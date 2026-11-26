@@ -33,6 +33,7 @@ export interface TopHudBarProps {
   onCloseShiftEarly: () => void;
   onOpenCounterQueue: () => void;
   onOpenLog: () => void;
+  onOpenGuide: () => void;
   onToggleMotionPaused: () => void;
   onToggleBgmMute: () => void;
   onToggleMute: () => void;
@@ -66,6 +67,7 @@ export function TopHudBar({
   onCloseShiftEarly,
   onOpenCounterQueue,
   onOpenLog,
+  onOpenGuide,
   onToggleMotionPaused,
   onToggleBgmMute,
   onToggleMute,
@@ -210,6 +212,14 @@ export function TopHudBar({
               onChangeBgmVolume={onChangeBgmVolume}
               onChangeSfxVolume={onChangeSfxVolume}
             />
+            <button
+              type="button"
+              onClick={onOpenGuide}
+              className="pmd-btn shrink-0 whitespace-nowrap px-2 py-0.5 font-semibold text-[#6ee7a0]"
+              title="Open PokéMart Manager's Guide"
+            >
+              Guide
+            </button>
             <button
               type="button"
               onClick={onReturnToMenu}

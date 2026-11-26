@@ -109,4 +109,37 @@ describe('PokéMart: Low Cortisol Shift Full-Screen PMD UI Integration', () => {
     expect(exportBox.value.length).toBeGreaterThan(20);
     await user.click(within(saveDialog).getByRole('button', { name: 'Close' }));
   }, 15000);
+
+  it('opens the stylized PokéMart Manager Guide from both Main Menu and In-Store Top HUD across all sections', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    // Open Guide from Main Menu top-right bar
+    await user.click(screen.getByRole('button', { name: 'Guide' }));
+    const menuGuide = screen.getByRole('dialog');
+    expect(within(menuGuide).getByText(/The 4-Step Shift Loop/i)).toBeInTheDocument();
+
+    // Switch through all handbook sections
+    await user.click(within(menuGuide).getByRole('tab', { name: /Shoppers & Haggling/i }));
+    expect(within(menuGuide).getByText(/6 Human Trainer Archetypes/i)).toBeInTheDocument();
+    expect(within(menuGuide).getByText(/Haggle \+15%/i)).toBeInTheDocument();
+
+    await user.click(within(menuGuide).getByRole('tab', { name: /Staff & Upgrades/i }));
+    expect(within(menuGuide).getByText(/Shopkeepers & Hiring Counter Clerks/i)).toBeInTheDocument();
+
+    await user.click(within(menuGuide).getByRole('tab', { name: /Care, Breeding & Items/i }));
+    expect(within(menuGuide).getByText(/Egg Breeding & Shiny Sparkle Hunting/i)).toBeInTheDocument();
+
+    await user.click(within(menuGuide).getByRole('tab', { name: /Rent, Stakes & Saves/i }));
+    expect(within(menuGuide).getByText(/3 Difficulty Modes & Daily Dues/i)).toBeInTheDocument();
+
+    await user.click(within(menuGuide).getByRole('button', { name: 'Close' }));
+
+    // Enter Indoor Store and open Guide from Top HUD pill
+    await user.click(screen.getByRole('button', { name: /PLAY/i }));
+    await user.click(screen.getByRole('button', { name: 'Guide' }));
+    const storeGuide = screen.getByRole('dialog');
+    expect(within(storeGuide).getByRole('heading', { name: /PokéMart Manager's Guide/i })).toBeInTheDocument();
+    await user.click(within(storeGuide).getByRole('button', { name: 'Close' }));
+  }, 15000);
 });

@@ -74,6 +74,7 @@ import { CozyDialog } from './components/CozyDialog';
 import { CreditsModal } from './components/CreditsModal';
 import { DebtLiquidationModal } from './components/DebtLiquidationModal';
 import { DisplayPensPanel } from './components/DisplayPensPanel';
+import { GameGuideModal } from './components/GameGuideModal';
 import { HealingStationPanel } from './components/HealingStationPanel';
 import { InspectPokemonModal } from './components/InspectPokemonModal';
 import { MainMenu } from './components/MainMenu';
@@ -96,6 +97,7 @@ export function App() {
   const [activeOfferUid, setActiveOfferUid] = useState<string | null>(null);
   const [inspectUid, setInspectUid] = useState<string | null>(null);
   const [saveModalOpen, setSaveModalOpen] = useState(false);
+  const [guideModalOpen, setGuideModalOpen] = useState(false);
   const [creditsModalOpen, setCreditsModalOpen] = useState(false);
   const [motionPaused, setMotionPaused] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -341,6 +343,7 @@ export function App() {
             setStore((prev) => ({ ...prev, game: setSfxVolumeAction(prev.game, volume) }))
           }
           onOpenSaveModal={() => setSaveModalOpen(true)}
+          onOpenGuide={() => setGuideModalOpen(true)}
           onOpenCredits={() => setCreditsModalOpen(true)}
         />
       ) : (
@@ -403,6 +406,7 @@ export function App() {
             onOpenLog={() =>
               setActiveDialog((prev) => (prev === 'log' ? null : 'log'))
             }
+            onOpenGuide={() => setGuideModalOpen(true)}
             onToggleMotionPaused={() => setMotionPaused((prev) => !prev)}
             onToggleBgmMute={() =>
               setStore((prev) => ({ ...prev, game: toggleBgmMuteAction(prev.game) }))
@@ -652,6 +656,8 @@ export function App() {
         onDeleteProfile={handleDeleteProfile}
         onImportSaveCode={handleImportSaveCode}
       />
+
+      <GameGuideModal open={guideModalOpen} onClose={() => setGuideModalOpen(false)} />
 
       <CreditsModal open={creditsModalOpen} onClose={() => setCreditsModalOpen(false)} />
 

@@ -36,6 +36,7 @@ export interface MainMenuProps {
   onChangeBgmVolume: (volume: number) => void;
   onChangeSfxVolume: (volume: number) => void;
   onOpenSaveModal: () => void;
+  onOpenGuide: () => void;
   onOpenCredits: () => void;
 }
 
@@ -56,6 +57,7 @@ export function MainMenu({
   onChangeBgmVolume,
   onChangeSfxVolume,
   onOpenSaveModal,
+  onOpenGuide,
   onOpenCredits,
 }: MainMenuProps) {
   const [creatorOpen, setCreatorOpen] = useState(false);
@@ -123,6 +125,13 @@ export function MainMenu({
               className="pmd-btn shrink-0 whitespace-nowrap px-2.5 py-1 text-xs font-semibold"
             >
               Save / Profiles
+            </button>
+            <button
+              type="button"
+              onClick={onOpenGuide}
+              className="pmd-btn shrink-0 whitespace-nowrap px-2.5 py-1 text-xs font-semibold text-[#ffd84d]"
+            >
+              Guide
             </button>
             <button
               type="button"
