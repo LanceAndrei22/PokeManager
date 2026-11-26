@@ -105,41 +105,41 @@ export function InspectPokemonModal({
           <div className="min-w-0 flex-1 space-y-1.5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex flex-wrap items-center gap-1.5">
-                <span className="border border-[#6ee7a0] bg-[#14472c] px-2 py-0.5 text-[11px] font-bold text-[#9effc3]">
+                <span className="border border-[#6ee7a0] bg-[#14472c] px-2.5 py-0.5 text-xs font-semibold text-[#9effc3]">
                   Trait: {pokemon.trait}
                 </span>
-                <span className="border border-[#78a8f0] bg-[#142958] px-2 py-0.5 text-[11px] font-bold uppercase text-[#ffd84d]">
+                <span className="border border-[#78a8f0] bg-[#142958] px-2.5 py-0.5 text-xs font-semibold uppercase text-[#ffd84d]">
                   {species.types.join(' / ')}
                 </span>
-                <span className="border border-[#4e78bd] bg-[#0c1b3e] px-2 py-0.5 text-[11px] font-bold text-[#cfe0ff]">
+                <span className="border border-[#4e78bd] bg-[#0c1b3e] px-2.5 py-0.5 text-xs font-semibold text-[#cfe0ff]">
                   Egg: {species.eggGroups.join(' / ')}
                 </span>
               </div>
 
               {isMascot ? (
-                <span className="border border-[#ffd84d] bg-[#5c3e00] px-2 py-0.5 text-[11px] font-bold text-[#ffd84d]">
+                <span className="border border-[#ffd84d] bg-[#5c3e00] px-2.5 py-0.5 text-xs font-semibold text-[#ffd84d]">
                   ★ Active Shop Mascot
                 </span>
               ) : (
                 <button
                   type="button"
                   onClick={() => onSetMascot(pokemon.uid)}
-                  className="pmd-btn-gold px-2.5 py-1 text-[11px] font-bold"
+                  className="pmd-btn-gold px-2.5 py-1 text-xs font-semibold"
                 >
                   Set as Shop Mascot
                 </button>
               )}
             </div>
 
-            <p className="text-xs italic text-[#a8c4f0]">{species.cozyNote}</p>
-            <div className="grid grid-cols-3 gap-2 pt-0.5 text-xs font-bold">
-              <div className="border border-[#3a61a3] bg-[#0a1430] px-2 py-1 text-[#ffd84d]">
+            <p className="text-sm italic text-[#b5d4ff]">{species.cozyNote}</p>
+            <div className="pmd-num grid grid-cols-3 gap-2 pt-0.5 text-sm">
+              <div className="border border-[#3a61a3] bg-[#0a1430] px-2.5 py-1 text-[#ffd84d]">
                 Cute: {pokemon.stats.cute}
               </div>
-              <div className="border border-[#3a61a3] bg-[#0a1430] px-2 py-1 text-[#9effc3]">
+              <div className="border border-[#3a61a3] bg-[#0a1430] px-2.5 py-1 text-[#9effc3]">
                 Comfort: {pokemon.stats.comfort}
               </div>
-              <div className="border border-[#3a61a3] bg-[#0a1430] px-2 py-1 text-[#a8d0ff]">
+              <div className="border border-[#3a61a3] bg-[#0a1430] px-2.5 py-1 text-[#b5d4ff]">
                 Rarity: {pokemon.stats.rarity}
               </div>
             </div>
@@ -147,15 +147,15 @@ export function InspectPokemonModal({
         </div>
 
         {/* Market Valuation Breakdown */}
-        <div className="pmd-inset p-3 text-xs">
+        <div className="pmd-inset p-3 text-sm">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="font-bold text-[#ffd84d]">Adoption Appraisal Breakdown</h2>
-            <span className="font-mono text-sm font-bold text-[#6ee7a0]">
+            <h2 className="font-semibold text-[#ffd84d]">Adoption Appraisal Breakdown</h2>
+            <span className="pmd-num text-base text-[#6ee7a0]">
               Base Tag: ₽{baseValuation.askingPrice.toLocaleString()} (Collector up to ₽
               {collectorValuation.askingPrice.toLocaleString()})
             </span>
           </div>
-          <div className="mt-2 grid grid-cols-2 gap-1.5 text-[11px] text-[#cfe0ff] sm:grid-cols-3">
+          <div className="pmd-num mt-2 grid grid-cols-2 gap-1.5 text-xs text-[#cfe0ff] sm:grid-cols-3">
             <div>Base Species: ₽{baseValuation.breakdown.basePrice}</div>
             <div>Stats Mult: {baseValuation.breakdown.statMultiplier}×</div>
             <div>Shiny Mult: {baseValuation.breakdown.shinyMultiplier}×</div>

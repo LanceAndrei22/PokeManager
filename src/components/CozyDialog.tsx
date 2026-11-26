@@ -107,14 +107,14 @@ export function CozyDialog({
       {...(closedByProp as Record<string, string>)}
     >
       <div className="flex max-h-[90dvh] flex-col">
-        <header className="flex items-center justify-between gap-2 border-b-2 border-[#78a8f0] bg-[#11234d] px-4 py-3">
-          <h1 id={titleId} className="font-[family-name:var(--font-display)] text-sm font-bold text-[#ffd84d] sm:text-base">
+        <header className="flex items-center justify-between gap-3 border-b-2 border-[#78a8f0] bg-[#11234d] px-4 py-3">
+          <h1 id={titleId} className="pmd-heading-display pmd-text-shadow text-[#ffd84d]">
             {title}
           </h1>
           <button
             type="button"
             onClick={() => dialogRef.current?.close()}
-            className="pmd-btn px-3 py-1 text-xs font-bold focus-visible:outline-2 focus-visible:outline-[#ffd84d]"
+            className="pmd-btn shrink-0 px-3 py-1 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-[#ffd84d]"
           >
             Close
           </button>

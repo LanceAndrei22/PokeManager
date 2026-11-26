@@ -92,12 +92,12 @@ export function BottomActionDock({
                     : 'pmd-btn'
               }`}
             >
-              <span className="whitespace-nowrap text-[11px] font-bold leading-tight">
+              <span className="whitespace-nowrap text-xs font-semibold leading-tight sm:text-sm">
                 {btn.label}
               </span>
               <span
-                className={`font-mono text-[10px] leading-tight ${
-                  btn.highlightGold ? 'text-[#3b2200]' : 'text-[#a8d0ff]'
+                className={`pmd-num text-xs leading-tight ${
+                  btn.highlightGold ? 'text-[#3b2200]' : 'text-[#b5d4ff]'
                 }`}
               >
                 {btn.sub}

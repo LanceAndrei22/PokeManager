@@ -18,7 +18,8 @@ import type {
   ProfileIndex,
   ShopUpgradeId,
 } from './data/types';
-import { playSfx } from './engine/audio';
+import { initAudioUnlockListeners, playSfx, setSfxMuted, setSfxVolume } from './engine/audio';
+import { setBgmMuted, setBgmTrack, setBgmVolume } from './engine/bgm';
 import { getDexSummary, getShopRankInfo } from './engine/dex';
 import { calculateShiftDues } from './engine/economy';
 import {
@@ -40,12 +41,15 @@ import {
   movePokemonLocation,
   purchaseUpgradeAction,
   setActiveGiftBall,
+  setBgmVolumeAction,
   setGlobalMarkup,
   setPenMarkup,
+  setSfxVolumeAction,
   setShiftSpeed,
   setShopMascotAction,
   startBreedingAction,
   startNextShift,
+  toggleBgmMuteAction,
   toggleMuteAction,
   toggleShiftRunning,
   useItemAction,
@@ -105,6 +109,28 @@ export function App() {
   const incubatorCapacity = getIncubatorCapacity(game.upgrades);
   const napBedCapacity = getNapBedCapacity(game.upgrades);
   const shiftDues = calculateShiftDues(game);
+
+  // Unlock cross-browser Web Audio cleanly on first pointer/key gesture
+  useEffect(() => initAudioUnlockListeners(), []);
+
+  // Keep SFX and BGM engines synchronized with active profile audio preferences
+  useEffect(() => {
+    setSfxMuted(Boolean(game.muted));
+    setSfxVolume(game.sfxVolume ?? 0.65);
+    setBgmMuted(Boolean(game.bgmMuted));
+    setBgmVolume(game.bgmVolume ?? 0.35);
+  }, [game.muted, game.sfxVolume, game.bgmMuted, game.bgmVolume]);
+
+  // Crossfade BGM between relaxed Menu theme, cozy PokéMart groove, and Bankruptcy silence
+  useEffect(() => {
+    if (game.isBankrupt) {
+      setBgmTrack('quiet');
+    } else if (screen === 'menu') {
+      setBgmTrack('menu');
+    } else {
+      setBgmTrack('shop');
+    }
+  }, [screen, game.isBankrupt]);
 
   // Persist immediately whenever active profile GameState changes
   useEffect(() => {
@@ -301,8 +327,17 @@ export function App() {
           }}
           onSwitchProfile={handleSwitchProfile}
           onCreateProfile={handleCreateProfile}
+          onToggleBgmMute={() =>
+            setStore((prev) => ({ ...prev, game: toggleBgmMuteAction(prev.game) }))
+          }
           onToggleMute={() =>
             setStore((prev) => ({ ...prev, game: toggleMuteAction(prev.game) }))
+          }
+          onChangeBgmVolume={(volume) =>
+            setStore((prev) => ({ ...prev, game: setBgmVolumeAction(prev.game, volume) }))
+          }
+          onChangeSfxVolume={(volume) =>
+            setStore((prev) => ({ ...prev, game: setSfxVolumeAction(prev.game, volume) }))
           }
           onOpenSaveModal={() => setSaveModalOpen(true)}
           onOpenCredits={() => setCreditsModalOpen(true)}
@@ -345,6 +380,9 @@ export function App() {
               Boolean(game.lastShiftSummary) || Boolean(game.pendingSettlement) || game.isBankrupt
             }
             muted={game.muted}
+            bgmMuted={Boolean(game.bgmMuted)}
+            sfxVolume={game.sfxVolume ?? 0.65}
+            bgmVolume={game.bgmVolume ?? 0.35}
             motionPaused={motionPaused}
             onToggleRunning={() => applyAction(toggleShiftRunning)}
             onChangeSpeed={(speed) =>
@@ -362,8 +400,17 @@ export function App() {
               setActiveDialog((prev) => (prev === 'log' ? null : 'log'))
             }
             onToggleMotionPaused={() => setMotionPaused((prev) => !prev)}
+            onToggleBgmMute={() =>
+              setStore((prev) => ({ ...prev, game: toggleBgmMuteAction(prev.game) }))
+            }
             onToggleMute={() =>
               setStore((prev) => ({ ...prev, game: toggleMuteAction(prev.game) }))
+            }
+            onChangeBgmVolume={(volume) =>
+              setStore((prev) => ({ ...prev, game: setBgmVolumeAction(prev.game, volume) }))
+            }
+            onChangeSfxVolume={(volume) =>
+              setStore((prev) => ({ ...prev, game: setSfxVolumeAction(prev.game, volume) }))
             }
             onReturnToMenu={handleReturnToMenu}
           />

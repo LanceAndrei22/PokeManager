@@ -164,15 +164,15 @@ export function AdoptionDexModal({ open, dex, onClose }: AdoptionDexModalProps) 
                     className={discovered ? '' : 'brightness-50 grayscale'}
                   />
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-1 font-mono text-[10px] text-[#a8c4f0]">
+                    <div className="pmd-num flex items-center justify-between gap-1 text-xs text-[#b5d4ff]">
                       <span>#{species.paddedId}</span>
                       <span className="uppercase text-[#ffd84d]">{species.rarityTier}</span>
                     </div>
-                    <div className="truncate font-bold text-white">
+                    <div className="truncate text-sm font-semibold text-white">
                       {showShiny ? '✨ ' : ''}
                       {species.name}
                     </div>
-                    <div className="text-[10px] text-[#a8d0ff]">
+                    <div className="text-xs text-[#b5d4ff]">
                       {discovered
                         ? `Adopted ${entry?.adoptedCount ?? 0} • Hatched ${entry?.hatchedCount ?? 0}`
                         : `Unlocks Rank ${species.unlockRank}`}
@@ -191,18 +191,18 @@ export function AdoptionDexModal({ open, dex, onClose }: AdoptionDexModalProps) 
               type="button"
               disabled={safePage <= 1}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="pmd-btn px-3 py-1 font-bold"
+              className="pmd-btn px-3 py-1 text-sm font-semibold"
             >
               Prev
             </button>
-            <span className="font-mono text-xs font-bold text-[#ffd84d]">
+            <span className="pmd-num text-sm text-[#ffd84d]">
               Page {safePage} / {totalPages} ({filteredSpecies.length} species)
             </span>
             <button
               type="button"
               disabled={safePage >= totalPages}
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              className="pmd-btn px-3 py-1 font-bold"
+              className="pmd-btn px-3 py-1 text-sm font-semibold"
             >
               Next
             </button>

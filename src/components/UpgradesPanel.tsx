@@ -23,25 +23,25 @@ export function UpgradesPanel({ cash, upgrades, onPurchaseUpgrade }: UpgradesPan
           <article key={upgrade.id} className="pmd-inset flex flex-col justify-between p-3">
             <div>
               <div className="flex items-center justify-between gap-2">
-                <h3 className="text-sm font-bold text-[#ffd84d]">{upgrade.name}</h3>
-                <span className="border border-[#78a8f0] bg-[#0a1430] px-2 py-0.5 font-mono text-[11px] font-bold text-white">
+                <h3 className="text-base font-semibold text-[#ffd84d]">{upgrade.name}</h3>
+                <span className="pmd-num border border-[#78a8f0] bg-[#0a1430] px-2 py-0.5 text-xs font-semibold text-white">
                   Lv.{level}/{upgrade.maxLevel}
                 </span>
               </div>
-              <p className="mt-1.5 text-xs leading-relaxed text-[#a8c4f0]">
+              <p className="mt-1.5 text-sm leading-relaxed text-[#b5d4ff]">
                 {upgrade.description}
               </p>
             </div>
 
             <div className="mt-3 flex items-center justify-between border-t border-[#3b60a0] pt-2">
-              <span className="font-mono text-xs font-bold text-[#ffd84d]">
+              <span className="pmd-num text-base text-[#ffd84d]">
                 {isMax ? 'Maxed Out' : `₽${cost.toLocaleString()}`}
               </span>
               <button
                 type="button"
                 disabled={isMax || !canAfford}
                 onClick={() => onPurchaseUpgrade(upgrade.id)}
-                className="pmd-btn-emerald px-3 py-1 text-xs font-bold"
+                className="pmd-btn-emerald px-3 py-1 text-sm font-semibold"
               >
                 {isMax ? 'Complete' : 'Upgrade'}
               </button>

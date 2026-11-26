@@ -59,7 +59,7 @@ export function BreedingIncubatorPanel({
               Share a species or Egg Group (or Ditto) to inherit stats &amp; traits. Legendaries cannot breed except Manaphy → Phione!
             </p>
           </div>
-          <span className="border border-[#ffd84d] bg-[#5c3e00] px-2.5 py-0.5 text-[11px] font-bold text-[#ffd84d]">
+          <span className="pmd-num border border-[#ffd84d] bg-[#5c3e00] px-2.5 py-0.5 text-xs font-semibold text-[#ffd84d]">
             Shiny Odds: ~{Math.min(25, baseShinyPct)}%
           </span>
         </div>
@@ -152,14 +152,14 @@ export function BreedingIncubatorPanel({
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
-                        <h4 className="truncate text-sm font-bold text-white">
+                        <h4 className="truncate text-sm font-semibold text-white">
                           {egg.readyToHatch ? `Ready: ${babySpecies.name} Egg!` : 'Warming Egg'}
                         </h4>
-                        <span className="font-mono text-xs font-bold text-[#6ee7a0]">
+                        <span className="pmd-num text-sm text-[#6ee7a0]">
                           {Math.round(egg.progress)}%
                         </span>
                       </div>
-                      <div className="text-[11px] text-[#a8c4f0]">
+                      <div className="text-xs text-[#b5d4ff]">
                         Parents: {egg.parentNames[0]} &amp; {egg.parentNames[1]} • {egg.trait}
                       </div>
                       <progress

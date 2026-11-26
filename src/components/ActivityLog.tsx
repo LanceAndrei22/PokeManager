@@ -18,15 +18,15 @@ const TONE_BADGE: Record<ActivityEntry['tone'], string> = {
 
 export function ActivityLog({ entries }: ActivityLogProps) {
   return (
-    <section aria-label="Shift Activity Journal" className="space-y-2 text-xs text-[#e2eeff]">
+    <section aria-label="Shift Activity Journal" className="space-y-2 text-sm text-[#e2eeff]">
       <ul className="max-h-80 space-y-1.5 overflow-y-auto pr-1">
         {entries.map((entry) => (
           <li
             key={entry.id}
-            className="pmd-inset flex items-start gap-2 px-2.5 py-2"
+            className="pmd-inset flex items-start gap-2.5 px-3 py-2"
           >
             <span
-              className={`shrink-0 border px-1.5 py-0.5 font-mono text-[10px] font-bold ${TONE_BADGE[entry.tone]}`}
+              className={`pmd-num shrink-0 border px-2 py-0.5 text-xs font-semibold ${TONE_BADGE[entry.tone]}`}
             >
               S{entry.shift}
             </span>

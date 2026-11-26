@@ -15,7 +15,7 @@
 
   --font-sans: "Pixelify Sans", "Consolas", ui-monospace, monospace;
   --font-display: "Silkscreen", "Pixelify Sans", "Consolas", monospace;
-  --font-mono: "Silkscreen", "Consolas", "Courier New", ui-monospace, monospace;
+  --font-mono: "Pixelify Sans", "Consolas", ui-monospace, monospace;
 }
 
 :root {
@@ -40,7 +40,7 @@ body,
   background-color: var(--color-pmd-navy-950);
   color: var(--color-pmd-ink);
   font-family: var(--font-sans);
-  font-size-adjust: from-font;
+  line-height: 1.45;
 }
 
 h1,
@@ -189,11 +189,11 @@ li {
   cursor: not-allowed;
 }
 
-/* Chunky golden-yellow title typography modeled after PokéSurvivor */
+/* Chunky golden-yellow display logo modeled after PokéSurvivor (Silkscreen 400 >=18px only) */
 .pmd-title {
   font-family: var(--font-display);
+  font-weight: 400;
   font-size: clamp(1.35rem, 1rem + 2.2vw, 3.05rem);
-  font-size-adjust: cap-height from-font;
   line-height: 1.08;
   color: #ffd84d;
   text-shadow:
@@ -203,6 +203,26 @@ li {
     -2px 2px 0 #1b1200,
     0 5px 0 #070d1f;
   letter-spacing: 0.02em;
+}
+
+/* Modal & large section header using Silkscreen 400 at >= 18px (never bolded) */
+.pmd-heading-display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(1.125rem, 1rem + 0.4vw, 1.35rem);
+  letter-spacing: 0.04em;
+  line-height: 1.25;
+}
+
+/* Crisp tabular numerals in Pixelify Sans for currency (₽), timers, and ledger counts */
+.pmd-num {
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.pmd-text-shadow {
+  text-shadow: 1px 1px 0 rgba(7, 13, 31, 0.85);
 }
 
 .pmd-splash {

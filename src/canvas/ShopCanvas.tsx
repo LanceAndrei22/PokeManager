@@ -262,7 +262,7 @@ export function ShopCanvas({
       {hoverLabel && (
         <div
           aria-hidden="true"
-          className="pmd-pill pointer-events-none fixed bottom-20 left-1/2 z-10 -translate-x-1/2 px-3 py-1 text-xs font-bold text-[#ffd84d]"
+          className="pmd-pill pointer-events-none fixed bottom-20 left-1/2 z-10 -translate-x-1/2 px-3 py-1 text-sm font-semibold text-[#ffd84d]"
         >
           {hoverLabel}
         </div>

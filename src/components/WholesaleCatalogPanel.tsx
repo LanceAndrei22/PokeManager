@@ -91,7 +91,7 @@ export function WholesaleCatalogPanel({
 
                   <div className="min-w-0 flex-1">
                     <span
-                      className={`inline-block border px-1.5 py-0.5 text-[10px] font-bold ${
+                      className={`inline-block border px-1.5 py-0.5 text-xs font-semibold ${
                         isVip
                           ? 'border-[#ffd84d] bg-[#5c3e00] text-[#ffd84d]'
                           : isEgg
@@ -110,10 +110,10 @@ export function WholesaleCatalogPanel({
                             : 'Healthy Adoptable'}
                     </span>
 
-                    <h4 className="mt-1 truncate text-sm font-bold text-white">
+                    <h4 className="mt-1 truncate text-base font-semibold text-white">
                       {isEgg ? 'Warm Mystery Egg' : `${offer.isShiny ? '✨ ' : ''}${species.name}`}
                     </h4>
-                    <div className="text-[11px] text-[#a8c4f0]">
+                    <div className="text-xs text-[#b5d4ff]">
                       {isEgg
                         ? 'Hatches a surprise baby companion'
                         : `${offer.trait} • Cute ${offer.stats.cute} • Comfort ${offer.stats.comfort}`}
@@ -122,14 +122,14 @@ export function WholesaleCatalogPanel({
                 </div>
 
                 <div className="mt-3 flex items-center justify-between border-t border-[#3b60a0] pt-2">
-                  <span className="font-mono text-sm font-bold text-[#ffd84d]">
+                  <span className="pmd-num text-base text-[#ffd84d]">
                     ₽{offer.cost.toLocaleString()}
                   </span>
                   <button
                     type="button"
                     disabled={offer.purchased || !canAfford}
                     onClick={() => onBuyOffer(offer.uid)}
-                    className={`px-3 py-1 text-xs font-bold ${
+                    className={`px-3 py-1 text-sm font-semibold ${
                       isVip ? 'pmd-btn-gold' : 'pmd-btn-emerald'
                     }`}
                   >
@@ -153,26 +153,26 @@ export function WholesaleCatalogPanel({
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-1">
-                      <h4 className="text-xs font-bold text-white">{item.name}</h4>
-                      <span className="font-mono text-[11px] font-bold text-[#6ee7a0]">
+                      <h4 className="text-sm font-semibold text-white">{item.name}</h4>
+                      <span className="pmd-num text-xs text-[#6ee7a0]">
                         Bag: {owned}
                       </span>
                     </div>
-                    <p className="mt-0.5 text-[11px] leading-snug text-[#a8c4f0]">
+                    <p className="mt-0.5 text-xs leading-snug text-[#b5d4ff]">
                       {item.description}
                     </p>
                   </div>
                 </div>
 
                 <div className="mt-2.5 flex items-center justify-between border-t border-[#3b60a0] pt-2">
-                  <span className="font-mono text-xs font-bold text-[#ffd84d]">
+                  <span className="pmd-num text-sm text-[#ffd84d]">
                     ₽{item.cost.toLocaleString()}
                   </span>
                   <button
                     type="button"
                     disabled={!canAfford}
                     onClick={() => onBuySupplyItem(item.slug)}
-                    className="pmd-btn-gold px-3 py-1 text-xs font-bold"
+                    className="pmd-btn-gold px-3 py-1 text-sm font-semibold"
                   >
                     Buy 1
                   </button>

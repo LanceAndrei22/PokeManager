@@ -54,7 +54,7 @@ export function DebtLiquidationModal({
       allowLightDismiss={false}
       title={`Shift #${settlement.shiftNumber} — Rent Due & Emergency Liquidation`}
     >
-      <div className="space-y-4 text-xs text-[#e2eeff]">
+      <div className="space-y-4 text-sm text-[#e2eeff]">
         <div
           className={`border-2 p-3 ${
             shortfall === 0
@@ -63,16 +63,16 @@ export function DebtLiquidationModal({
           }`}
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <strong className="text-sm text-white">
+            <strong className="text-base font-semibold text-white">
               {shortfall === 0
                 ? 'Rent Covered! Ready to settle shift dues.'
                 : `Cash Shortfall: ₽${shortfall.toLocaleString()}`}
             </strong>
-            <span className="font-mono font-bold text-[#ffd84d]">
+            <span className="pmd-num text-sm text-[#ffd84d]">
               Grace Shifts Left: {debtGraceRemaining}
             </span>
           </div>
-          <p className="mt-1 text-[11px] text-[#f2d6d6]">
+          <p className="mt-1 text-xs text-[#f2d6d6]">
             {shortfall === 0
               ? 'Your emergency liquidation covered today’s rent and pen/bed upkeep.'
               : debtGraceRemaining > 0
@@ -82,28 +82,28 @@ export function DebtLiquidationModal({
         </div>
 
         {/* Itemized Dues */}
-        <div className="pmd-inset grid grid-cols-2 gap-2 p-3 sm:grid-cols-4">
+        <div className="pmd-inset grid grid-cols-2 gap-3 p-3 sm:grid-cols-4">
           <div>
-            <div className="text-[10px] text-[#a8c4f0]">Daily Rent</div>
-            <div className="font-mono text-sm font-bold text-white">
+            <div className="text-xs font-medium text-[#b5d4ff]">Daily Rent</div>
+            <div className="pmd-num mt-0.5 text-base text-white">
               ₽{settlement.dailyRent.toLocaleString()}
             </div>
           </div>
           <div>
-            <div className="text-[10px] text-[#a8c4f0]">Pen Upkeep</div>
-            <div className="font-mono text-sm font-bold text-white">
+            <div className="text-xs font-medium text-[#b5d4ff]">Pen Upkeep</div>
+            <div className="pmd-num mt-0.5 text-base text-white">
               ₽{settlement.penUpkeep.toLocaleString()}
             </div>
           </div>
           <div>
-            <div className="text-[10px] text-[#a8c4f0]">Nap Bed Upkeep</div>
-            <div className="font-mono text-sm font-bold text-white">
+            <div className="text-xs font-medium text-[#b5d4ff]">Nap Bed Upkeep</div>
+            <div className="pmd-num mt-0.5 text-base text-white">
               ₽{settlement.bedUpkeep.toLocaleString()}
             </div>
           </div>
           <div>
-            <div className="text-[10px] text-[#a8c4f0]">Total Dues / Cash</div>
-            <div className="font-mono text-sm font-bold text-[#ffd84d]">
+            <div className="text-xs font-medium text-[#b5d4ff]">Total Dues / Cash</div>
+            <div className="pmd-num mt-0.5 text-base text-[#ffd84d]">
               ₽{settlement.totalDues.toLocaleString()} / ₽{cash.toLocaleString()}
             </div>
           </div>
@@ -111,11 +111,11 @@ export function DebtLiquidationModal({
 
         {/* Emergency Liquidation Roster (50% base value) */}
         <div className="space-y-2">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-[#ffd84d]">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-[#ffd84d]">
             Emergency Liquidation (Wholesale 50% Base Value)
           </h2>
           {liquidatable.length === 0 ? (
-            <p className="pmd-inset p-3 text-[#a8c4f0]">
+            <p className="pmd-inset p-3 text-sm text-[#b5d4ff]">
               No eligible Pokémon left to liquidate.
             </p>
           ) : (
@@ -126,7 +126,7 @@ export function DebtLiquidationModal({
                 return (
                   <div
                     key={mon.uid}
-                    className="pmd-inset flex items-center justify-between gap-2 p-2"
+                    className="pmd-inset flex items-center justify-between gap-2 p-2.5"
                   >
                     <div className="flex items-center gap-2">
                       <PokemonSprite
@@ -136,11 +136,11 @@ export function DebtLiquidationModal({
                         size={40}
                       />
                       <div>
-                        <div className="font-bold text-white">
+                        <div className="font-semibold text-white">
                           {mon.isShiny ? '✨ ' : ''}
                           {sp.name}
                         </div>
-                        <div className="text-[10px] text-[#a8c4f0]">
+                        <div className="text-xs text-[#b5d4ff]">
                           {mon.location === 'pen'
                             ? `Pen #${(mon.penIndex ?? 0) + 1}`
                             : mon.location === 'healing'
@@ -152,7 +152,7 @@ export function DebtLiquidationModal({
                     <button
                       type="button"
                       onClick={() => onLiquidatePokemon(mon.uid)}
-                      className="pmd-btn-danger shrink-0 px-2.5 py-1 text-[11px] font-bold"
+                      className="pmd-btn-danger pmd-num shrink-0 px-2.5 py-1 text-xs font-semibold"
                     >
                       Liquidate (+₽{payout.toLocaleString()})
                     </button>
@@ -167,7 +167,7 @@ export function DebtLiquidationModal({
           <button
             type="button"
             onClick={onFinalizeSettlement}
-            className={`px-4 py-2 text-xs font-bold ${
+            className={`px-4 py-2 text-sm font-semibold ${
               shortfall === 0
                 ? 'pmd-btn-emerald'
                 : debtGraceRemaining > 0

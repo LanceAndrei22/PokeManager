@@ -6,6 +6,7 @@
  */
 import type { CounterOffer, DifficultyConfig, MarketTrend } from '../data/types';
 import type { ShopRankInfo } from '../engine/dex';
+import { AudioControls } from './AudioControls';
 
 export interface TopHudBarProps {
   profileName: string;
@@ -23,6 +24,9 @@ export interface TopHudBarProps {
   counterQueue: CounterOffer[];
   hasPendingSettlement: boolean;
   muted: boolean;
+  bgmMuted: boolean;
+  sfxVolume: number;
+  bgmVolume: number;
   motionPaused: boolean;
   onToggleRunning: () => void;
   onChangeSpeed: (speed: 1 | 2) => void;
@@ -30,7 +34,10 @@ export interface TopHudBarProps {
   onOpenCounterQueue: () => void;
   onOpenLog: () => void;
   onToggleMotionPaused: () => void;
+  onToggleBgmMute: () => void;
   onToggleMute: () => void;
+  onChangeBgmVolume: (volume: number) => void;
+  onChangeSfxVolume: (volume: number) => void;
   onReturnToMenu: () => void;
 }
 
@@ -50,6 +57,9 @@ export function TopHudBar({
   counterQueue,
   hasPendingSettlement,
   muted,
+  bgmMuted,
+  sfxVolume,
+  bgmVolume,
   motionPaused,
   onToggleRunning,
   onChangeSpeed,
@@ -57,7 +67,10 @@ export function TopHudBar({
   onOpenCounterQueue,
   onOpenLog,
   onToggleMotionPaused,
+  onToggleBgmMute,
   onToggleMute,
+  onChangeBgmVolume,
+  onChangeSfxVolume,
   onReturnToMenu,
 }: TopHudBarProps) {
   const rentAlert = cash < totalDues;
@@ -70,21 +83,21 @@ export function TopHudBar({
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-1.5">
         {/* Left: Funds + Rent Due + Shift Timer & Controls */}
         <div className="pointer-events-auto flex flex-wrap items-center gap-1.5">
-          <div className="pmd-pill flex items-center gap-2 px-2 py-1 text-xs font-bold">
+          <div className="pmd-pill pmd-num flex items-center gap-2 px-2.5 py-1 text-sm font-semibold">
             <span className="text-[#ffd84d]" title={`${profileName} • ${difficulty.name}`}>
               ₽{cash.toLocaleString()}
             </span>
             <span className="text-[#4e78bd]">|</span>
             <span
-              className={rentAlert ? 'text-[#ff8f85]' : 'text-[#a8d0ff]'}
+              className={rentAlert ? 'text-[#ff8f85]' : 'text-[#b5d4ff]'}
               title={`Daily Rent & Pen/Bed Upkeep (${debtGraceRemaining} Debt Grace left)`}
             >
               Rent: ₽{totalDues.toLocaleString()}
             </span>
           </div>
 
-          <div className="pmd-pill flex flex-wrap items-center gap-1.5 px-2 py-1 text-xs">
-            <span className="font-bold text-[#ffd84d]">Shift #{shiftNumber}</span>
+          <div className="pmd-pill flex flex-wrap items-center gap-1.5 px-2.5 py-1 text-xs">
+            <span className="pmd-num text-sm font-semibold text-[#ffd84d]">Shift #{shiftNumber}</span>
             <div className="hidden items-center gap-1.5 sm:flex">
               <progress
                 aria-label="Shift time progress"
@@ -92,7 +105,7 @@ export function TopHudBar({
                 value={shiftTick}
                 className="h-2 w-14 accent-[#ffd84d]"
               />
-              <span className="font-mono text-[10px] text-[#cfe0ff]">
+              <span className="pmd-num text-xs text-[#dbe8ff]">
                 {shiftTick}/{shiftDurationTicks}s
               </span>
             </div>
@@ -100,7 +113,7 @@ export function TopHudBar({
               type="button"
               disabled={hasPendingSettlement}
               onClick={onToggleRunning}
-              className={`px-2 py-0.5 text-[11px] font-bold ${
+              className={`px-2.5 py-0.5 text-xs font-semibold ${
                 shiftRunning ? 'pmd-btn-gold' : 'pmd-btn-emerald'
               }`}
             >
@@ -111,8 +124,8 @@ export function TopHudBar({
                 type="button"
                 aria-pressed={shiftSpeed === 1}
                 onClick={() => onChangeSpeed(1)}
-                className={`px-1.5 py-0.5 font-mono text-[10px] font-bold ${
-                  shiftSpeed === 1 ? 'bg-[#ffd84d] text-[#261600]' : 'text-[#cfe0ff]'
+                className={`pmd-num px-1.5 py-0.5 text-xs font-semibold ${
+                  shiftSpeed === 1 ? 'bg-[#ffd84d] text-[#261600]' : 'text-[#dbe8ff]'
                 }`}
               >
                 1×
@@ -121,8 +134,8 @@ export function TopHudBar({
                 type="button"
                 aria-pressed={shiftSpeed === 2}
                 onClick={() => onChangeSpeed(2)}
-                className={`px-1.5 py-0.5 font-mono text-[10px] font-bold ${
-                  shiftSpeed === 2 ? 'bg-[#ffd84d] text-[#261600]' : 'text-[#cfe0ff]'
+                className={`pmd-num px-1.5 py-0.5 text-xs font-semibold ${
+                  shiftSpeed === 2 ? 'bg-[#ffd84d] text-[#261600]' : 'text-[#dbe8ff]'
                 }`}
               >
                 2×
@@ -132,7 +145,7 @@ export function TopHudBar({
               type="button"
               disabled={hasPendingSettlement}
               onClick={onCloseShiftEarly}
-              className="pmd-btn px-2 py-0.5 text-[11px] font-bold"
+              className="pmd-btn px-2.5 py-0.5 text-xs font-semibold"
               title="Close Shop & Pay Shift Rent"
             >
               Close Shift
@@ -140,13 +153,13 @@ export function TopHudBar({
           </div>
         </div>
 
-        {/* Right: Counter Queue Alert + Rank/Trend + Utilities */}
+        {/* Right: Counter Queue Alert + Rank/Trend + Audio & Utilities */}
         <div className="pointer-events-auto flex flex-wrap items-center gap-1.5">
           {counterQueue.length > 0 && (
             <button
               type="button"
               onClick={onOpenCounterQueue}
-              className="pmd-btn-gold flex items-center gap-1 px-2.5 py-1 text-xs font-bold"
+              className="pmd-btn-gold flex items-center gap-1 px-2.5 py-1 text-xs font-semibold"
             >
               <span>!</span>
               <span>Counter: {counterQueue.length} waiting</span>
@@ -154,24 +167,24 @@ export function TopHudBar({
           )}
 
           <div
-            className="pmd-pill hidden items-center gap-2 px-2 py-1 text-[11px] lg:flex"
+            className="pmd-pill hidden items-center gap-2 px-2.5 py-1 text-xs xl:flex"
             title={`${rankInfo.title} (${rankInfo.xp} XP)`}
           >
-            <span className="font-bold text-[#ffd84d]">Rk.{rankInfo.rank}</span>
+            <span className="pmd-num font-semibold text-[#ffd84d]">Rk.{rankInfo.rank}</span>
             <progress
               aria-label="Shop rank progress"
               max={100}
               value={rankInfo.progressPct}
               className="h-1.5 w-10 accent-[#6ee7a0]"
             />
-            <span className="text-[#a8d0ff]">{trend.badge}</span>
+            <span className="text-[#b5d4ff]">{trend.badge}</span>
           </div>
 
-          <div className="pmd-pill flex items-center gap-1 px-1.5 py-0.5 text-[11px]">
+          <div className="pmd-pill flex flex-wrap items-center gap-1 px-1.5 py-0.5 text-xs">
             <button
               type="button"
               onClick={onOpenLog}
-              className="pmd-btn px-2 py-0.5 font-bold"
+              className="pmd-btn px-2 py-0.5 font-semibold"
               title="Open Shift Journal"
             >
               Log
@@ -180,21 +193,25 @@ export function TopHudBar({
               type="button"
               onClick={onToggleMotionPaused}
               aria-label={motionPaused ? 'Play animation' : 'Pause animation'}
-              className="pmd-btn hidden px-2 py-0.5 font-bold sm:inline-flex"
+              className="pmd-btn hidden px-2 py-0.5 font-semibold sm:inline-flex"
             >
               {motionPaused ? 'Play Anim' : 'Pause Anim'}
             </button>
-            <button
-              type="button"
-              onClick={onToggleMute}
-              className="pmd-btn px-2 py-0.5 font-bold"
-            >
-              {muted ? 'Muted' : 'SFX On'}
-            </button>
+            <AudioControls
+              compact
+              bgmMuted={bgmMuted}
+              sfxMuted={muted}
+              bgmVolume={bgmVolume}
+              sfxVolume={sfxVolume}
+              onToggleBgmMute={onToggleBgmMute}
+              onToggleSfxMute={onToggleMute}
+              onChangeBgmVolume={onChangeBgmVolume}
+              onChangeSfxVolume={onChangeSfxVolume}
+            />
             <button
               type="button"
               onClick={onReturnToMenu}
-              className="pmd-btn px-2 py-0.5 font-bold text-[#ffd84d]"
+              className="pmd-btn px-2 py-0.5 font-semibold text-[#ffd84d]"
             >
               Menu
             </button>

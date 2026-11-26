@@ -16,6 +16,7 @@ import {
   type ProfileIndex,
 } from '../data/types';
 import { getDexSummary, getShopRankInfo } from '../engine/dex';
+import { AudioControls } from './AudioControls';
 import { ItemIcon, PokemonSprite } from './PokemonSprite';
 
 export interface MainMenuProps {
@@ -24,7 +25,10 @@ export interface MainMenuProps {
   onPlay: () => void;
   onSwitchProfile: (profileId: string) => void;
   onCreateProfile: (name: string, difficulty: DifficultyId, starterSpeciesId: number) => void;
+  onToggleBgmMute: () => void;
   onToggleMute: () => void;
+  onChangeBgmVolume: (volume: number) => void;
+  onChangeSfxVolume: (volume: number) => void;
   onOpenSaveModal: () => void;
   onOpenCredits: () => void;
 }
@@ -32,7 +36,7 @@ export interface MainMenuProps {
 const SPLASH_LINES = [
   'Fresh Berries & Live Counter Haggling!',
   '493 Gen 1–4 Species Ready for Adoption!',
-  'Watch Kecleon Count Every Pokédollar!',
+  'Watch Clerk Leo Tally Every Pokédollar!',
 ];
 
 export function MainMenu({
@@ -41,7 +45,10 @@ export function MainMenu({
   onPlay,
   onSwitchProfile,
   onCreateProfile,
+  onToggleBgmMute,
   onToggleMute,
+  onChangeBgmVolume,
+  onChangeSfxVolume,
   onOpenSaveModal,
   onOpenCredits,
 }: MainMenuProps) {
@@ -77,10 +84,10 @@ export function MainMenu({
           <div className="relative">
             <h1 className="pmd-title">PokéMart: Low Cortisol Shift</h1>
             <div className="mt-1.5 flex flex-wrap items-center gap-x-6 gap-y-1.5">
-              <span className="font-[family-name:var(--font-display)] text-[11px] tracking-[0.18em] text-[#dbe8ff] uppercase">
+              <span className="pmd-text-shadow text-sm font-semibold tracking-wider text-[#dbe8ff] uppercase">
                 GEN 4 PET SHOP &amp; COUNTER TYCOON
               </span>
-              <span className="pmd-splash inline-block -rotate-2 text-xs font-bold sm:text-sm">
+              <span className="pmd-splash inline-block -rotate-2 text-sm font-semibold sm:text-base">
                 {SPLASH_LINES[splashIndex]}
               </span>
             </div>
@@ -88,28 +95,31 @@ export function MainMenu({
 
           {/* Quick Fan Badges Bar (Top Right) */}
           <div className="flex flex-wrap items-center gap-2">
-            <div className="pmd-pill flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold">
+            <div className="pmd-pill pmd-num flex items-center gap-1.5 px-3 py-1 text-sm font-semibold">
               <span className="text-[#ffd84d]">₽</span>
-              <span className="font-mono">{activeState.cash.toLocaleString()}</span>
+              <span>{activeState.cash.toLocaleString()}</span>
             </div>
-            <button
-              type="button"
-              onClick={onToggleMute}
-              className="pmd-btn px-2.5 py-1 text-xs font-bold"
-            >
-              SFX: {activeState.muted ? 'Muted' : 'On'}
-            </button>
+            <AudioControls
+              bgmMuted={Boolean(activeState.bgmMuted)}
+              sfxMuted={Boolean(activeState.muted)}
+              bgmVolume={activeState.bgmVolume ?? 0.35}
+              sfxVolume={activeState.sfxVolume ?? 0.65}
+              onToggleBgmMute={onToggleBgmMute}
+              onToggleSfxMute={onToggleMute}
+              onChangeBgmVolume={onChangeBgmVolume}
+              onChangeSfxVolume={onChangeSfxVolume}
+            />
             <button
               type="button"
               onClick={onOpenSaveModal}
-              className="pmd-btn px-2.5 py-1 text-xs font-bold"
+              className="pmd-btn px-3 py-1 text-sm font-semibold"
             >
               Save / Profiles
             </button>
             <button
               type="button"
               onClick={onOpenCredits}
-              className="pmd-btn px-2.5 py-1 text-xs font-bold"
+              className="pmd-btn px-3 py-1 text-sm font-semibold"
             >
               Credits
             </button>
@@ -128,10 +138,10 @@ export function MainMenu({
                 className="pmd-btn-gold flex flex-col items-center justify-center gap-2 px-4 py-5 text-center"
               >
                 <ItemIcon slug="poke-ball" name="Open Store" size={44} />
-                <span className="font-[family-name:var(--font-display)] text-xl font-bold tracking-wide">
+                <span className="pmd-heading-display text-2xl tracking-wider">
                   PLAY
                 </span>
-                <span className="text-xs font-bold text-[#3b2200]">
+                <span className="text-sm font-semibold text-[#3b2200]">
                   {activeState.isBankrupt
                     ? 'Inspect Bankrupt Shop'
                     : `Open ${activeState.profileName}'s Store`}
@@ -144,7 +154,7 @@ export function MainMenu({
                   <div className="flex items-center justify-between gap-2">
                     <label
                       htmlFor="menu-profile-select"
-                      className="text-xs font-bold text-[#ffd84d]"
+                      className="text-sm font-semibold text-[#ffd84d]"
                     >
                       Shift Manager Profile
                     </label>
@@ -152,7 +162,7 @@ export function MainMenu({
                       type="button"
                       aria-expanded={creatorOpen}
                       onClick={() => setCreatorOpen((prev) => !prev)}
-                      className="pmd-btn px-2 py-0.5 text-[11px] font-bold text-[#ffd84d]"
+                      className="pmd-btn px-2.5 py-0.5 text-xs font-semibold text-[#ffd84d]"
                     >
                       {creatorOpen ? 'Cancel' : '+ New Trainer'}
                     </button>
@@ -162,7 +172,7 @@ export function MainMenu({
                     aria-label="Shift Manager Profile"
                     value={profileIndex.activeProfileId}
                     onChange={(e) => onSwitchProfile(e.target.value)}
-                    className="mt-1.5 w-full border-2 border-[#78a8f0] bg-[#0a1430] px-2.5 py-1.5 text-xs font-bold text-white"
+                    className="mt-1.5 w-full border-2 border-[#78a8f0] bg-[#0a1430] px-2.5 py-1.5 text-sm font-medium text-white"
                   >
                     {profileIndex.profiles.map((meta) => (
                       <option key={meta.id} value={meta.id}>
@@ -172,12 +182,12 @@ export function MainMenu({
                   </select>
                 </div>
 
-                <div className="border-t border-[#2e4d88] pt-2 text-xs">
+                <div className="border-t border-[#2e4d88] pt-2 text-sm">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-[#a8c4f0]">Active Mode:</span>
-                    <span className="font-bold text-[#ffd84d]">{activeDiff.name}</span>
+                    <span className="font-medium text-[#b5d4ff]">Active Mode:</span>
+                    <span className="font-semibold text-[#ffd84d]">{activeDiff.name}</span>
                   </div>
-                  <p className="mt-1 text-[11px] leading-snug text-[#d4e3ff]">
+                  <p className="mt-1 text-xs leading-snug text-[#d4e3ff]">
                     {activeDiff.tagline}
                   </p>
                 </div>
@@ -192,14 +202,14 @@ export function MainMenu({
                 className="pmd-inset space-y-3 border-2 border-[#ffd84d] p-3"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h2 className="text-sm font-bold text-[#ffd84d]">New Trainer Profile</h2>
-                  <span className="text-[11px] text-[#a8c4f0]">
+                  <h2 className="text-base font-semibold text-[#ffd84d]">New Trainer Profile</h2>
+                  <span className="text-xs text-[#b5d4ff]">
                     Local isolated save • Pick partner &amp; stakes
                   </span>
                 </div>
 
                 <div>
-                  <label htmlFor="new-trainer-name" className="block text-xs font-bold text-[#dbe8ff]">
+                  <label htmlFor="new-trainer-name" className="block text-sm font-semibold text-[#dbe8ff]">
                     Trainer Name
                   </label>
                   <input
@@ -210,13 +220,13 @@ export function MainMenu({
                     placeholder="e.g. Dawn, Lucas, Cynthia..."
                     value={trainerName}
                     onChange={(e) => setTrainerName(e.target.value)}
-                    className="mt-1 w-full border-2 border-[#78a8f0] bg-[#0a1430] px-2.5 py-1.5 text-xs text-white placeholder:text-[#6f8ec2]"
+                    className="mt-1 w-full border-2 border-[#78a8f0] bg-[#0a1430] px-2.5 py-1.5 text-sm text-white placeholder:text-[#6f8ec2]"
                   />
                 </div>
 
                 {/* 6 Bundled Iconic Starter Mascots */}
                 <div>
-                  <div className="mb-1.5 text-xs font-bold text-[#dbe8ff]">
+                  <div className="mb-1.5 text-sm font-semibold text-[#dbe8ff]">
                     Pick Starter Mascot (Starts in Pen #1)
                   </div>
                   <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6">
@@ -236,7 +246,7 @@ export function MainMenu({
                           }`}
                         >
                           <PokemonSprite speciesId={speciesId} name={sp.name} size={40} />
-                          <span className="text-[11px] font-bold text-white">{sp.name}</span>
+                          <span className="text-xs font-semibold text-white">{sp.name}</span>
                         </button>
                       );
                     })}
@@ -245,7 +255,7 @@ export function MainMenu({
 
                 {/* 3-Tier Difficulty Box styled after PokéSurvivor */}
                 <div>
-                  <div className="mb-1.5 text-xs font-bold text-[#dbe8ff]">Difficulty Mode</div>
+                  <div className="mb-1.5 text-sm font-semibold text-[#dbe8ff]">Difficulty Mode</div>
                   <div className="grid gap-2 sm:grid-cols-3">
                     {DIFFICULTY_LIST.map((diff) => {
                       const active = selectedDiff === diff.id;
@@ -255,19 +265,19 @@ export function MainMenu({
                           type="button"
                           aria-pressed={active}
                           onClick={() => setSelectedDiff(diff.id)}
-                          className={`flex flex-col items-start gap-1 border-2 p-2 text-left ${
+                          className={`flex flex-col items-start gap-1 border-2 p-2.5 text-left ${
                             active
                               ? 'border-[#ffd84d] bg-[#214284]'
                               : 'border-[#3a61a3] bg-[#0d1c40] hover:border-[#78a8f0]'
                           }`}
                         >
                           <div className="flex w-full items-center justify-between gap-1">
-                            <span className="text-xs font-bold text-[#ffd84d]">{diff.name}</span>
-                            <span className="font-mono text-[10px] text-[#a8d0ff]">
+                            <span className="text-sm font-semibold text-[#ffd84d]">{diff.name}</span>
+                            <span className="pmd-num text-xs text-[#b5d4ff]">
                               ₽{diff.startingCash.toLocaleString()}
                             </span>
                           </div>
-                          <div className="text-[10px] leading-tight text-[#d2e2ff]">
+                          <div className="pmd-num text-xs leading-snug text-[#d2e2ff]">
                             Rent ₽{diff.baseRent}+/d • {diff.debtGraceShifts} Grace •{' '}
                             {diff.id === 'high-stakes'
                               ? 'VIP Rk4+'
@@ -280,7 +290,7 @@ export function MainMenu({
                 </div>
 
                 <div className="flex justify-end gap-2 pt-1">
-                  <button type="submit" className="pmd-btn-gold px-4 py-1.5 text-xs font-bold">
+                  <button type="submit" className="pmd-btn-gold px-4 py-2 text-sm font-semibold">
                     Create Trainer &amp; Save
                   </button>
                 </div>
@@ -289,27 +299,27 @@ export function MainMenu({
 
             {/* 3-Tier Difficulty Quick Preview Strip */}
             {!creatorOpen && (
-              <div className="pmd-inset grid gap-2 p-2.5 text-[11px] sm:grid-cols-3">
+              <div className="pmd-inset grid gap-2 p-2.5 text-xs sm:grid-cols-3">
                 {DIFFICULTY_LIST.map((diff) => {
                   const isCurrent = diff.id === activeState.difficulty;
                   return (
                     <div
                       key={diff.id}
-                      className={`border px-2 py-1.5 ${
+                      className={`border px-2.5 py-2 ${
                         isCurrent
                           ? 'border-[#ffd84d] bg-[#1a3772]'
-                          : 'border-[#2e4d88] bg-[#0b1634]/80 opacity-80'
+                          : 'border-[#2e4d88] bg-[#0b1634]/80 opacity-85'
                       }`}
                     >
-                      <div className="flex items-center justify-between font-bold">
+                      <div className="flex items-center justify-between font-semibold">
                         <span className={isCurrent ? 'text-[#ffd84d]' : 'text-[#dbe8ff]'}>
                           {diff.name}
                         </span>
-                        <span className="font-mono text-[10px] text-[#9ec4ff]">
+                        <span className="pmd-num text-xs text-[#9ec4ff]">
                           Rent ₽{diff.baseRent}
                         </span>
                       </div>
-                      <div className="mt-0.5 text-[10px] text-[#a8c4f0]">
+                      <div className="pmd-num mt-0.5 text-xs text-[#b5d4ff]">
                         {diff.debtGraceShifts} Debt Grace • Bankrupt at &lt;₽0
                       </div>
                     </div>
@@ -325,8 +335,8 @@ export function MainMenu({
             className="pmd-panel mx-auto w-full max-w-sm space-y-3 p-4"
           >
             <div className="flex items-center justify-between border-b-2 border-[#4e78bd] pb-2">
-              <h2 className="text-sm font-bold text-[#ffd84d]">Your Mascot</h2>
-              <span className="border border-[#ffd84d] bg-[#142958] px-2 py-0.5 text-[10px] font-bold text-[#ffd84d]">
+              <h2 className="text-base font-semibold text-[#ffd84d]">Your Mascot</h2>
+              <span className="border border-[#ffd84d] bg-[#142958] px-2.5 py-0.5 text-xs font-semibold text-[#ffd84d]">
                 {activeDiff.name}
               </span>
             </div>
@@ -341,15 +351,15 @@ export function MainMenu({
                   className="pmd-float-bob"
                 />
               </div>
-              <div className="mt-2.5 text-base font-bold text-white">
+              <div className="mt-2.5 text-base font-semibold text-white">
                 {mascotMon?.isShiny ? '✨ Shiny ' : ''}
                 {mascotSpecies.name}
               </div>
-              <div className="mt-1 flex flex-wrap justify-center gap-1">
+              <div className="mt-1 flex flex-wrap justify-center gap-1.5">
                 {mascotSpecies.types.map((t) => (
                   <span
                     key={t}
-                    className="border border-[#78a8f0] bg-[#152d63] px-2 py-0.5 text-[10px] font-bold uppercase text-[#ffd84d]"
+                    className="border border-[#78a8f0] bg-[#152d63] px-2.5 py-0.5 text-xs font-semibold uppercase text-[#ffd84d]"
                   >
                     {t}
                   </span>
@@ -357,10 +367,10 @@ export function MainMenu({
               </div>
             </div>
 
-            <div className="pmd-inset space-y-1.5 p-2.5 text-xs">
+            <div className="pmd-inset space-y-1.5 p-3 text-sm">
               <div className="flex items-center justify-between">
-                <span className="font-bold text-[#a8c4f0]">Rank {rankInfo.rank}</span>
-                <span className="text-[11px] font-bold text-[#ffd84d]">{rankInfo.title}</span>
+                <span className="pmd-num font-semibold text-[#b5d4ff]">Rank {rankInfo.rank}</span>
+                <span className="text-xs font-semibold text-[#ffd84d]">{rankInfo.title}</span>
               </div>
               <progress
                 aria-label="Shop Rank XP progress"
@@ -368,7 +378,7 @@ export function MainMenu({
                 value={rankInfo.progressPct}
                 className="h-2 w-full accent-[#ffd84d]"
               />
-              <div className="flex items-center justify-between text-[11px] text-[#cfe0ff]">
+              <div className="pmd-num flex items-center justify-between text-xs text-[#cfe0ff]">
                 <span>Shift #{activeState.shiftNumber}</span>
                 <span>
                   Pokédex: {dexSummary.discoveredSpecies}/{dexSummary.totalSpecies}
@@ -379,7 +389,7 @@ export function MainMenu({
         </main>
 
         {/* Quiet Bottom-Left Fan Credits */}
-        <footer className="pt-2 text-left text-[11px] text-[#dbe8ff]/85">
+        <footer className="pt-2 text-left text-xs text-[#dbe8ff]/90">
           <div className="inline-block border border-[#3a61a3]/70 bg-[#0c1733]/80 px-2.5 py-1">
             <strong>PokéMart: Low Cortisol Shift</strong> — Simple, completely free fan project made
             for entertainment only • Sprites: PMDCollab/SpriteCollab (CC BY-NC 4.0) • Pokémon ©

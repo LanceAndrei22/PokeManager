@@ -62,14 +62,14 @@ export function HealingStationPanel({
                       size={56}
                     />
                     <div>
-                      <h4 className="text-sm font-bold text-white">
+                      <h4 className="text-base font-semibold text-white">
                         {mon.isShiny ? '✨ ' : ''}
                         {species.name}
                       </h4>
-                      <div className="text-[11px] font-bold text-[#6ee7a0]">
+                      <div className="text-xs font-medium text-[#6ee7a0]">
                         {mon.trait} • Cute {mon.stats.cute} • Comfort {mon.stats.comfort}
                       </div>
-                      <div className="mt-1 text-xs font-bold text-[#ffd84d]">
+                      <div className="pmd-num mt-1 text-sm text-[#ffd84d]">
                         Rested: {mon.healingProgress}%
                       </div>
                     </div>
@@ -77,7 +77,7 @@ export function HealingStationPanel({
                   <button
                     type="button"
                     onClick={() => onInspectPokemon(mon.uid)}
-                    className="pmd-btn px-2 py-0.5 text-[11px] font-bold"
+                    className="pmd-btn px-2.5 py-1 text-xs font-semibold"
                   >
                     Inspect
                   </button>
@@ -92,7 +92,7 @@ export function HealingStationPanel({
 
                 <div className="mt-2.5 flex flex-wrap gap-1.5 border-t border-[#3b60a0] pt-2">
                   {availableCare.length === 0 ? (
-                    <span className="text-[11px] text-[#a8c4f0]">
+                    <span className="text-xs text-[#b5d4ff]">
                       Buy Berries or Moomoo Milk in Supplies to speed recovery.
                     </span>
                   ) : (
@@ -104,7 +104,7 @@ export function HealingStationPanel({
                           key={slug}
                           type="button"
                           onClick={() => onUseCareItem(mon.uid, slug)}
-                          className="pmd-btn-emerald inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-bold"
+                          className="pmd-btn-emerald inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold"
                         >
                           <ItemIcon slug={slug} name={def.name} size={16} />
                           <span>

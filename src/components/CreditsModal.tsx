@@ -1,6 +1,7 @@
 /**
  * Credits & Fan Project Disclaimer Modal styled in PMD Navy & Gold.
- * Highlights non-commercial attribution for PMDCollab/SpriteCollab (CC BY-NC 4.0),
+ * Documents non-commercial attribution for PMDCollab/SpriteCollab (CC BY-NC 4.0),
+ * pret/pokeemerald tilesets & overworld trainers, Pokémon Showdown portraits,
  * PokeAPI Gen 1–4 data, and self-hosted SIL OFL pixel fonts.
  */
 import { CozyDialog } from './CozyDialog';
@@ -13,35 +14,40 @@ export interface CreditsModalProps {
 export function CreditsModal({ open, onClose }: CreditsModalProps) {
   return (
     <CozyDialog open={open} onClose={onClose} title="Credits &amp; Fan Disclaimer">
-      <div className="space-y-3 text-xs leading-relaxed text-[#dbe8ff]">
+      <div className="space-y-3 text-sm leading-relaxed text-[#dbe8ff]">
         <section className="pmd-inset space-y-1.5 p-3">
-          <h2 className="text-sm font-bold text-[#ffd84d]">Free Non-Commercial Fan Project</h2>
+          <h2 className="text-base font-semibold text-[#ffd84d]">Free Non-Commercial Fan Project</h2>
           <p>
             <strong>PokéMart: Low Cortisol Shift</strong> is a simple, completely free fan project made
             strictly for entertainment purposes only — no ads, no paywalls, and no monetization.
           </p>
-          <p className="text-[#a8c4f0]">
-            Pokémon, PokéMart, Kecleon, and all species names/concepts belong to{' '}
+          <p className="text-[#b5d4ff]">
+            Pokémon, PokéMart, and all species/trainer concepts belong to{' '}
             <strong>Nintendo, Creatures Inc., and GAME FREAK</strong>.
           </p>
         </section>
 
         <section className="pmd-inset space-y-1.5 p-3">
-          <h2 className="text-sm font-bold text-[#ffd84d]">PMD Animated Sprites &amp; Portraits</h2>
+          <h2 className="text-base font-semibold text-[#ffd84d]">PMD Pokémon Sprites &amp; Portraits</h2>
           <p>
             All 493 Gen 1–4 (#001 Bulbasaur to #493 Arceus) multi-frame animations, shiny spritesheets,
-            portraits, and shopkeeper/shopper Pokémon NPCs are provided by the community{' '}
+            and portraits are provided by the community{' '}
             <strong>PMDCollab / SpriteCollab</strong> repository under{' '}
             <strong className="text-[#ffd84d]">CC BY-NC 4.0</strong>.
           </p>
         </section>
 
         <section className="pmd-inset space-y-1.5 p-3">
-          <h2 className="text-sm font-bold text-[#ffd84d]">Data, Icons &amp; Pixel Fonts</h2>
-          <ul className="list-disc space-y-1 pl-4 text-[#cfe0ff]">
-            <li>National Dex species metadata, types, evolutions, and item icons: PokeAPI (MIT / BSD).</li>
+          <h2 className="text-base font-semibold text-[#ffd84d]">Tilesets, Trainers, Data &amp; Audio</h2>
+          <ul className="list-disc space-y-1 pl-5 text-[#cfe0ff]">
+            <li>
+              Outdoor meadow, PokéMart indoor tilesets, and Human Trainer overworlds: decompiled tiles
+              from <strong>pret/pokeemerald</strong> plus cohesive GBA-palette custom Pet Shop stations.
+            </li>
+            <li>Human Trainer counter negotiation portraits: <strong>Pokémon Showdown</strong> sprites.</li>
+            <li>National Dex species metadata, evolutions, and item icons: PokeAPI (MIT / BSD).</li>
             <li>Self-hosted pixel typography: Pixelify Sans &amp; Silkscreen (SIL Open Font License 1.1).</li>
-            <li>Zero-KB Web Audio API cozy chiptune synthesizer &amp; procedural indoor tile art.</li>
+            <li>Original dual BGM tracks &amp; Web Audio API SFX synthesizer built cleanly in-browser.</li>
           </ul>
         </section>
       </div>

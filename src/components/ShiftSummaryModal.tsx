@@ -27,7 +27,7 @@ export function ShiftSummaryModal({ summary, onStartNextShift }: ShiftSummaryMod
       allowLightDismiss={false}
       title={`Shift #${summary.shiftNumber} Complete — Ledger Recap`}
     >
-      <div className="space-y-4 text-xs text-[#e2eeff]">
+      <div className="space-y-4 text-sm text-[#e2eeff]">
         {summary.usedDebtGrace && (
           <div className="border-2 border-[#ffd84d] bg-[#523700] p-3 text-[#ffeaa3]">
             <strong>Debt Grace Invoked!</strong> Today&apos;s dues exceeded cash on hand, using 1
@@ -36,36 +36,36 @@ export function ShiftSummaryModal({ summary, onStartNextShift }: ShiftSummaryMod
           </div>
         )}
 
-        <p className="text-[#cfe0ff]">
+        <p className="text-sm leading-relaxed text-[#dbe8ff]">
           {summary.closedEarly
             ? 'Closed doors early for ledger tally and pen cleaning.'
-            : 'Closing bell chimed! Kecleon tallied the counter register.'}{' '}
-          Market Trend: <strong className="text-[#ffd84d]">{summary.trendTitle}</strong>.
+            : 'Closing bell chimed! Clerk Leo tallied the counter register.'}{' '}
+          Market Trend: <strong className="font-semibold text-[#ffd84d]">{summary.trendTitle}</strong>.
         </p>
 
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-          <div className="pmd-inset p-2.5">
-            <div className="text-[10px] text-[#a8c4f0]">Adoption Sales</div>
-            <div className="font-mono text-base font-bold text-[#6ee7a0]">
+          <div className="pmd-inset p-3">
+            <div className="text-xs font-medium text-[#b5d4ff]">Adoption Sales</div>
+            <div className="pmd-num pmd-text-shadow mt-0.5 text-lg text-[#6ee7a0]">
               ₽{summary.revenue.toLocaleString()}
             </div>
           </div>
-          <div className="pmd-inset p-2.5">
-            <div className="text-[10px] text-[#a8c4f0]">Tips Earned</div>
-            <div className="font-mono text-base font-bold text-[#ffd84d]">
+          <div className="pmd-inset p-3">
+            <div className="text-xs font-medium text-[#b5d4ff]">Tips Earned</div>
+            <div className="pmd-num pmd-text-shadow mt-0.5 text-lg text-[#ffd84d]">
               +₽{summary.tipsEarned.toLocaleString()}
             </div>
           </div>
-          <div className="pmd-inset p-2.5">
-            <div className="text-[10px] text-[#a8c4f0]">Wholesale Spend</div>
-            <div className="font-mono text-base font-bold text-white">
+          <div className="pmd-inset p-3">
+            <div className="text-xs font-medium text-[#b5d4ff]">Wholesale Spend</div>
+            <div className="pmd-num pmd-text-shadow mt-0.5 text-lg text-white">
               ₽{summary.expenses.toLocaleString()}
             </div>
           </div>
-          <div className="pmd-inset p-2.5">
-            <div className="text-[10px] text-[#a8c4f0]">Cash After Dues</div>
+          <div className="pmd-inset p-3">
+            <div className="text-xs font-medium text-[#b5d4ff]">Cash After Dues</div>
             <div
-              className={`font-mono text-base font-bold ${
+              className={`pmd-num pmd-text-shadow mt-0.5 text-lg ${
                 summary.cashAfterDues >= 0 ? 'text-[#6ee7a0]' : 'text-[#ff8f85]'
               }`}
             >
@@ -75,28 +75,34 @@ export function ShiftSummaryModal({ summary, onStartNextShift }: ShiftSummaryMod
         </div>
 
         {/* Daily Rent & Upkeep Breakdown */}
-        <div className="pmd-inset grid grid-cols-2 gap-2 p-2.5 sm:grid-cols-4">
+        <div className="pmd-inset grid grid-cols-2 gap-3 p-3 sm:grid-cols-4">
           <div>
-            <div className="text-[10px] text-[#a8c4f0]">Daily Rent</div>
-            <div className="font-mono font-bold text-white">₽{summary.dailyRent.toLocaleString()}</div>
+            <div className="text-xs font-medium text-[#b5d4ff]">Daily Rent</div>
+            <div className="pmd-num mt-0.5 text-base text-white">
+              ₽{summary.dailyRent.toLocaleString()}
+            </div>
           </div>
           <div>
-            <div className="text-[10px] text-[#a8c4f0]">Pen Upkeep</div>
-            <div className="font-mono font-bold text-white">₽{summary.penUpkeep.toLocaleString()}</div>
+            <div className="text-xs font-medium text-[#b5d4ff]">Pen Upkeep</div>
+            <div className="pmd-num mt-0.5 text-base text-white">
+              ₽{summary.penUpkeep.toLocaleString()}
+            </div>
           </div>
           <div>
-            <div className="text-[10px] text-[#a8c4f0]">Nap Bed Upkeep</div>
-            <div className="font-mono font-bold text-white">₽{summary.bedUpkeep.toLocaleString()}</div>
+            <div className="text-xs font-medium text-[#b5d4ff]">Nap Bed Upkeep</div>
+            <div className="pmd-num mt-0.5 text-base text-white">
+              ₽{summary.bedUpkeep.toLocaleString()}
+            </div>
           </div>
           <div>
-            <div className="text-[10px] text-[#a8c4f0]">Total Dues Paid</div>
-            <div className="font-mono font-bold text-[#ffd84d]">
+            <div className="text-xs font-medium text-[#b5d4ff]">Total Dues Paid</div>
+            <div className="pmd-num mt-0.5 text-base text-[#ffd84d]">
               ₽{summary.totalDues.toLocaleString()}
             </div>
           </div>
         </div>
 
-        <div className="pmd-inset flex flex-wrap gap-3 px-3 py-2 font-bold text-[#a8d0ff]">
+        <div className="pmd-inset pmd-num flex flex-wrap gap-3 px-3.5 py-2.5 text-sm text-[#c4deff]">
           <span>Adoptions: {summary.adoptionsCount}</span>
           <span>•</span>
           <span>Walk-outs: {summary.walkoutsCount}</span>
@@ -116,7 +122,7 @@ export function ShiftSummaryModal({ summary, onStartNextShift }: ShiftSummaryMod
             type="button"
             autoFocus
             onClick={onStartNextShift}
-            className="pmd-btn-gold px-4 py-2 text-sm font-bold"
+            className="pmd-btn-gold px-5 py-2 text-base font-semibold"
           >
             Start Next Shift (#{summary.shiftNumber + 1})
           </button>

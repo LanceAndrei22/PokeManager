@@ -131,12 +131,12 @@ export function SaveTransferModal({
                     />
                     <div>
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="font-bold text-white">{meta.name}</span>
-                        <span className="border border-[#78a8f0] bg-[#13295c] px-1.5 py-0.5 text-[10px] font-bold text-[#a8d0ff]">
+                        <span className="font-semibold text-white">{meta.name}</span>
+                        <span className="border border-[#78a8f0] bg-[#13295c] px-2 py-0.5 text-xs font-semibold text-[#b5d4ff]">
                           {diff.name}
                         </span>
                         {isActive && (
-                          <span className="border border-[#2ecc71] bg-[#14472c] px-1.5 py-0.5 text-[10px] font-bold text-[#9effc3]">
+                          <span className="border border-[#2ecc71] bg-[#14472c] px-2 py-0.5 text-xs font-semibold text-[#9effc3]">
                             Active
                           </span>
                         )}
@@ -184,7 +184,7 @@ export function SaveTransferModal({
           </div>
 
           <form onSubmit={handleCreate} className="space-y-2 border-t border-[#3b60a0] pt-2.5">
-            <div className="text-[11px] font-bold text-[#ffd84d]">Create New Trainer Profile</div>
+            <div className="text-sm font-semibold text-[#ffd84d]">Create New Trainer Profile</div>
             <div className="flex flex-wrap gap-2">
               <input
                 type="text"
@@ -245,10 +245,10 @@ export function SaveTransferModal({
             readOnly
             rows={3}
             value={exportCode}
-            className="w-full border-2 border-[#4e78bd] bg-[#091229] p-2 font-mono text-[11px] text-[#cfe0ff]"
+            className="w-full border-2 border-[#4e78bd] bg-[#091229] p-2.5 font-mono text-xs text-[#cfe0ff]"
           />
 
-          <label className="block pt-1 font-bold text-[#e2eeff]">
+          <label className="block pt-1 text-sm font-semibold text-[#e2eeff]">
             <span>Import Save Code (replaces current active profile data)</span>
             <textarea
               aria-label="Import Save Code"
@@ -256,7 +256,7 @@ export function SaveTransferModal({
               placeholder="Paste Base64 save code here..."
               value={importInput}
               onChange={(e) => setImportInput(e.target.value)}
-              className="mt-1 w-full border-2 border-[#4e78bd] bg-[#091229] p-2 font-mono text-[11px] text-white placeholder:text-[#6f8ec2]"
+              className="mt-1 w-full border-2 border-[#4e78bd] bg-[#091229] p-2.5 font-mono text-xs text-white placeholder:text-[#6f8ec2]"
             />
           </label>
           <div className="flex justify-end">

@@ -57,11 +57,11 @@ export function DisplayPensPanel({
       {/* Global Pricing & Checkout Ribbon Bar */}
       <div className="pmd-inset grid gap-4 p-3 sm:grid-cols-2">
         <div>
-          <div className="flex items-center justify-between text-xs font-bold">
+          <div className="flex items-center justify-between text-sm font-semibold">
             <label htmlFor="global-markup-slider" className="text-[#ffd84d]">
               Global Shop Markup
             </label>
-            <span className="font-mono text-sm text-[#6ee7a0]">{globalMarkup}%</span>
+            <span className="pmd-num text-base text-[#6ee7a0]">{globalMarkup}%</span>
           </div>
           <input
             id="global-markup-slider"
@@ -75,13 +75,13 @@ export function DisplayPensPanel({
             onChange={(e) => onChangeGlobalMarkup(Number(e.target.value))}
             className="pmd-slider mt-1"
           />
-          <p className="text-[11px] text-[#a8c4f0]">
+          <p className="text-xs text-[#b5d4ff]">
             80%–105% delights Bargain Browsers; 125%+ suits Collectors &amp; Shiny Seekers.
           </p>
         </div>
 
         <div>
-          <div className="text-xs font-bold text-[#ffd84d]">Checkout Gift-Wrap Ribbon</div>
+          <div className="text-sm font-semibold text-[#ffd84d]">Checkout Gift-Wrap Ribbon</div>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {GIFT_BALL_OPTIONS.map((slug) => {
               const def = getItemDefinition(slug);
@@ -95,13 +95,13 @@ export function DisplayPensPanel({
                   disabled={disabled}
                   onClick={() => onSelectGiftBall(slug)}
                   title={def.description}
-                  className={`inline-flex items-center gap-1 px-2 py-1 text-[11px] font-bold ${
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold ${
                     selected ? 'pmd-btn-gold' : 'pmd-btn'
                   }`}
                 >
                   <ItemIcon slug={slug} name={def.name} size={18} />
                   <span>{def.name.replace(' Wrap', '')}</span>
-                  <span className="font-mono text-[10px]">({count})</span>
+                  <span className="pmd-num text-xs">({count})</span>
                 </button>
               );
             })}
@@ -111,7 +111,7 @@ export function DisplayPensPanel({
 
       {/* Display Pen Grid */}
       <div>
-        <h3 className="mb-2 text-sm font-bold text-[#ffd84d]">
+        <h3 className="mb-2 text-base font-semibold text-[#ffd84d]">
           Display Pens ({penMons.length}/{penCapacity})
         </h3>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -124,10 +124,10 @@ export function DisplayPensPanel({
               return (
                 <div
                   key={penIndex}
-                  className="pmd-inset flex min-h-[140px] flex-col items-center justify-center border-dashed border-[#4e78bd] p-3 text-center text-xs text-[#a8c4f0]"
+                  className="pmd-inset flex min-h-[140px] flex-col items-center justify-center border-dashed border-[#4e78bd] p-3 text-center text-sm text-[#b5d4ff]"
                 >
-                  <div className="font-bold text-white">Display Pen #{penIndex + 1}</div>
-                  <div className="mt-1">Empty — move a companion from Reserve or Wholesale!</div>
+                  <div className="font-semibold text-white">Display Pen #{penIndex + 1}</div>
+                  <div className="mt-1 text-xs">Empty — move a companion from Reserve or Wholesale!</div>
                 </div>
               );
             }
@@ -153,29 +153,29 @@ export function DisplayPensPanel({
                       size={56}
                     />
                     <div>
-                      <div className="text-[10px] font-bold text-[#a8c4f0]">Pen #{penIndex + 1}</div>
-                      <h4 className="text-sm font-bold text-white">
+                      <div className="pmd-num text-xs font-semibold text-[#b5d4ff]">Pen #{penIndex + 1}</div>
+                      <h4 className="text-base font-semibold text-white">
                         {mon.isShiny ? '✨ ' : ''}
                         {species.name}
                       </h4>
-                      <div className="text-[11px] font-bold text-[#6ee7a0]">{mon.trait}</div>
+                      <div className="text-xs font-semibold text-[#6ee7a0]">{mon.trait}</div>
                       {trendMatch && (
-                        <span className="mt-0.5 inline-block border border-[#ffd84d] bg-[#5c3e00] px-1.5 py-0.5 text-[10px] font-bold text-[#ffd84d]">
+                        <span className="mt-0.5 inline-block border border-[#ffd84d] bg-[#5c3e00] px-1.5 py-0.5 text-xs font-semibold text-[#ffd84d]">
                           Trend Boost!
                         </span>
                       )}
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-mono text-sm font-bold text-[#ffd84d]">
+                    <div className="pmd-num text-base text-[#ffd84d]">
                       ~₽{valuation.askingPrice.toLocaleString()}
                     </div>
-                    <div className="text-[10px] text-[#a8c4f0]">{effectiveMarkup}% tag</div>
+                    <div className="pmd-num text-xs text-[#b5d4ff]">{effectiveMarkup}% tag</div>
                   </div>
                 </div>
 
-                <div className="mt-2 flex items-center justify-between gap-2 border-t border-[#3b60a0] pt-2 text-[11px]">
-                  <label className="flex items-center gap-1 font-bold text-[#a8c4f0]">
+                <div className="mt-2 flex items-center justify-between gap-2 border-t border-[#3b60a0] pt-2 text-xs">
+                  <label className="flex items-center gap-1 font-semibold text-[#b5d4ff]">
                     <span>Tag:</span>
                     <select
                       aria-label={`Pen ${penIndex + 1} markup`}
@@ -186,7 +186,7 @@ export function DisplayPensPanel({
                           e.target.value === 'global' ? null : Number(e.target.value),
                         )
                       }
-                      className="border border-[#78a8f0] bg-[#0a1430] px-1.5 py-0.5 text-[11px] font-bold text-white"
+                      className="border border-[#78a8f0] bg-[#0a1430] px-1.5 py-0.5 text-xs font-semibold text-white"
                     >
                       <option value="global">Global ({globalMarkup}%)</option>
                       <option value="90">90% Quick</option>
@@ -200,14 +200,14 @@ export function DisplayPensPanel({
                     <button
                       type="button"
                       onClick={() => onMovePokemon(mon.uid, 'reserve')}
-                      className="pmd-btn px-2 py-0.5 font-bold"
+                      className="pmd-btn px-2 py-0.5 font-semibold"
                     >
                       Rest
                     </button>
                     <button
                       type="button"
                       onClick={() => onInspectPokemon(mon.uid)}
-                      className="pmd-btn-emerald px-2.5 py-0.5 font-bold"
+                      className="pmd-btn-emerald px-2.5 py-0.5 font-semibold"
                     >
                       Inspect
                     </button>
@@ -221,11 +221,11 @@ export function DisplayPensPanel({
 
       {/* Reserve Kennel */}
       <div>
-        <h3 className="mb-2 text-sm font-bold text-[#ffd84d]">
+        <h3 className="mb-2 text-base font-semibold text-[#ffd84d]">
           Reserve Kennel ({reserveMons.length})
         </h3>
         {reserveMons.length === 0 ? (
-          <p className="pmd-inset px-3 py-2.5 text-xs text-[#a8c4f0]">
+          <p className="pmd-inset px-3 py-2.5 text-sm text-[#b5d4ff]">
             No Pokémon waiting in the back kennel. Extra hatches or rested strays wait here.
           </p>
         ) : (
@@ -245,11 +245,11 @@ export function DisplayPensPanel({
                       size={44}
                     />
                     <div>
-                      <div className="text-xs font-bold text-white">
+                      <div className="text-sm font-semibold text-white">
                         {mon.isShiny ? '✨ ' : ''}
                         {species.name}
                       </div>
-                      <div className="text-[11px] text-[#a8c4f0]">
+                      <div className="text-xs text-[#b5d4ff]">
                         {mon.trait} • Cute {mon.stats.cute}
                       </div>
                     </div>
@@ -258,14 +258,14 @@ export function DisplayPensPanel({
                     <button
                       type="button"
                       onClick={() => onMovePokemon(mon.uid, 'pen')}
-                      className="pmd-btn-emerald px-2 py-1 text-[11px] font-bold"
+                      className="pmd-btn-emerald px-2 py-1 text-xs font-semibold"
                     >
                       To Pen
                     </button>
                     <button
                       type="button"
                       onClick={() => onInspectPokemon(mon.uid)}
-                      className="pmd-btn px-2 py-1 text-[11px] font-bold"
+                      className="pmd-btn px-2 py-1 text-xs font-semibold"
                     >
                       Inspect
                     </button>
