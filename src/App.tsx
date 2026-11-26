@@ -226,6 +226,9 @@ export function App() {
         )}
 
         <ShopFloorPreview
+          profileId={game.profileId}
+          cash={game.cash}
+          shiftSpeed={game.shiftSpeed}
           penCapacity={penCapacity}
           napBedCapacity={napBedCapacity}
           pokemon={game.pokemon}

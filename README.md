@@ -10,6 +10,7 @@ A lightweight, static 2D pixel-art Pokémon pet shop, stray healing center, and 
 
 ## Cozy Gameplay Highlights
 
+- **Animated Cozy 2D Shop Floor:** Watch crisp pixelated Pokémon Platinum sprites hop, breathe, flip directions, and nap in warm oak display pens and plush beds while strolling shoppers display archetype thought bubbles and hearts, `Zzz`, sparkles, and `+₽` coins float upward (with a Pause animation toggle and `prefers-reduced-motion` support).
 - **Zero-Stress Live-Tick Shifts:** Open the shop floor at `1×` or `2×` speed, pause anytime, or click **Close Shift & Rest** to review your **Shift Summary**—with no rent penalties, no bankruptcy, and no angry customer walk-outs.
 - **Rotating Wholesale & Rescue Catalog:** Welcome healthy adoptables, discounted tired strays needing plush nap recovery, and Mystery Eggs every shift alongside a stocked **Shop Supplies & Stones** shelf.
 - **Cozy Market Trends & 4 Customer Archetypes:** Adapt to shifting daily trends (*Rainy Afternoon Nap*, *Tea Club Visit*, *Sinnoh Park Stroll*, etc.), avoid gentle oversupply saturation penalties, tune global or per-pen markup sliders (`80%–160%`), and welcome *Cozy Collectors*, *Bargain Browsers*, *Trend Fans*, and *Shiny Seekers*.
@@ -24,7 +25,7 @@ A lightweight, static 2D pixel-art Pokémon pet shop, stray healing center, and 
 ## Tech Stack
 
 - **Frontend:** Vite 8 + React 19 + TypeScript + Tailwind CSS v4 (`@tailwindcss/vite`)
-- **Shop Floor Rendering:** Crisp pixelated static Platinum preview (Phase 4); animated HTML5 2D Canvas shop floor planned for Phase 5
+- **Shop Floor Rendering:** Plain HTML5 2D Canvas with crisp `imageSmoothingEnabled = false` integer-scaled Platinum sprites, procedural pixel tiles/particles, off-screen caching, and accessible DOM controls
 - **Sprites & Icons:** Curated **45 Pokémon Platinum (Gen 4, 80×80)** Normal & Shiny species + **17 Gen 4 pixel item icons** (`63.6 KB` / `0.062 MB` total bundled size)
 - **Audio:** Zero-KB Web Audio API sine/triangle chiptune synthesizer
 - **Testing:** Vitest + React Testing Library (`jsdom`)
@@ -48,7 +49,7 @@ D:\PokeManager\
 ├── src/
 │   ├── data/                  # Species, items, trends, archetypes, upgrades, manifest
 │   ├── engine/                # Pure simulation, economy, breeding, healing, storage, SFX
-│   ├── canvas/                # Phase 5: HTML5 2D Canvas shop floor & Platinum animations
+│   ├── canvas/                # HTML5 2D Canvas shop floor, Platinum animations, shoppers & particles
 │   └── components/            # Cozy React + Tailwind UI panels & native <dialog> modals
 └── tests/                     # Engine unit tests & React Testing Library UI tests
 ```
