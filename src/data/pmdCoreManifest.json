@@ -1,9 +1,10 @@
 {
-  "0052": {
+  "0263": {
     "anims": [
       "Walk",
       "Idle",
-      "Sleep"
+      "Sleep",
+      "Hop"
     ],
     "portrait": true
   },
@@ -11,7 +12,17 @@
     "anims": [
       "Walk",
       "Idle",
-      "Sleep"
+      "Sleep",
+      "Hop"
+    ],
+    "portrait": true
+  },
+  "0052": {
+    "anims": [
+      "Walk",
+      "Idle",
+      "Sleep",
+      "Hop"
     ],
     "portrait": true
   },
@@ -19,23 +30,8 @@
     "anims": [
       "Walk",
       "Idle",
-      "Sleep"
-    ],
-    "portrait": true
-  },
-  "0263": {
-    "anims": [
-      "Walk",
-      "Idle",
-      "Sleep"
-    ],
-    "portrait": true
-  },
-  "0040": {
-    "anims": [
-      "Walk",
-      "Idle",
-      "Sleep"
+      "Sleep",
+      "Hop"
     ],
     "portrait": true
   },
@@ -43,15 +39,17 @@
     "anims": [
       "Walk",
       "Idle",
-      "Sleep"
+      "Sleep",
+      "Hop"
     ],
     "portrait": true
   },
-  "0279": {
+  "0040": {
     "anims": [
       "Walk",
       "Idle",
-      "Sleep"
+      "Sleep",
+      "Hop"
     ],
     "portrait": true
   },
@@ -59,23 +57,17 @@
     "anims": [
       "Walk",
       "Idle",
-      "Sleep"
+      "Sleep",
+      "Hop"
     ],
     "portrait": true
   },
-  "0272": {
+  "0279": {
     "anims": [
       "Walk",
       "Idle",
-      "Sleep"
-    ],
-    "portrait": true
-  },
-  "0053": {
-    "anims": [
-      "Walk",
-      "Idle",
-      "Sleep"
+      "Sleep",
+      "Hop"
     ],
     "portrait": true
   },
@@ -83,7 +75,26 @@
     "anims": [
       "Walk",
       "Idle",
-      "Sleep"
+      "Sleep",
+      "Hop"
+    ],
+    "portrait": true
+  },
+  "0272": {
+    "anims": [
+      "Walk",
+      "Idle",
+      "Sleep",
+      "Hop"
+    ],
+    "portrait": true
+  },
+  "0053": {
+    "anims": [
+      "Walk",
+      "Idle",
+      "Sleep",
+      "Hop"
     ],
     "portrait": true
   },
@@ -91,7 +102,8 @@
     "anims": [
       "Walk",
       "Idle",
-      "Sleep"
+      "Sleep",
+      "Hop"
     ],
     "portrait": true
   },
@@ -99,7 +111,8 @@
     "anims": [
       "Walk",
       "Idle",
-      "Sleep"
+      "Sleep",
+      "Hop"
     ],
     "portrait": true
   },
@@ -107,7 +120,8 @@
     "anims": [
       "Walk",
       "Idle",
-      "Sleep"
+      "Sleep",
+      "Hop"
     ],
     "portrait": true
   },
@@ -115,7 +129,8 @@
     "anims": [
       "Walk",
       "Idle",
-      "Sleep"
+      "Sleep",
+      "Hop"
     ],
     "portrait": true
   },
@@ -123,7 +138,8 @@
     "anims": [
       "Walk",
       "Idle",
-      "Sleep"
+      "Sleep",
+      "Hop"
     ],
     "portrait": true
   },
@@ -131,7 +147,8 @@
     "anims": [
       "Walk",
       "Idle",
-      "Sleep"
+      "Sleep",
+      "Hop"
     ],
     "portrait": true
   },
@@ -139,7 +156,8 @@
     "anims": [
       "Walk",
       "Idle",
-      "Sleep"
+      "Sleep",
+      "Hop"
     ],
     "portrait": true
   },
@@ -147,7 +165,8 @@
     "anims": [
       "Walk",
       "Idle",
-      "Sleep"
+      "Sleep",
+      "Hop"
     ],
     "portrait": true
   },
@@ -155,7 +174,8 @@
     "anims": [
       "Walk",
       "Idle",
-      "Sleep"
+      "Sleep",
+      "Hop"
     ],
     "portrait": true
   },
@@ -163,7 +183,8 @@
     "anims": [
       "Walk",
       "Idle",
-      "Sleep"
+      "Sleep",
+      "Hop"
     ],
     "portrait": true
   }

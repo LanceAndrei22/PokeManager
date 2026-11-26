@@ -415,24 +415,31 @@ async function main() {
     const outDir = path.join(PMD_DIR, padded);
     await fs.mkdir(outDir, { recursive: true });
 
-    const [animXml, walkBuf, idleBuf, sleepBuf, portraitBuf] = await Promise.all([
+    const [animXml, walkBuf, idleBuf, sleepBuf, hopBuf, portraitBuf] = await Promise.all([
       fetchBuffer(`${SPRITECOLLAB_BASE}/sprite/${padded}/AnimData.xml`),
       fetchBuffer(`${SPRITECOLLAB_BASE}/sprite/${padded}/Walk-Anim.png`),
       fetchBuffer(`${SPRITECOLLAB_BASE}/sprite/${padded}/Idle-Anim.png`),
       fetchBuffer(`${SPRITECOLLAB_BASE}/sprite/${padded}/Sleep-Anim.png`),
+      fetchBuffer(`${SPRITECOLLAB_BASE}/sprite/${padded}/Hop-Anim.png`).catch(() => null),
       fetchBuffer(`${SPRITECOLLAB_BASE}/portrait/${padded}/Normal.png`),
     ]);
 
-    await Promise.all([
+    const writes = [
       fs.writeFile(path.join(outDir, 'AnimData.xml'), animXml),
       fs.writeFile(path.join(outDir, 'Walk-Anim.png'), walkBuf),
       fs.writeFile(path.join(outDir, 'Idle-Anim.png'), idleBuf),
       fs.writeFile(path.join(outDir, 'Sleep-Anim.png'), sleepBuf),
       fs.writeFile(path.join(outDir, 'Normal.png'), portraitBuf),
-    ]);
+    ];
+    const anims = ['Walk', 'Idle', 'Sleep'];
+    if (hopBuf) {
+      writes.push(fs.writeFile(path.join(outDir, 'Hop-Anim.png'), hopBuf));
+      anims.push('Hop');
+    }
+    await Promise.all(writes);
 
     coreManifest[padded] = {
-      anims: ['Walk', 'Idle', 'Sleep'],
+      anims,
       portrait: true,
     };
   });
