@@ -1,13 +1,16 @@
 /**
  * Full-screen Indoor Gen 4 PokéMart pixel renderer:
- * - Caches tiled GBA PokéMart architecture (`floor-tile`, `wall-tile`, `clock-wall`,
- *   `shelf-blue`, `plant-pot`, `counter-left/mid/right`, `pen-grass` + `pen-fence`,
- *   `healing-rug` + `healing-bed`, `mat`, `upgrades-board`) into an offscreen background layer.
- * - Renders live dynamic states every frame: sliding glass entrance doors (`door-closed` /
- *   `door-open` + `OPEN`/`CLOSED`), Human Store Clerk Leo (`mart_employee`) behind the
- *   register, blinking Wholesale PC (`pc-terminal`), glowing Egg Incubator (`incubator-pod` +
- *   wobbling eggs), depth-sorted 100% PMD SpriteCollab store Pokémon, Human Trainer shoppers,
- *   queued register shoppers with Patience Bars & `!` badges, hover highlights, and particles.
+ * - Caches cohesive Gen 4 PokéMart architecture (`floor-tile`, `wall-tile`, `clock-wall`,
+ *   `plant-pot`, `mat`, Checkout Welcome Mat, wall-mounted oak Upgrades Board, Organic
+ *   Habitat Display Pens with floor drop shadows, and modular braided-rug Resting Corner).
+ * - Layers live dynamic elements with true 2.5D Y-depth:
+ *   1. Sliding glass entrance doors (`OPEN`/`CLOSED`),
+ *   2. Clerk Leo standing physically *behind* the deep Gen 4 Checkout Counter (legs occluded
+ *      naturally by the counter desk top, cash register, and Poké Ball display case),
+ *   3. Standing Wholesale PC Kiosk flush against the back wall with subtle monitor glow,
+ *   4. Physical Egg Incubator oak-and-glass pedestal with wobbling eggs,
+ *   5. Depth-sorted grounded PMD Pokémon (with opaque-foot contact shadows), Pen front fence
+ *      rails, and grounded Human Trainer shoppers with tightly anchored head indicators.
  */
 import type { CustomerArchetypeId } from '../data/types';
 import {
@@ -19,6 +22,7 @@ import {
   type Pose,
 } from './animation';
 import { getHumanNpcFrame, type CardinalDirection } from './humanNpcAnimator';
+import { drawOrganicPenHabitat } from './organicTerrain';
 import { particleAlpha, type Particle } from './particles';
 import {
   COIN,
@@ -28,7 +32,6 @@ import {
   ICON_COLORS,
   LETTER_Z,
   PALETTE,
-  PC_ICON,
   SHOPPER_FRAMES,
   SPARKLE,
   STAR,
@@ -77,18 +80,11 @@ const BUBBLE_ICONS: Record<CustomerArchetypeId, PixelBitmap> = {
 
 const HAIR_COLORS = ['#3c2918', '#7a4a2a', '#c27c3e', '#2f3a56', '#8e5b9a', '#d9a441'];
 const POKE_BALL: PixelBitmap = ['.rrrr.', 'rrrrrr', 'kkwwkk', 'wwwwww', '.wwww.'];
-const BALL_COLORS = { r: '#e04848', k: PALETTE.woodDeep, w: PALETTE.white };
+const BALL_COLORS = { r: '#e04848', k: '#1c2436', w: '#f7fafc' };
 const HOVER_CARET: PixelBitmap = ['yyyyy', '.yyy.', '..y..'];
 
 function seam(unit: number): number {
   return Math.max(1, Math.round(unit / 2));
-}
-
-function hash(n: number): number {
-  let h = Math.imul(n ^ 0x9e3779b9, 0x85ebca6b);
-  h ^= h >>> 13;
-  h = Math.imul(h, 0xc2b2ae35);
-  return (h ^ (h >>> 16)) >>> 0;
 }
 
 function computeFrameDrawSize(
@@ -146,30 +142,112 @@ function drawMartFloor(ctx: CanvasRenderingContext2D, layout: ShopLayout): void 
   if (floorTile) {
     const step = layout.unit * 16;
     tileImageRect(ctx, floorTile, floorRect, step, step);
+    // Subtle ground ambient shadow right along the base of the back wall
+    ctx.fillStyle = 'rgba(12, 24, 42, 0.14)';
+    ctx.fillRect(0, layout.wall.h, layout.width, layout.unit * 2);
     return;
   }
   drawPlankFloor(ctx, floorRect, layout.unit);
 }
 
+/** Renders the physical oak-framed Upgrades Notice Board mounted directly on the back wall. */
+function drawWallUpgradesBoard(ctx: CanvasRenderingContext2D, layout: ShopLayout): void {
+  const b = layout.upgradesStation;
+  const u = layout.unit;
+
+  // Soft cast shadow onto the PokéMart wall beneath the oak frame
+  ctx.fillStyle = 'rgba(10, 20, 38, 0.28)';
+  ctx.fillRect(b.x + u * 2, b.y + u * 2, b.w, b.h + u);
+
+  // Dark pixel outline + warm mitered oak wood border
+  ctx.fillStyle = '#2d1c0f';
+  ctx.fillRect(b.x, b.y, b.w, b.h);
+  ctx.fillStyle = '#8b5e36';
+  ctx.fillRect(b.x + u, b.y + u, b.w - u * 2, b.h - u * 2);
+  ctx.fillStyle = '#a87849';
+  ctx.fillRect(b.x + u, b.y + u, b.w - u * 2, u);
+
+  // Warm woven corkboard backing
+  const innerX = b.x + u * 3;
+  const innerY = b.y + u * 3;
+  const innerW = Math.max(u * 6, b.w - u * 6);
+  const innerH = Math.max(u * 6, b.h - u * 7);
+  ctx.fillStyle = '#c49a6c';
+  ctx.fillRect(innerX, innerY, innerW, innerH);
+  ctx.fillStyle = '#b18659';
+  for (let py = innerY + u; py < innerY + innerH - u; py += u * 3) {
+    for (let px = innerX + u; px < innerX + innerW - u; px += u * 4) {
+      ctx.fillRect(px, py, u, seam(u));
+    }
+  }
+
+  // Pinned store blueprint & notice sheets with tiny red/gold pushpins
+  const sheet1W = Math.max(u * 6, Math.round(innerW * 0.34));
+  const sheet1H = Math.max(u * 5, Math.round(innerH * 0.68));
+  const s1x = innerX + u * 2;
+  const s1y = innerY + u * 2;
+  ctx.fillStyle = 'rgba(20, 14, 8, 0.22)';
+  ctx.fillRect(s1x + seam(u), s1y + seam(u), sheet1W, sheet1H);
+  ctx.fillStyle = '#fdf4d3';
+  ctx.fillRect(s1x, s1y, sheet1W, sheet1H);
+  ctx.fillStyle = '#8f7d5e';
+  ctx.fillRect(s1x + u, s1y + u * 3, sheet1W - u * 2, seam(u));
+  ctx.fillRect(s1x + u, s1y + u * 5, sheet1W - u * 3, seam(u));
+  ctx.fillStyle = '#d94638';
+  ctx.fillRect(s1x + Math.round(sheet1W / 2) - seam(u), s1y + seam(u), u, u);
+
+  const sheet2W = Math.max(u * 7, Math.round(innerW * 0.42));
+  const sheet2H = Math.max(u * 6, Math.round(innerH * 0.72));
+  const s2x = innerX + innerW - sheet2W - u * 2;
+  const s2y = innerY + u * 1.5;
+  ctx.fillStyle = 'rgba(20, 14, 8, 0.22)';
+  ctx.fillRect(s2x + seam(u), s2y + seam(u), sheet2W, sheet2H);
+  ctx.fillStyle = '#6db6eb';
+  ctx.fillRect(s2x, s2y, sheet2W, sheet2H);
+  ctx.fillStyle = '#d7f0ff';
+  ctx.fillRect(s2x + u, s2y + u * 2, sheet2W - u * 2, seam(u));
+  ctx.fillRect(s2x + u, s2y + u * 4, Math.round(sheet2W * 0.6), seam(u));
+  ctx.fillRect(s2x + u, s2y + u * 6, sheet2W - u * 3, seam(u));
+  ctx.fillStyle = '#ffd84d';
+  ctx.fillRect(s2x + Math.round(sheet2W / 2) - seam(u), s2y + seam(u), u, u);
+
+  // Small integrated brass/navy label bar embedded on the bottom wood molding
+  const label = 'UPGRADES';
+  ctx.font = `700 ${Math.max(8, Math.round(u * 3.1))}px "Chakra Petch", sans-serif`;
+  const tagW = Math.min(b.w - u * 4, Math.ceil(ctx.measureText(label).width) + u * 4);
+  const tagH = Math.max(u * 4.5, 10);
+  const tagX = Math.round(b.x + (b.w - tagW) / 2);
+  const tagY = Math.round(b.y + b.h - tagH + seam(u));
+  ctx.fillStyle = '#13244b';
+  ctx.fillRect(tagX, tagY, tagW, tagH);
+  ctx.strokeStyle = '#ffd84d';
+  ctx.lineWidth = Math.max(1, seam(u));
+  ctx.strokeRect(tagX, tagY, tagW, tagH);
+  ctx.fillStyle = '#ffd84d';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, tagX + tagW / 2, tagY + tagH / 2, tagW - u * 2);
+  ctx.textAlign = 'start';
+}
+
 function drawMartWall(ctx: CanvasRenderingContext2D, layout: ShopLayout): void {
   const { wall, unit: u, width } = layout;
   const wallImg = getTileImage('indoor', 'wall-tile');
-  const shelfImg = getTileImage('indoor', 'shelf-blue');
   const plantImg = getTileImage('indoor', 'plant-pot');
   const clockImg = getTileImage('indoor', 'clock-wall');
 
   if (wallImg) {
-    // Upper Gen 4 PokéMart ceiling molding + wainscot + GBA wall-tile band
+    // Upper Gen 4 PokéMart royal-blue ceiling cornice + crisp light paneling + GBA wall band
     ctx.fillStyle = '#1b3d7a';
-    ctx.fillRect(wall.x, wall.y, wall.w, Math.max(u * 4, Math.round(wall.h * 0.2)));
-    ctx.fillStyle = '#dde6f0';
+    ctx.fillRect(wall.x, wall.y, wall.w, Math.max(u * 4, Math.round(wall.h * 0.18)));
+    ctx.fillStyle = '#e2eaf3';
     ctx.fillRect(wall.x, wall.y + u * 4, wall.w, Math.max(0, wall.h - u * 4));
-    ctx.fillStyle = '#c8d6e8';
+    ctx.fillStyle = '#cad7e8';
     for (let x = 0; x < width; x += u * 16) {
       ctx.fillRect(x, wall.y + u * 4, seam(u), wall.h - u * 4);
     }
     const tileW = u * 16;
-    const bandH = Math.min(wall.h - u * 4, u * 32);
+    const bandH = Math.min(wall.h - u * 4, u * 30);
     const bandY = wall.h - bandH;
     for (let x = 0; x < width; x += tileW) {
       ctx.drawImage(wallImg, x, bandY, tileW, bandH);
@@ -177,66 +255,61 @@ function drawMartWall(ctx: CanvasRenderingContext2D, layout: ShopLayout): void {
   } else {
     ctx.fillStyle = '#e8dfc9';
     ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
-    ctx.fillStyle = '#d8cbb0';
-    for (let row = 0, y = u * 4; y < wall.h - u * 12; row += 1, y += u * 6) {
-      for (let x = row % 2 === 0 ? 0 : u * 4; x < width; x += u * 8) {
-        ctx.fillRect(x, y, u, u);
-      }
-    }
-    const wainTop = wall.h - u * 11;
+    const wainTop = wall.h - u * 12;
     ctx.fillStyle = '#2d5ca8';
     ctx.fillRect(0, wainTop, width, wall.h - wainTop);
     ctx.fillStyle = '#4e7dd1';
     ctx.fillRect(0, wainTop, width, u);
-    ctx.fillStyle = '#1b3d7a';
-    for (let x = u * 2; x < width; x += u * 6) {
-      ctx.fillRect(x, wainTop + u * 2, seam(u), wall.h - wainTop - u * 4);
-    }
   }
 
-  ctx.fillStyle = '#0c1733';
+  // Crisp baseboard trim separating wall and tile floor
+  ctx.fillStyle = '#13244b';
   ctx.fillRect(0, wall.h - u * 2, width, u * 2);
 
-  // Sunlit window
+  // Sunlit store window with sky pane & warm highlight
   const wRect = layout.window;
+  ctx.fillStyle = 'rgba(10, 20, 38, 0.2)';
+  ctx.fillRect(wRect.x + u, wRect.y + u, wRect.w, wRect.h + u);
   ctx.fillStyle = '#1b3d7a';
   ctx.fillRect(wRect.x, wRect.y, wRect.w, wRect.h);
   ctx.fillStyle = '#a5dcff';
   ctx.fillRect(wRect.x + u, wRect.y + u, wRect.w - u * 2, wRect.h - u * 2);
+  ctx.fillStyle = '#ccecff';
+  ctx.fillRect(wRect.x + u, wRect.y + u, wRect.w - u * 2, Math.round((wRect.h - u * 2) * 0.45));
   ctx.fillStyle = '#1b3d7a';
   ctx.fillRect(wRect.x + Math.round(wRect.w / 2) - seam(u), wRect.y, u, wRect.h);
   ctx.fillRect(wRect.x, wRect.y + Math.round(wRect.h / 2) - seam(u), wRect.w, u);
   ctx.fillStyle = '#ffffff';
-  ctx.fillRect(wRect.x + u * 2, wRect.y + u * 2, u * 2, u);
+  ctx.fillRect(wRect.x + u * 2, wRect.y + u * 2, u * 3, u);
 
-  // Wall clock & merchandise shelves flanking clear wall sections
+  // Wall clock positioned cleanly on the wall above the counter bay
   if (clockImg) {
-    const cs = u * 12;
-    const cx = Math.min(wRect.x - cs - u * 4, layout.counter.x + layout.counter.w + u * 6);
-    if (cx > layout.counter.x + layout.counter.w + u * 2) {
-      ctx.drawImage(clockImg, cx, wall.h - u * 28, cs, cs);
-    }
+    const cs = u * 11;
+    const cx = Math.round(layout.counter.x + layout.counter.w * 0.78);
+    const cy = Math.max(u * 6, layout.window.y + u * 2);
+    ctx.drawImage(clockImg, cx, cy, cs, cs);
   }
-  if (shelfImg) {
-    const sw = u * 28;
-    const sh = u * 28;
-    const shelfX = wRect.x + wRect.w + u * 6;
-    if (shelfX + sw < layout.door.x - u * 4) {
-      ctx.drawImage(shelfImg, shelfX, wall.h - sh + u * 2, sw, sh);
-    }
-  }
+
+  // Framed oak Upgrades Notice Board mounted directly on the upper-right wall
+  drawWallUpgradesBoard(ctx, layout);
+
+  // Grounded potted plants flanking outer wall edges with subtle floor contact shadows
   if (plantImg) {
     const pw = u * 12;
     const ph = u * 24;
     if (layout.counter.x - pw >= u * 2) {
-      ctx.drawImage(plantImg, layout.counter.x - pw, wall.h - ph + u * 2, pw, ph);
+      const px = layout.counter.x - pw - u;
+      drawPixelShadow(ctx, px + pw / 2, wall.h + u * 2, pw * 0.85, u, 0.26);
+      ctx.drawImage(plantImg, px, wall.h - ph + u * 3, pw, ph);
     }
     if (layout.door.x + layout.door.w + pw + u * 2 < width) {
-      ctx.drawImage(plantImg, layout.door.x + layout.door.w + u, wall.h - ph + u * 2, pw, ph);
+      const px = layout.door.x + layout.door.w + u * 2;
+      drawPixelShadow(ctx, px + pw / 2, wall.h + u * 2, pw * 0.85, u, 0.26);
+      ctx.drawImage(plantImg, px, wall.h - ph + u * 3, pw, ph);
     }
   }
 
-  // Pendant lamps
+  // Pendant ceiling lamps
   for (const lamp of layout.lamps) {
     ctx.fillStyle = '#24180d';
     ctx.fillRect(lamp.x - seam(u), 0, seam(u), lamp.y - u * 3);
@@ -247,47 +320,122 @@ function drawMartWall(ctx: CanvasRenderingContext2D, layout: ShopLayout): void {
   }
 }
 
-function drawStaticCounter(ctx: CanvasRenderingContext2D, layout: ShopLayout): void {
+/** Paints the cozy stitched Checkout Mat on the floor directly in front of the counter. */
+function drawCounterFloorMat(ctx: CanvasRenderingContext2D, layout: ShopLayout): void {
   const c = layout.counter;
   const u = layout.unit;
-  const leftImg = getTileImage('indoor', 'counter-left');
-  const midImg = getTileImage('indoor', 'counter-mid');
-  const rightImg = getTileImage('indoor', 'counter-right');
+  const matX = c.x + u * 4;
+  const matY = c.y + c.h + u * 4;
+  const matW = c.w - u * 8;
+  const matH = u * 18;
 
-  if (leftImg && midImg && rightImg) {
-    const endW = Math.min(u * 16, Math.round(c.w * 0.25));
-    const rightH = Math.round(c.h * 1.35);
-    ctx.drawImage(leftImg, c.x, c.y, endW, c.h);
-    const midArea: Rect = { x: c.x + endW, y: c.y, w: Math.max(0, c.w - endW * 2), h: c.h };
-    if (midArea.w > 0) {
-      tileImageRect(ctx, midImg, midArea, u * 16, c.h);
-    }
-    ctx.drawImage(rightImg, c.x + c.w - endW, c.y + c.h - rightH, endW, rightH);
-  } else {
-    ctx.fillStyle = PALETTE.wood;
-    ctx.fillRect(c.x, c.y + u * 2, c.w, c.h - u * 2);
-    ctx.fillStyle = '#7e5c3b';
-    for (let x = c.x + u * 8; x < c.x + c.w; x += u * 8) {
-      ctx.fillRect(x, c.y + u * 2, seam(u), c.h - u * 2);
-    }
-    ctx.fillStyle = PALETTE.woodDark;
-    ctx.fillRect(c.x - u, c.y, c.w + u * 2, u * 2);
+  // Soft woven royal-blue & cream checkout runner mat flush on the tile floor
+  ctx.fillStyle = '#223e73';
+  ctx.fillRect(matX, matY, matW, matH);
+  ctx.fillStyle = '#335a9e';
+  ctx.fillRect(matX + u, matY + u, matW - u * 2, matH - u * 2);
+  ctx.strokeStyle = '#d4e4ff';
+  ctx.lineWidth = Math.max(1, seam(u));
+  ctx.strokeRect(matX + u * 2, matY + u * 2, matW - u * 4, matH - u * 4);
+}
 
-    ctx.fillStyle = '#4d5d73';
-    ctx.fillRect(c.x + u * 3, c.y - u * 6, u * 10, u * 6);
-    ctx.fillStyle = '#78e0ff';
-    ctx.fillRect(c.x + u * 5, c.y - u * 5, u * 6, u * 2);
-    drawBitmap(ctx, POKE_BALL, c.x + c.w - u * 9, c.y - u * 5, u, BALL_COLORS);
+/**
+ * Draws the substantial, deep Gen 4 Checkout Counter foreground (desk top, front paneling,
+ * cash register, glass Poké Ball display stand, and brass-trimmed PokéMart emblem).
+ * Rendered AFTER `drawClerk` so Clerk Leo's legs are naturally occluded behind the counter!
+ */
+function drawCounterForeground(ctx: CanvasRenderingContext2D, layout: ShopLayout): void {
+  const c = layout.counter;
+  const u = layout.unit;
+
+  // Crisp grounded floor shadow cast below and right of the counter base
+  ctx.fillStyle = 'rgba(10, 22, 16, 0.26)';
+  ctx.fillRect(c.x + u * 2, c.y + c.h, c.w, u * 3);
+  ctx.fillRect(c.x + c.w, c.y + u * 3, u * 2, c.h);
+
+  const topDepth = Math.max(u * 8, Math.round(c.h * 0.4));
+  const frontY = c.y + topDepth;
+  const frontH = c.h - topDepth;
+
+  // Outer pixel border around counter body
+  ctx.fillStyle = '#142038';
+  ctx.fillRect(c.x - u, c.y, c.w + u * 2, c.h + u);
+
+  // Counter top plane: warm light-oak / cream Gen 4 beveled desk top
+  ctx.fillStyle = '#e7d7b8';
+  ctx.fillRect(c.x, c.y + u, c.w, topDepth - u);
+  ctx.fillStyle = '#f7edd8';
+  ctx.fillRect(c.x, c.y + u, c.w, u * 2);
+  // Front lip bevel of the counter desk
+  ctx.fillStyle = '#b99b6d';
+  ctx.fillRect(c.x, frontY - u * 2, c.w, u * 2);
+
+  // Vertical Gen 4 PokéMart blue & oak front paneling
+  ctx.fillStyle = '#26539c';
+  ctx.fillRect(c.x, frontY, c.w, frontH);
+  ctx.fillStyle = '#1b3e78';
+  ctx.fillRect(c.x, frontY + frontH - u * 3, c.w, u * 3);
+  ctx.fillStyle = '#4e83d4';
+  ctx.fillRect(c.x + u, frontY + u, c.w - u * 2, u);
+
+  // Recessed vertical panel grooves across the counter front
+  ctx.fillStyle = '#18376b';
+  const grooveStep = Math.max(u * 14, Math.round(c.w / 6));
+  for (let gx = c.x + grooveStep; gx < c.x + c.w - u * 4; gx += grooveStep) {
+    ctx.fillRect(gx, frontY + u * 2, seam(u), frontH - u * 5);
   }
 
-  // Crisp PokéMart signboard front plate in Pixelify Sans
+  // Left counter prop: Pixel Cash Register with glowing green screen
+  const regW = u * 14;
+  const regH = u * 10;
+  const regX = c.x + u * 5;
+  const regY = c.y - u * 4;
+  ctx.fillStyle = '#1c2638';
+  ctx.fillRect(regX, regY, regW, regH);
+  ctx.fillStyle = '#7c8ca3';
+  ctx.fillRect(regX + u, regY + u, regW - u * 2, regH - u * 2);
+  ctx.fillStyle = '#25334a';
+  ctx.fillRect(regX + u * 2, regY + u * 2, regW - u * 4, u * 3);
+  ctx.fillStyle = '#6ee7a0';
+  ctx.fillRect(regX + u * 3, regY + u * 3, regW - u * 6, u);
+  ctx.fillStyle = '#cfd9e8';
+  for (let k = 0; k < 4; k += 1) {
+    ctx.fillRect(regX + u * (2 + k * 2.5), regY + u * 6, u * 1.5, u);
+  }
+
+  // Right counter prop: Glass Poké Ball Display Stand showing 3 mini Poké Balls
+  const caseW = u * 22;
+  const caseH = u * 9;
+  const caseX = c.x + c.w - caseW - u * 6;
+  const caseY = c.y - u * 3;
+  ctx.fillStyle = '#1c2e4f';
+  ctx.fillRect(caseX, caseY, caseW, caseH);
+  ctx.fillStyle = '#a5dcff';
+  ctx.fillRect(caseX + u, caseY + u, caseW - u * 2, caseH - u * 3);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(caseX + u * 2, caseY + u, u * 3, u);
+  ctx.fillStyle = '#8b5e36';
+  ctx.fillRect(caseX + u, caseY + caseH - u * 2, caseW - u * 2, u);
+  const ballU = Math.max(1, Math.round(u * 0.72));
+  for (let i = 0; i < 3; i += 1) {
+    drawBitmap(
+      ctx,
+      POKE_BALL,
+      Math.round(caseX + u * 2.5 + i * u * 6.2),
+      Math.round(caseY + u * 2),
+      ballU,
+      BALL_COLORS,
+    );
+  }
+
+  // Brass-trimmed royal-navy PokéMart emblem centered on the front paneling
   const label = 'PokéMart';
-  ctx.font = `600 ${Math.max(10, Math.round(u * 4.2))}px "Chakra Petch", sans-serif`;
-  const plateW = Math.min(c.w - u * 6, Math.ceil(ctx.measureText(label).width) + u * 5);
+  ctx.font = `700 ${Math.max(10, Math.round(u * 4.2))}px "Chakra Petch", sans-serif`;
+  const plateW = Math.min(c.w - u * 10, Math.ceil(ctx.measureText(label).width) + u * 6);
+  const plateH = Math.min(frontH - u * 4, u * 7);
   const plateX = c.x + Math.round((c.w - plateW) / 2);
-  const plateY = c.y + Math.max(u * 2, Math.round(c.h * 0.22));
-  const plateH = Math.min(c.h - u * 3, u * 7);
-  ctx.fillStyle = '#13244b';
+  const plateY = frontY + Math.round((frontH - plateH) / 2) - seam(u);
+  ctx.fillStyle = '#0f1f44';
   ctx.fillRect(plateX, plateY, plateW, plateH);
   ctx.strokeStyle = '#ffd84d';
   ctx.lineWidth = Math.max(1, seam(u));
@@ -299,125 +447,169 @@ function drawStaticCounter(ctx: CanvasRenderingContext2D, layout: ShopLayout): v
   ctx.textAlign = 'start';
 }
 
+/** Paints an Organic Habitat Display Pen (floor shadow, mottled grass/dirt habitat, back & side wood borders). */
 function drawStaticPen(ctx: CanvasRenderingContext2D, pen: PenRect, u: number): void {
   const { inner } = pen;
-  const grassTile = getTileImage('indoor', 'pen-grass');
-  const fenceTile = getTileImage('indoor', 'pen-fence');
+  const rail = Math.max(u * 3, inner.x - pen.x);
 
-  ctx.fillStyle = '#6f4e2e';
+  // Subtle grounded drop shadow cast by the pen frame onto the PokéMart floor tiles
+  ctx.fillStyle = 'rgba(10, 22, 16, 0.24)';
+  ctx.fillRect(pen.x + u * 2, pen.y + pen.h, pen.w, u * 2.5);
+  ctx.fillRect(pen.x + pen.w, pen.y + u * 2, u * 2, pen.h);
+
+  // Outer stone/oak low habitat enclosure frame
+  ctx.fillStyle = '#362314';
   ctx.fillRect(pen.x, pen.y, pen.w, pen.h);
+  ctx.fillStyle = '#8d623b';
+  ctx.fillRect(pen.x + seam(u), pen.y + seam(u), pen.w - u, pen.h - u);
+  ctx.fillStyle = '#ab7d51';
+  ctx.fillRect(pen.x + u, pen.y + u, pen.w - u * 2, Math.max(u, rail - u * 2));
 
-  if (grassTile) {
-    tileImageRect(ctx, grassTile, inner, u * 16, u * 16);
-  } else {
-    ctx.fillStyle = '#f6e2a6';
-    ctx.fillRect(inner.x, inner.y, inner.w, inner.h);
-    const speckles = Math.floor((inner.w * inner.h) / (u * u * 44));
-    for (let i = 0; i < speckles; i += 1) {
-      const h = hash(i * 7 + pen.index * 1013);
-      const sx = inner.x + (h % Math.max(1, inner.w - u * 2));
-      const sy = inner.y + ((h >>> 11) % Math.max(1, inner.h - u));
-      ctx.fillStyle = h % 3 === 0 ? '#d9b257' : '#e7c46b';
-      ctx.fillRect(sx, sy, u * 2, seam(u));
-    }
-  }
+  // Organic indoor habitat ground (mottled meadow grass + dithered dirt basking spot + tufts)
+  drawOrganicPenHabitat(ctx, inner.x, inner.y, inner.w, inner.h, u, pen.index);
 
-  ctx.fillStyle = 'rgba(20, 40, 20, 0.14)';
+  // Subtle interior shadow along the top & left inner border for recessed soil depth
+  ctx.fillStyle = 'rgba(16, 36, 18, 0.22)';
   ctx.fillRect(inner.x, inner.y, inner.w, u * 2);
+  ctx.fillRect(inner.x, inner.y, u, inner.h);
 
-  if (fenceTile) {
-    const fw = Math.max(u * 4, inner.x - pen.x);
-    tileImageRect(ctx, fenceTile, { x: pen.x, y: pen.y, w: pen.w, h: fw }, u * 12, fw);
-    tileImageRect(
-      ctx,
-      fenceTile,
-      { x: pen.x, y: pen.y + pen.h - fw, w: pen.w, h: fw },
-      u * 12,
-      fw,
-    );
-  }
-
-  // Timber corner posts & borders
-  ctx.fillStyle = PALETTE.woodDark;
-  const post = u * 3;
-  const step = u * 14;
-  for (let x = pen.x; x <= pen.x + pen.w - post; x += step) {
-    ctx.fillRect(x, pen.y, post, post);
-    ctx.fillRect(x, pen.y + pen.h - post, post, post);
-  }
-  for (let y = pen.y; y <= pen.y + pen.h - post; y += step) {
-    ctx.fillRect(pen.x, y, post, post);
-    ctx.fillRect(pen.x + pen.w - post, y, post, post);
-  }
+  // Top & side wooden fence posts
+  const post = Math.max(u * 3, rail);
+  ctx.fillStyle = '#4e321b';
+  ctx.fillRect(pen.x, pen.y, post, post);
   ctx.fillRect(pen.x + pen.w - post, pen.y, post, post);
-  ctx.fillRect(pen.x + pen.w - post, pen.y + pen.h - post, post, post);
+  ctx.fillStyle = '#ba8e60';
+  ctx.fillRect(pen.x + seam(u), pen.y + seam(u), post - u, u);
+  ctx.fillRect(pen.x + pen.w - post + seam(u), pen.y + seam(u), post - u, u);
 
-  // Crisp pen label plate
-  ctx.font = `600 ${Math.max(10, Math.round(u * 4))}px "Chakra Petch", sans-serif`;
+  // Compact wooden/navy Pen number plaque nestled at the top-left corner
+  ctx.font = `600 ${Math.max(10, Math.round(u * 3.8))}px "Chakra Petch", sans-serif`;
   const label = `Pen ${pen.index + 1}`;
   const plateW = Math.ceil(ctx.measureText(label).width) + u * 4;
   const plateX = inner.x + u * 2;
   const plateY = inner.y + u * 2;
-  ctx.fillStyle = 'rgba(19, 36, 75, 0.92)';
-  ctx.fillRect(plateX - seam(u), plateY - seam(u), plateW + seam(u) * 2, u * 6 + seam(u) * 2);
+  ctx.fillStyle = 'rgba(19, 36, 75, 0.88)';
+  ctx.fillRect(plateX - seam(u), plateY - seam(u), plateW + seam(u) * 2, u * 5.5 + seam(u) * 2);
   ctx.fillStyle = '#ffd84d';
   ctx.textBaseline = 'middle';
-  ctx.fillText(label, plateX + u * 2, plateY + u * 3);
+  ctx.fillText(label, plateX + u * 2, plateY + u * 2.8);
 }
 
-function drawStaticBed(
+/**
+ * Draws the pen's bottom front timber rail in the Y-sorted entity pass so Pokémon walking
+ * near the front edge stay naturally *inside* the pen behind the front fence.
+ */
+function drawPenFrontRail(ctx: CanvasRenderingContext2D, pen: PenRect, u: number): void {
+  const railH = Math.max(u * 3, pen.inner.x - pen.x);
+  const railY = pen.y + pen.h - railH;
+  ctx.fillStyle = '#362314';
+  ctx.fillRect(pen.x, railY, pen.w, railH);
+  ctx.fillStyle = '#8d623b';
+  ctx.fillRect(pen.x + seam(u), railY + seam(u), pen.w - u, railH - u);
+  ctx.fillStyle = '#b48759';
+  ctx.fillRect(pen.x + u, railY + seam(u), pen.w - u * 2, u);
+
+  // Bottom-left and bottom-right timber corner post caps
+  const post = Math.max(u * 3, railH);
+  ctx.fillStyle = '#4e321b';
+  ctx.fillRect(pen.x, pen.y + pen.h - post, post, post);
+  ctx.fillRect(pen.x + pen.w - post, pen.y + pen.h - post, post, post);
+  ctx.fillStyle = '#c4986a';
+  ctx.fillRect(pen.x + seam(u), pen.y + pen.h - post + seam(u), post - u, u);
+  ctx.fillRect(pen.x + pen.w - post + seam(u), pen.y + pen.h - post + seam(u), post - u, u);
+}
+
+function drawCushionedBed(
   ctx: CanvasRenderingContext2D,
   bed: Rect,
   u: number,
   bedImg: HTMLImageElement | null,
 ): void {
+  // Subtle contact shadow directly beneath each wooden pet bed frame
+  ctx.fillStyle = 'rgba(18, 28, 22, 0.24)';
+  ctx.fillRect(bed.x + u, bed.y + bed.h, bed.w - u, u * 2);
+
   if (bedImg) {
     ctx.drawImage(bedImg, bed.x, bed.y, bed.w, bed.h);
     return;
   }
-  ctx.fillStyle = PALETTE.berry;
+
+  // Cozy oak-trimmed pet cushion bed fallback
+  ctx.fillStyle = '#4d321c';
   fillPixelRoundRect(ctx, bed.x, bed.y, bed.w, bed.h, u * 2);
-  ctx.fillStyle = PALETTE.berryLight;
+  ctx.fillStyle = PALETTE.berry;
   fillPixelRoundRect(ctx, bed.x + u, bed.y + u, bed.w - u * 2, bed.h - u * 2, u * 2);
+  ctx.fillStyle = PALETTE.berryLight;
+  fillPixelRoundRect(ctx, bed.x + u * 2, bed.y + u * 2, bed.w - u * 4, bed.h - u * 4, u);
   ctx.fillStyle = PALETTE.cream;
-  fillPixelRoundRect(ctx, bed.x + u * 3, bed.y + u * 2, bed.w - u * 6, Math.round(bed.h * 0.3), u);
-  const quiltY = bed.y + Math.round(bed.h * 0.64);
+  fillPixelRoundRect(ctx, bed.x + u * 4, bed.y + u * 3, bed.w - u * 8, Math.round(bed.h * 0.28), u);
+  const quiltY = bed.y + Math.round(bed.h * 0.62);
   ctx.fillStyle = '#f4d58a';
-  ctx.fillRect(bed.x + u, quiltY, bed.w - u * 2, u * 2);
+  ctx.fillRect(bed.x + u * 2, quiltY, bed.w - u * 4, u * 2);
 }
 
-function drawStationLabelBadge(
-  ctx: CanvasRenderingContext2D,
-  rect: Rect,
-  label: string,
-  u: number,
-): void {
-  ctx.font = `600 ${Math.max(10, Math.round(u * 3.8))}px "Chakra Petch", sans-serif`;
-  const badgeW = Math.min(rect.w - u * 2, Math.ceil(ctx.measureText(label).width) + u * 4);
-  const badgeH = u * 6;
-  const bx = Math.round(rect.x + (rect.w - badgeW) / 2);
-  const by = rect.y + rect.h - badgeH - u;
-  ctx.fillStyle = 'rgba(12, 23, 51, 0.9)';
-  ctx.fillRect(bx, by, badgeW, badgeH);
-  ctx.strokeStyle = '#78a8f0';
-  ctx.lineWidth = Math.max(1, seam(u));
-  ctx.strokeRect(bx, by, badgeW, badgeH);
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillStyle = '#eef5ff';
-  ctx.fillText(label, bx + badgeW / 2, by + badgeH / 2, badgeW - u * 2);
-  ctx.textAlign = 'start';
-}
-
-function drawStaticStations(ctx: CanvasRenderingContext2D, layout: ShopLayout): void {
+/**
+ * Modular renderer for the Resting / Nap Corner care alcove.
+ * Renders a warm woven-carpet & oak-trimmed rug sitting seamlessly on the PokéMart floor
+ * tiles with cushioned pixel beds (zero detached UI box), cleanly isolated for future
+ * Resting Pen expansions.
+ */
+export function drawRestingPensArea(ctx: CanvasRenderingContext2D, layout: ShopLayout): void {
+  const nap = layout.napArea;
   const u = layout.unit;
-  const matImg = getTileImage('indoor', 'mat');
   const rugImg = getTileImage('indoor', 'healing-rug');
   const bedImg = getTileImage('indoor', 'healing-bed');
-  const upgImg = getTileImage('indoor', 'upgrades-board');
 
-  // Entrance stone foyer + authentic welcome mat
+  // Subtle drop shadow + stitched oak carpet trim flush on the PokéMart floor tiles
+  ctx.fillStyle = 'rgba(12, 26, 18, 0.2)';
+  ctx.fillRect(nap.x + u, nap.y + nap.h, nap.w - u, u * 2);
+
+  ctx.fillStyle = '#5c4028';
+  fillPixelRoundRect(ctx, nap.x, nap.y, nap.w, nap.h, u * 2);
+
+  const innerRug: Rect = {
+    x: nap.x + u * 2,
+    y: nap.y + u * 2,
+    w: nap.w - u * 4,
+    h: nap.h - u * 4,
+  };
+  if (rugImg) {
+    tileImageRect(ctx, rugImg, innerRug, u * 16, u * 16);
+  } else {
+    ctx.fillStyle = '#cfe4c4';
+    ctx.fillRect(innerRug.x, innerRug.y, innerRug.w, innerRug.h);
+  }
+
+  // Woven sage-and-cream decorative inner border stitching
+  ctx.strokeStyle = '#e7f0d6';
+  ctx.lineWidth = Math.max(1, seam(u));
+  ctx.strokeRect(
+    innerRug.x + u * 1.5,
+    innerRug.y + u * 1.5,
+    innerRug.w - u * 3,
+    innerRug.h - u * 3,
+  );
+
+  // Small warm wooden plaque nestled at top-left of the Resting Corner rug
+  const label = 'Resting Corner';
+  ctx.font = `600 ${Math.max(10, Math.round(u * 3.6))}px "Chakra Petch", sans-serif`;
+  const tagW = Math.ceil(ctx.measureText(label).width) + u * 4;
+  ctx.fillStyle = '#3d2817';
+  ctx.fillRect(innerRug.x + u * 2, innerRug.y + u, tagW, u * 5.5);
+  ctx.fillStyle = '#f5dfb8';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, innerRug.x + u * 4, innerRug.y + u * 3.8);
+
+  for (const bed of layout.beds) {
+    drawCushionedBed(ctx, bed, u, bedImg);
+  }
+}
+
+function drawEntranceFoyer(ctx: CanvasRenderingContext2D, layout: ShopLayout): void {
+  const u = layout.unit;
+  const matImg = getTileImage('indoor', 'mat');
   const f = layout.foyer;
+
   ctx.fillStyle = '#6f7c91';
   ctx.fillRect(f.x, f.y, f.w, f.h);
   ctx.fillStyle = '#8b99b0';
@@ -431,61 +623,6 @@ function drawStaticStations(ctx: CanvasRenderingContext2D, layout: ShopLayout): 
     ctx.fillStyle = PALETTE.berry;
     ctx.fillRect(layout.door.x, f.y + u * 2, layout.door.w, matH);
   }
-
-  // Healing Corner rug & pixel pet beds
-  const nap = layout.napArea;
-  if (rugImg) {
-    tileImageRect(ctx, rugImg, nap, u * 16, u * 16);
-    ctx.strokeStyle = '#26532c';
-    ctx.lineWidth = Math.max(1, seam(u));
-    ctx.strokeRect(nap.x, nap.y, nap.w, nap.h);
-  } else {
-    ctx.fillStyle = '#d9ecd2';
-    fillPixelRoundRect(ctx, nap.x, nap.y, nap.w, nap.h, u * 2);
-  }
-  ctx.font = `600 ${Math.max(10, Math.round(u * 4))}px "Chakra Petch", sans-serif`;
-  const napTagW = Math.ceil(ctx.measureText('Nap Corner').width) + u * 4;
-  ctx.fillStyle = 'rgba(19, 36, 75, 0.9)';
-  ctx.fillRect(nap.x + u * 2, nap.y + u * 1.5, napTagW, u * 6);
-  ctx.fillStyle = '#9be89b';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('Nap Corner', nap.x + u * 4, nap.y + u * 4.5);
-  for (const bed of layout.beds) {
-    drawStaticBed(ctx, bed, u, bedImg);
-  }
-
-  // Base station pads for Incubator, PC Terminal, Upgrades Board
-  const stations: Array<{ rect: Rect; label: string; bg: string; border: string }> = [
-    { rect: layout.incubatorStation, label: 'Incubator', bg: '#213a66', border: '#6ee7a0' },
-    { rect: layout.pcStation, label: 'Wholesale PC', bg: '#1b315e', border: '#78e0ff' },
-    { rect: layout.upgradesStation, label: 'Upgrades', bg: '#4e3520', border: '#ffd84d' },
-  ];
-
-  for (const st of stations) {
-    ctx.fillStyle = '#070d1f';
-    ctx.fillRect(st.rect.x, st.rect.y, st.rect.w, st.rect.h);
-    ctx.fillStyle = st.bg;
-    ctx.fillRect(st.rect.x + u, st.rect.y + u, st.rect.w - u * 2, st.rect.h - u * 2);
-    ctx.fillStyle = st.border;
-    ctx.fillRect(st.rect.x + u, st.rect.y + u, st.rect.w - u * 2, seam(u));
-    drawStationLabelBadge(ctx, st.rect, st.label, u);
-  }
-
-  // Static oak Upgrades Board sprite when loaded
-  if (upgImg) {
-    const upg = layout.upgradesStation;
-    const maxW = upg.w - u * 6;
-    const maxH = upg.h - u * 10;
-    const drawW = Math.min(maxW, Math.round((maxH * 48) / 36));
-    const drawH = Math.min(maxH, Math.round((drawW * 36) / 48));
-    ctx.drawImage(
-      upgImg,
-      Math.round(upg.x + (upg.w - drawW) / 2),
-      Math.round(upg.y + u * 2),
-      drawW,
-      drawH,
-    );
-  }
 }
 
 /** Paints static indoor background geometry once per layout size / DPR / tileset decode. */
@@ -493,11 +630,12 @@ export function drawIndoorBackground(ctx: CanvasRenderingContext2D, layout: Shop
   ctx.imageSmoothingEnabled = false;
   drawMartFloor(ctx, layout);
   drawMartWall(ctx, layout);
-  drawStaticCounter(ctx, layout);
+  drawCounterFloorMat(ctx, layout);
+  drawEntranceFoyer(ctx, layout);
   for (const pen of layout.pens) {
     drawStaticPen(ctx, pen, layout.unit);
   }
-  drawStaticStations(ctx, layout);
+  drawRestingPensArea(ctx, layout);
 }
 
 /** Offscreen cache layer builder for `indoorRenderer`. */
@@ -522,8 +660,6 @@ function drawSlidingDoors(
   const u = layout.unit;
   const doorClosed = getTileImage('indoor', 'door-closed');
   const doorOpen = getTileImage('indoor', 'door-open');
-
-  // Door slides open smoothly when shoppers cross threshold (or partly invites during open shift)
   const slideOpen = world.doorOpenAmount > 0.2;
 
   ctx.fillStyle = '#1b3d7a';
@@ -550,7 +686,7 @@ function drawSlidingDoors(
     ctx.fillRect(d.x + u * 2, d.y + u * 3, u * 2, d.h - u * 8);
   }
 
-  // Crisp OPEN / CLOSED sign plaque in Pixelify Sans
+  // Crisp OPEN / CLOSED sign plaque above door
   const badgeH = u * 6;
   const badgeY = d.y - badgeH;
   ctx.fillStyle = shiftRunning ? '#1e8449' : '#b03a2e';
@@ -566,108 +702,194 @@ function drawSlidingDoors(
   ctx.textAlign = 'start';
 }
 
-function drawDynamicStations(
+/**
+ * Renders the standing Gen 4 PokéMart PC Kiosk flush against the back wall (beside the
+ * counter) with grounded floor shadow, live screen glow, and optional VIP! alert — zero
+ * detached dark UI container.
+ */
+function drawWholesalePcKiosk(
   ctx: CanvasRenderingContext2D,
   layout: ShopLayout,
   world: ShopWorld,
+  pulse: boolean,
 ): void {
-  const u = layout.unit;
-  const still = world.reducedMotion || world.motionPaused;
-  const pulse = still ? false : Math.floor(world.time * 2) % 2 === 0;
-  const incImg = getTileImage('indoor', 'incubator-pod');
-  const pcImg = getTileImage('indoor', 'pc-terminal');
-  const upgImg = getTileImage('indoor', 'upgrades-board');
-
-  // 1. Egg Incubator Pod + wobbling pixel eggs
-  const inc = layout.incubatorStation;
-  if (world.readyEggCount > 0) {
-    ctx.strokeStyle = pulse ? '#ffd84d' : '#f5b82e';
-    ctx.lineWidth = u;
-    ctx.strokeRect(inc.x + seam(u), inc.y + seam(u), inc.w - u, inc.h - u);
-  }
-  if (incImg) {
-    const maxH = inc.h - u * 10;
-    const drawH = Math.max(u * 12, maxH);
-    const drawW = Math.round((drawH * 32) / 36);
-    ctx.drawImage(incImg, Math.round(inc.x + (inc.w - drawW) / 2), Math.round(inc.y + u * 2), drawW, drawH);
-  }
-  const eggScale = Math.max(1, Math.round(u * 1.1));
-  const eggCountDraw = Math.min(3, Math.max(1, world.eggCount));
-  for (let i = 0; i < eggCountDraw; i += 1) {
-    const wobble = !still && world.eggCount > 0 ? Math.round(Math.sin(world.eggWobblePhase + i) * u * 0.9) : 0;
-    const ex = Math.round(
-      inc.x + inc.w * (eggCountDraw === 1 ? 0.5 : (i + 1) / (eggCountDraw + 1)) - 4 * eggScale + wobble,
-    );
-    const bob = !still && world.readyEggCount > 0 && pulse ? -u : 0;
-    const ey = Math.round(inc.y + inc.h * 0.38 - 3.5 * eggScale + bob);
-    if (world.eggCount > 0) {
-      drawBitmap(ctx, EGG_ICON, ex, ey, eggScale, ICON_COLORS);
-    } else if (!incImg) {
-      ctx.globalAlpha = 0.32;
-      drawBitmap(ctx, EGG_ICON, ex, ey, eggScale, ICON_COLORS);
-      ctx.globalAlpha = 1;
-    }
-  }
-
-  // 2. Wholesale PC Terminal + monitor pulse + VIP indicator
   const pc = layout.pcStation;
+  const u = layout.unit;
+  const pcImg = getTileImage('indoor', 'pc-terminal');
+
+  // Grounded contact shadow directly beneath the standing PC kiosk base
+  drawPixelShadow(ctx, pc.x + pc.w / 2, pc.y + pc.h - u, pc.w * 0.88, u, 0.30);
+
   if (pcImg) {
-    const maxH = pc.h - u * 10;
-    const drawH = Math.max(u * 12, maxH);
-    const drawW = Math.round((drawH * 16) / 24);
+    const drawH = pc.h - u * 4;
+    const drawW = Math.min(pc.w, Math.round((drawH * 16) / 24));
     const drawX = Math.round(pc.x + (pc.w - drawW) / 2);
     const drawY = Math.round(pc.y + u * 2);
     ctx.drawImage(pcImg, drawX, drawY, drawW, drawH);
-    // Live screen glow pixel rectangle overlay
+
+    // Subtle live monitor glow overlay inside the PC screen bezel
     ctx.fillStyle = world.hasVipContract
       ? pulse
         ? '#ffd84d'
         : '#f5b82e'
       : pulse
-        ? 'rgba(120, 224, 255, 0.72)'
+        ? 'rgba(120, 224, 255, 0.78)'
         : 'rgba(79, 183, 230, 0.45)';
     ctx.fillRect(
       drawX + Math.round(drawW * 0.2),
       drawY + Math.round(drawH * 0.16),
       Math.round(drawW * 0.6),
-      Math.round(drawH * 0.25),
+      Math.round(drawH * 0.24),
     );
   } else {
-    const pcScale = Math.max(1, Math.round(u * 1.3));
-    drawBitmap(
-      ctx,
-      PC_ICON,
-      Math.round(pc.x + pc.w / 2 - 4 * pcScale),
-      Math.round(pc.y + pc.h * 0.42 - 3.5 * pcScale),
-      pcScale,
-      {
-        b: world.hasVipContract ? '#f5b82e' : '#3b82f6',
-        c: world.hasVipContract ? (pulse ? '#ffd84d' : '#ffea85') : pulse ? '#78e0ff' : '#4fb7e6',
-        w: '#ffffff',
-      },
-    );
-  }
-  if (world.hasVipContract) {
-    ctx.fillStyle = '#ffd84d';
-    ctx.font = `700 ${Math.max(10, Math.round(u * 3.8))}px "Chakra Petch", sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.fillText('VIP!', pc.x + pc.w / 2, pc.y + u * 5);
-    ctx.textAlign = 'start';
+    // Crisp Gen 4 standing PC kiosk pixel architecture fallback
+    const kx = pc.x + u * 3;
+    const kw = pc.w - u * 6;
+    const kh = pc.h - u * 4;
+    ctx.fillStyle = '#182438';
+    ctx.fillRect(kx, pc.y + u * 2, kw, kh);
+    ctx.fillStyle = '#c5d2e3';
+    ctx.fillRect(kx + u, pc.y + u * 3, kw - u * 2, kh - u * 2);
+    ctx.fillStyle = '#2d5ca8';
+    ctx.fillRect(kx + u, pc.y + u * 3, kw - u * 2, u * 3);
+    ctx.fillStyle = world.hasVipContract
+      ? pulse
+        ? '#ffd84d'
+        : '#f5b82e'
+      : pulse
+        ? '#78e0ff'
+        : '#4fb7e6';
+    ctx.fillRect(kx + u * 3, pc.y + u * 7, kw - u * 6, Math.round(kh * 0.34));
+    ctx.fillStyle = '#4e5d75';
+    ctx.fillRect(kx + u * 2, pc.y + Math.round(kh * 0.56), kw - u * 4, u * 3);
   }
 
-  // 3. Upgrades pinned notes fallback if tile isn't decoded yet
-  if (!upgImg) {
-    const upg = layout.upgradesStation;
-    const pw = Math.max(u * 4, Math.round(upg.w * 0.22));
-    const ph = Math.max(u * 4, Math.round(upg.h * 0.26));
-    ctx.fillStyle = '#fdf3cf';
-    ctx.fillRect(upg.x + Math.round(upg.w * 0.24), upg.y + u * 4, pw, ph);
-    ctx.fillStyle = '#a5e6ff';
-    ctx.fillRect(upg.x + Math.round(upg.w * 0.56), upg.y + u * 5, pw, ph);
-    ctx.fillStyle = PALETTE.berry;
-    ctx.fillRect(upg.x + Math.round(upg.w * 0.24) + seam(u), upg.y + u * 4 - seam(u), u, u);
-    ctx.fillRect(upg.x + Math.round(upg.w * 0.56) + seam(u), upg.y + u * 5 - seam(u), u, u);
+  // Compact physical nameplate on the PC base + glowing VIP! alert when contract active
+  const label = world.hasVipContract ? 'PC ★VIP' : 'PC';
+  ctx.font = `700 ${Math.max(9, Math.round(u * 3.3))}px "Chakra Petch", sans-serif`;
+  const tagW = Math.ceil(ctx.measureText(label).width) + u * 3.5;
+  const tagH = Math.max(u * 4.8, 11);
+  const tagX = Math.round(pc.x + (pc.w - tagW) / 2);
+  const tagY = Math.round(pc.y + pc.h - tagH);
+  ctx.fillStyle = world.hasVipContract ? '#5c3e00' : 'rgba(15, 31, 68, 0.92)';
+  ctx.fillRect(tagX, tagY, tagW, tagH);
+  ctx.strokeStyle = world.hasVipContract ? '#ffd84d' : '#78a8f0';
+  ctx.lineWidth = Math.max(1, seam(u));
+  ctx.strokeRect(tagX, tagY, tagW, tagH);
+  ctx.fillStyle = world.hasVipContract ? '#ffd84d' : '#eef5ff';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, tagX + tagW / 2, tagY + tagH / 2);
+  ctx.textAlign = 'start';
+}
+
+/**
+ * Renders the physical Oak & Glass Egg Incubator Care Pedestal directly on the PokéMart
+ * floor tiles (no detached dark box), complete with floor shadow, warming glass pod, and
+ * wobbling pixel eggs inside.
+ */
+function drawIncubatorPedestal(
+  ctx: CanvasRenderingContext2D,
+  layout: ShopLayout,
+  world: ShopWorld,
+  pulse: boolean,
+): void {
+  const inc = layout.incubatorStation;
+  const u = layout.unit;
+  const still = world.reducedMotion || world.motionPaused;
+  const incImg = getTileImage('indoor', 'incubator-pod');
+
+  // Grounded floor contact shadow directly beneath the oak care table
+  const tableW = Math.min(inc.w - u * 4, u * 44);
+  const tableH = Math.round(inc.h * 0.42);
+  const tableX = Math.round(inc.x + (inc.w - tableW) / 2);
+  const tableY = Math.round(inc.y + inc.h - tableH - u * 2);
+
+  drawPixelShadow(ctx, inc.x + inc.w / 2, tableY + tableH + u, tableW * 1.02, u, 0.28);
+
+  // Warm oak care pedestal base sitting cleanly on the tile floor
+  ctx.fillStyle = '#362314';
+  ctx.fillRect(tableX, tableY, tableW, tableH);
+  ctx.fillStyle = '#9b6e44';
+  ctx.fillRect(tableX + u, tableY + u, tableW - u * 2, tableH - u * 2);
+  ctx.fillStyle = '#cfa270';
+  ctx.fillRect(tableX + u, tableY + u, tableW - u * 2, u * 2.5);
+  // Subtle recessed drawer + brass pull on cabinet front
+  ctx.fillStyle = '#7c5330';
+  ctx.fillRect(tableX + u * 3, tableY + u * 5, tableW - u * 6, Math.max(u * 4, tableH - u * 10));
+  ctx.fillStyle = '#ffd84d';
+  ctx.fillRect(Math.round(tableX + tableW / 2 - u * 2), tableY + u * 6.5, u * 4, u);
+
+  // Glowing glass Incubator pod resting cleanly on top of the oak table
+  const podH = Math.max(u * 18, Math.round(inc.h * 0.62));
+  const podW = Math.round((podH * 32) / 36);
+  const podX = Math.round(inc.x + (inc.w - podW) / 2);
+  const podY = Math.round(tableY - podH + u * 5);
+
+  if (incImg) {
+    ctx.drawImage(incImg, podX, podY, podW, podH);
+  } else {
+    ctx.fillStyle = '#1b3d7a';
+    ctx.fillRect(podX, podY, podW, podH);
+    ctx.fillStyle = '#9be8ff';
+    ctx.fillRect(podX + u * 2, podY + u * 2, podW - u * 4, podH - u * 6);
   }
+
+  // Golden ready-to-hatch highlight ring around the pod top when eggs are ready
+  if (world.readyEggCount > 0) {
+    ctx.strokeStyle = pulse ? '#ffd84d' : '#f5b82e';
+    ctx.lineWidth = u;
+    ctx.strokeRect(podX - seam(u), podY - seam(u), podW + u, podH + u);
+  }
+
+  // Wobbling pixel eggs nestled inside the incubator glass dome
+  const eggScale = Math.max(1, Math.round(u * 1.0));
+  const eggCountDraw = Math.min(3, Math.max(1, world.eggCount));
+  for (let i = 0; i < eggCountDraw; i += 1) {
+    const wobble =
+      !still && world.eggCount > 0 ? Math.round(Math.sin(world.eggWobblePhase + i) * u * 0.8) : 0;
+    const ex = Math.round(
+      podX + podW * (eggCountDraw === 1 ? 0.5 : (i + 1) / (eggCountDraw + 1)) - 4 * eggScale + wobble,
+    );
+    const bob = !still && world.readyEggCount > 0 && pulse ? -u : 0;
+    const ey = Math.round(podY + podH * 0.45 - 3.5 * eggScale + bob);
+    if (world.eggCount > 0) {
+      drawBitmap(ctx, EGG_ICON, ex, ey, eggScale, ICON_COLORS);
+    } else if (!incImg) {
+      ctx.globalAlpha = 0.3;
+      drawBitmap(ctx, EGG_ICON, ex, ey, eggScale, ICON_COLORS);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  // Integrated wooden/navy label plaque along the bottom rail of the oak table
+  const label = world.readyEggCount > 0 ? 'Eggs ★Ready' : 'Incubator';
+  ctx.font = `600 ${Math.max(9, Math.round(u * 3.4))}px "Chakra Petch", sans-serif`;
+  const tagW = Math.min(tableW - u * 2, Math.ceil(ctx.measureText(label).width) + u * 4);
+  const tagH = Math.max(u * 5, 11);
+  const tagX = Math.round(inc.x + (inc.w - tagW) / 2);
+  const tagY = Math.round(tableY + tableH - tagH + seam(u));
+  ctx.fillStyle = world.readyEggCount > 0 ? '#5c3e00' : 'rgba(15, 31, 68, 0.92)';
+  ctx.fillRect(tagX, tagY, tagW, tagH);
+  ctx.strokeStyle = world.readyEggCount > 0 ? '#ffd84d' : '#6ee7a0';
+  ctx.lineWidth = Math.max(1, seam(u));
+  ctx.strokeRect(tagX, tagY, tagW, tagH);
+  ctx.fillStyle = world.readyEggCount > 0 ? '#ffd84d' : '#eef5ff';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, tagX + tagW / 2, tagY + tagH / 2);
+  ctx.textAlign = 'start';
+}
+
+function drawDynamicStations(
+  ctx: CanvasRenderingContext2D,
+  layout: ShopLayout,
+  world: ShopWorld,
+): void {
+  const still = world.reducedMotion || world.motionPaused;
+  const pulse = still ? false : Math.floor(world.time * 2) % 2 === 0;
+  drawWholesalePcKiosk(ctx, layout, world, pulse);
+  drawIncubatorPedestal(ctx, layout, world, pulse);
 }
 
 function drawHumanFallback(
@@ -749,21 +971,37 @@ function drawHumanSprite(
   return getHumanHeadTopY(y, layout);
 }
 
+/**
+ * Draws Clerk Leo standing physically *behind* the deep Checkout Counter.
+ * Because `drawCounterForeground` renders immediately after this call, Clerk Leo's lower
+ * legs and waist are naturally occluded behind the oak counter desk top.
+ */
 function drawClerk(
   ctx: CanvasRenderingContext2D,
   layout: ShopLayout,
   world: ShopWorld,
 ): void {
   const u = layout.unit;
-  const still = world.reducedMotion || world.motionPaused;
-  const waveLift =
-    !still && world.clerkWaveTimer > 0 ? Math.round(Math.sin(world.clerkWaveTimer * 16) * u) : 0;
-  const cx = Math.round(layout.counter.x + layout.counter.w * 0.52);
-  const cy = Math.round(layout.counter.y + u * 4 + waveLift);
+  const cx = Math.round(layout.counter.x + layout.counter.w * 0.44);
+  // Place Clerk Leo's feet behind the counter's front desk so torso & head stand cleanly above
+  const cy = Math.round(layout.counter.y + u * 11);
 
+  drawPixelShadow(ctx, cx, cy, getHumanSpriteScale(layout) * 10, u, 0.24);
   const drawnH = drawHumanSprite(ctx, 'mart_employee', 'down', false, 0, cx, cy, layout);
   if (drawnH === null) {
     drawHumanFallback(ctx, cx, cy, u, '#2d5ca8', '#1f2937', false, 0, false);
+  }
+  // Subtle welcoming wave sparkle/nod timer kept cleanly without artificial vertical jump
+  if (world.clerkWaveTimer > 0 && !world.reducedMotion && !world.motionPaused) {
+    const headY = drawnH ?? cy - u * 15;
+    drawBitmap(
+      ctx,
+      SPARKLE,
+      Math.round(cx + u * 7),
+      Math.round(headY - u * 2),
+      Math.max(1, Math.round(u * 0.65)),
+      ICON_COLORS,
+    );
   }
 }
 
@@ -800,7 +1038,7 @@ function drawPokemon(
   }
 
   // Tight grounded pixel-oval contact shadow directly beneath the Pokémon's feet
-  drawPixelShadow(ctx, feetX, feetY, shadowW * pose.scaleX, u, ent.state === 'sleep' ? 0.24 : 0.34);
+  drawPixelShadow(ctx, feetX, feetY, shadowW * pose.scaleX, u, ent.state === 'sleep' ? 0.24 : 0.36);
 
   if (hovered) {
     ctx.fillStyle = 'rgba(255, 216, 77, 0.58)';
@@ -859,7 +1097,7 @@ function drawWalker(
   const still = world.reducedMotion || world.motionPaused;
   const walking = walker.state !== 'browsing' && !still;
 
-  drawPixelShadow(ctx, walker.x, walker.y, getHumanSpriteScale(layout) * 10, u, 0.30);
+  drawPixelShadow(ctx, walker.x, walker.y, getHumanSpriteScale(layout) * 10, u, 0.32);
 
   const drawnH = drawHumanSprite(
     ctx,
@@ -896,7 +1134,7 @@ function drawQueuedShopper(
   const u = layout.unit;
   const still = world.reducedMotion || world.motionPaused;
   const walking = q.state === 'walking-to-counter' && !still;
-  drawPixelShadow(ctx, q.x, q.y, getHumanSpriteScale(layout) * 10, u, 0.32);
+  drawPixelShadow(ctx, q.x, q.y, getHumanSpriteScale(layout) * 10, u, 0.34);
 
   const spriteHeadTop = drawHumanSprite(
     ctx,
@@ -1049,19 +1287,15 @@ function drawHoverHighlight(
     ctx.strokeStyle = '#ffd84d';
     ctx.lineWidth = lw;
     ctx.beginPath();
-    // Top-left bracket
     ctx.moveTo(rect.x, rect.y + arm);
     ctx.lineTo(rect.x, rect.y);
     ctx.lineTo(rect.x + arm, rect.y);
-    // Top-right bracket
     ctx.moveTo(rect.x + rect.w - arm, rect.y);
     ctx.lineTo(rect.x + rect.w, rect.y);
     ctx.lineTo(rect.x + rect.w, rect.y + arm);
-    // Bottom-right bracket
     ctx.moveTo(rect.x + rect.w, rect.y + rect.h - arm);
     ctx.lineTo(rect.x + rect.w, rect.y + rect.h);
     ctx.lineTo(rect.x + rect.w - arm, rect.y + rect.h);
-    // Bottom-left bracket
     ctx.moveTo(rect.x + arm, rect.y + rect.h);
     ctx.lineTo(rect.x, rect.y + rect.h);
     ctx.lineTo(rect.x, rect.y + rect.h - arm);
@@ -1069,7 +1303,7 @@ function drawHoverHighlight(
   }
 }
 
-/** Renders one complete frame of the full-viewport Indoor PokéMart scene. */
+/** Renders one complete frame of the full-viewport cohesive Indoor PokéMart scene. */
 export function renderIndoorScene(
   ctx: CanvasRenderingContext2D,
   layout: ShopLayout,
@@ -1089,15 +1323,26 @@ export function renderIndoorScene(
   else drawIndoorBackground(ctx, layout);
 
   drawSlidingDoors(ctx, layout, world, options.shiftRunning);
-  drawDynamicStations(ctx, layout, world);
-  drawHoverHighlight(ctx, layout, options.hoverTarget);
+
+  // True behind-counter layering: Clerk Leo renders behind the desk, then the deep Counter
+  // desk/front/register overlays Clerk Leo's lower legs before floor shoppers render in front.
   drawClerk(ctx, layout, world);
+  drawCounterForeground(ctx, layout);
+
+  drawDynamicStations(ctx, layout, world);
 
   const hoverPokemonUid = options.hoverTarget?.kind === 'pokemon' ? options.hoverTarget.uid : null;
   const hoverOfferUid =
     options.hoverTarget?.kind === 'counter-offer' ? options.hoverTarget.offerUid : null;
 
+  // Unified 2.5D Y-sort across grounded Pokémon, Pen front wooden rails, and Human Shoppers
   const drawables: Array<{ y: number; draw: () => void }> = [];
+  for (const pen of layout.pens) {
+    drawables.push({
+      y: pen.y + pen.h,
+      draw: () => drawPenFrontRail(ctx, pen, layout.unit),
+    });
+  }
   for (const ent of world.pokemon.values()) {
     drawables.push({
       y: ent.y,
@@ -1119,6 +1364,9 @@ export function renderIndoorScene(
 
   drawables.sort((a, b) => a.y - b.y);
   for (const d of drawables) d.draw();
+
+  // Subtle corner hover highlight cleanly above the hovered station/pen
+  drawHoverHighlight(ctx, layout, options.hoverTarget);
 
   for (const walker of world.walkers.values()) drawWalkerBubble(ctx, layout, world, walker);
   for (const p of world.particles) drawParticle(ctx, layout, p);

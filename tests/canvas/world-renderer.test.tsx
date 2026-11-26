@@ -234,6 +234,31 @@ describe('Shop World State Machine', () => {
     // Visible head anchor clears ~10px transparent top cell padding in 16x32 Human Trainer sprites
     const headTop = getHumanHeadTopY(fhdLayout.counterQueueSpots[0].y, fhdLayout);
     expect(fhdLayout.counterQueueSpots[0].y - headTop).toBe(21 * fhdLayout.unit);
+
+    // Every integrated station (wall-side PC, wall-mounted Upgrades, Incubator pedestal, Resting Corner)
+    // resolves cleanly via hitTestIndoorScene at 1920x1080
+    expect(
+      hitTestIndoorScene(world, fhdLayout, fhdLayout.pcStation.x + 12, fhdLayout.pcStation.y + 12),
+    ).toEqual(expect.objectContaining({ kind: 'station', station: 'wholesale' }));
+    expect(
+      hitTestIndoorScene(
+        world,
+        fhdLayout,
+        fhdLayout.upgradesStation.x + 12,
+        fhdLayout.upgradesStation.y + 12,
+      ),
+    ).toEqual(expect.objectContaining({ kind: 'station', station: 'upgrades' }));
+    expect(
+      hitTestIndoorScene(
+        world,
+        fhdLayout,
+        fhdLayout.incubatorStation.x + 12,
+        fhdLayout.incubatorStation.y + 12,
+      ),
+    ).toEqual(expect.objectContaining({ kind: 'station', station: 'breeding' }));
+    expect(
+      hitTestIndoorScene(world, fhdLayout, fhdLayout.napArea.x + 12, fhdLayout.napArea.y + 12),
+    ).toEqual(expect.objectContaining({ kind: 'station', station: 'healing' }));
   });
 
   it('cycles store Pokémon strictly across grounded walk and idle (never hopping) and eases doors', () => {

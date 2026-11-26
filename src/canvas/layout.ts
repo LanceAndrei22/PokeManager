@@ -2,7 +2,8 @@
  * Pure PC desktop indoor PokéMart shop floor geometry: converts desktop CSS dimensions
  * (`1280×720` minimum, optimized for `1920×1080` and `2560×1440+`), pen count, nap-bed
  * count, and devicePixelRatio into backing-store rectangles with crisp integer pixel
- * scaling and walkway routes. No DOM access, so it is 100% unit-testable.
+ * scaling, integrated wall/floor station placement, and modular Resting Pen geometry.
+ * No DOM access, so it is 100% unit-testable.
  */
 import type { PenRect, Point, Rect, ShopLayout } from './types';
 
@@ -64,9 +65,44 @@ export function computeShopCssHeight(cssWidth: number, penCount: number): number
 }
 
 /**
+ * Modular layout helper for the Resting / Nap Corner care alcove.
+ * Isolated cleanly so future Resting Pen mechanics (additional beds, care stations,
+ * comfort zones) can expand this region without disturbing the rest of the store plan.
+ */
+export function computeRestingPensLayout(
+  areaX: number,
+  areaY: number,
+  areaW: number,
+  areaH: number,
+  bedCount: number,
+  gap: number,
+  spx: (cssAt1280: number) => number,
+): { napArea: Rect; beds: Rect[] } {
+  const napArea: Rect = { x: areaX, y: areaY, w: areaW, h: areaH };
+  const labelH = spx(22);
+  const padX = Math.max(gap, spx(16));
+  const slots = Math.max(1, bedCount);
+  const bedW = Math.min(spx(148), Math.floor((areaW - padX * 2 - gap * (slots - 1)) / slots));
+  const bedH = Math.max(spx(46), areaH - labelH - spx(12));
+  const beds: Rect[] = Array.from({ length: bedCount }, (_, i) => ({
+    x: areaX + padX + i * (bedW + gap),
+    y: areaY + labelH,
+    w: bedW,
+    h: bedH,
+  }));
+  return { napArea, beds };
+}
+
+/**
  * Computes full-viewport PC desktop indoor Gen 4 PokéMart geometry fitting cleanly between
  * the floating Top Pill HUD and Bottom DS Action Dock across `1280×800`, `1920×1080`, and
- * `2560×1440+` with crisp integer pixel scaling and zero page scroll.
+ * `2560×1440+`:
+ * - Substantial, deeper Checkout Counter on the upper-left with room behind it for Clerk Leo
+ *   and a stitched Checkout Mat directly in front for queuing shoppers.
+ * - Standing Wholesale PC Kiosk flush against the back wall beside the counter.
+ * - Wall-mounted wooden Upgrades Notice Board on the upper-right wall.
+ * - Organic Habitat Display Pens centered across the middle floor.
+ * - Modular Resting Corner rug alcove & physical Egg Incubator care pedestal on the lower floor.
  */
 export function computeIndoorLayout(
   cssWidth: number,
@@ -88,20 +124,20 @@ export function computeIndoorLayout(
   // Crisp integer backing-store art-pixel size:
   // 2px @ 1280×800 (1× DPR), 3px @ 1920×1080 (1× DPR), 4px @ 2560×1440 (1× DPR).
   const unit = Math.max(2, Math.round(2 * resScale * dpr));
-  const pad = spx(20);
+  const pad = spx(22);
   const gap = spx(14);
 
   // Clear the fixed desktop Top HUD bar and Bottom Action Dock cleanly across resolutions.
-  const topBand = px(Math.round(72 + (resScale - 1) * 20));
+  const topBand = px(Math.round(70 + (resScale - 1) * 18));
   const bottomBand = px(Math.round(76 + (resScale - 1) * 20));
 
-  const wallH = topBand + spx(74);
+  const wallH = topBand + spx(78);
   const wall: Rect = { x: 0, y: 0, w: width, h: wallH };
 
-  const doorW = spx(60);
-  const doorH = spx(60);
+  const doorW = spx(64);
+  const doorH = spx(64);
   const door: Rect = {
-    x: width - pad - spx(10) - doorW,
+    x: width - pad - spx(8) - doorW,
     y: wall.h - doorH,
     w: doorW,
     h: doorH,
@@ -111,83 +147,114 @@ export function computeIndoorLayout(
     x: door.x - spx(10),
     y: wall.h,
     w: doorW + spx(20),
-    h: spx(26),
+    h: spx(28),
   };
 
-  const counterW = Math.min(spx(248), Math.round(width * 0.27));
-  const counterH = spx(34);
+  // Larger, deeper Gen 4 Checkout Counter projecting organically onto the floor so Clerk Leo
+  // stands visibly behind the desk top while shoppers queue right up against the front edge.
+  const counterW = Math.min(spx(304), Math.round(width * 0.29));
+  const counterH = spx(50);
   const counter: Rect = {
     x: pad + spx(6),
-    y: wall.h - counterH,
+    y: wall.h - spx(14),
     w: counterW,
     h: counterH,
   };
+  const counterBottom = counter.y + counter.h;
 
-  const windowW = Math.min(spx(164), Math.round(width * 0.18));
+  // Standing Gen 4 Wholesale PC Kiosk placed flush against the back wall beside the counter.
+  const pcW = spx(62);
+  const pcH = spx(74);
+  const pcStation: Rect = {
+    x: counter.x + counter.w + spx(22),
+    y: wall.h - spx(46),
+    w: pcW,
+    h: pcH,
+  };
+
+  // Sunlit center-left store window cleanly clear of the PC kiosk.
+  const windowW = Math.min(spx(148), Math.round(width * 0.14));
+  const windowX = Math.max(
+    pcStation.x + pcStation.w + spx(24),
+    Math.round(width * 0.50 - windowW / 2),
+  );
   const windowRect: Rect = {
-    x: Math.round(width * 0.52 - windowW / 2),
+    x: windowX,
     y: topBand + spx(12),
     w: windowW,
     h: spx(34),
   };
 
-  // Up to 4 shoppers stand cleanly below Clerk Leo's counter so Patience Bars and `!`
-  // badges sit tightly above each trainer's head without overlapping Clerk Leo or the sign.
-  const queueY = wall.h + unit * 26;
-  const queueStartX = counter.x + unit * 12;
-  const queueStepX = Math.max(unit * 18, Math.round((counterW - unit * 24) / 3));
+  // Physical oak Upgrades Notice Board mounted directly on the upper-right back wall.
+  const upgradesW = Math.min(spx(124), Math.max(spx(96), door.x - (windowRect.x + windowRect.w) - spx(68)));
+  const upgradesH = spx(54);
+  const upgradesX = Math.min(
+    door.x - upgradesW - spx(32),
+    windowRect.x + windowRect.w + spx(30),
+  );
+  const upgradesStation: Rect = {
+    x: upgradesX,
+    y: topBand + spx(10),
+    w: upgradesW,
+    h: upgradesH,
+  };
+
+  // Up to 4 shoppers stand grounded on the Checkout Mat right up against the counter front.
+  const queueY = counterBottom + unit * 18;
+  const queueStartX = counter.x + unit * 16;
+  const queueStepX = Math.max(unit * 18, Math.round((counterW - unit * 32) / 3));
   const counterQueueSpots: Point[] = Array.from({ length: 4 }, (_, i) => ({
     x: queueStartX + i * queueStepX,
     y: queueY + (i % 2) * unit * 2,
   }));
 
-  const aisleY = wall.h + Math.round(unit * 12);
+  const aisleY = counterBottom + Math.round(unit * 11);
   const doorSpot: Point = {
     x: door.x + Math.round(door.w / 2),
-    y: aisleY,
+    y: wall.h + spx(18),
   };
 
+  // Lower Care Wing: modular Resting Corner rug alcove (left) + physical Incubator pedestal (right)
   const floorBottom = height - bottomBand;
   const wingH = Math.min(
     spx(136),
-    Math.max(spx(98), Math.round((floorBottom - wall.h) * 0.23)),
+    Math.max(spx(102), Math.round((floorBottom - counterBottom) * 0.24)),
   );
   const wingY = floorBottom - wingH;
   const wingTotalW = width - pad * 2;
-  const napW = Math.round(wingTotalW * 0.43);
-  const sideStationW = Math.floor((wingTotalW - napW - gap * 3) / 3);
+  const napW = Math.round(wingTotalW * 0.52);
 
-  const napArea: Rect = { x: pad, y: wingY, w: napW, h: wingH };
+  const { napArea, beds } = computeRestingPensLayout(
+    pad,
+    wingY,
+    napW,
+    wingH,
+    bedCount,
+    gap,
+    spx,
+  );
+
+  // Physical Egg Incubator care table sitting naturally on the open lower-right floor tiles
+  const incW = Math.min(spx(210), Math.max(spx(150), Math.round(wingTotalW * 0.22)));
+  const incH = Math.min(wingH, spx(122));
   const incubatorStation: Rect = {
-    x: napArea.x + napArea.w + gap,
-    y: wingY,
-    w: sideStationW,
-    h: wingH,
-  };
-  const pcStation: Rect = {
-    x: incubatorStation.x + sideStationW + gap,
-    y: wingY,
-    w: sideStationW,
-    h: wingH,
-  };
-  const upgradesStation: Rect = {
-    x: pcStation.x + sideStationW + gap,
-    y: wingY,
-    w: sideStationW,
-    h: wingH,
+    x: napArea.x + napArea.w + Math.round((wingTotalW - napW - incW) * 0.45),
+    y: wingY + Math.round((wingH - incH) / 2),
+    w: incW,
+    h: incH,
   };
 
+  // Organic Habitat Display Pens centered cleanly in the middle floor band
   const cols = getPenColumns(safeCssW, penCount);
   const rows = Math.max(1, Math.ceil(penCount / cols));
-  const pensTop = Math.max(wall.h + gap * 2, queueY + spx(18));
-  const pensBottom = wingY - gap;
-  const availPenH = Math.max(spx(140), pensBottom - pensTop);
-  const maxPenH = spx(rows === 1 ? 216 : 176);
+  const pensTop = Math.max(counterBottom + gap * 2, queueY + spx(18));
+  const pensBottom = wingY - spx(22);
+  const availPenH = Math.max(spx(136), pensBottom - pensTop);
+  const maxPenH = spx(rows === 1 ? 210 : 168);
   const penH = Math.min(maxPenH, Math.floor((availPenH - gap * (rows - 1)) / rows));
   const penW = Math.floor((width - pad * 2 - gap * (cols - 1)) / cols);
-  const fence = unit * 3;
+  const fence = unit * 4;
 
-  // Vertically center the pen grid in the open floor band between queue and stations
   const totalGridH = rows * penH + (rows - 1) * gap;
   const gridStartY = pensTop + Math.max(0, Math.floor((availPenH - totalGridH) / 2));
 
@@ -210,17 +277,6 @@ export function computeIndoorLayout(
   const maxFit = Math.floor((innerH * 0.92) / SPRITE_SOURCE_SIZE);
   const preferred = Math.round((innerH * 0.64) / SPRITE_SOURCE_SIZE);
   const spriteScale = Math.max(1, Math.min(maxFit, preferred));
-
-  const labelH = spx(22);
-  const slots = Math.max(1, bedCount);
-  const bedW = Math.min(spx(148), Math.floor((napArea.w - gap * (slots + 1)) / slots));
-  const bedH = Math.max(spx(42), napArea.h - labelH - spx(8));
-  const beds: Rect[] = Array.from({ length: bedCount }, (_, i) => ({
-    x: napArea.x + gap + i * (bedW + gap),
-    y: napArea.y + labelH,
-    w: bedW,
-    h: bedH,
-  }));
 
   return {
     cssWidth: safeCssW,
@@ -247,8 +303,8 @@ export function computeIndoorLayout(
     pcStation,
     upgradesStation,
     lamps: [
-      { x: Math.round(width * 0.29), y: topBand + spx(28) },
-      { x: Math.round(width * 0.72), y: topBand + spx(28) },
+      { x: Math.round(width * 0.30), y: topBand + spx(24) },
+      { x: Math.round(width * 0.72), y: topBand + spx(24) },
     ],
   };
 }
@@ -393,41 +449,45 @@ export function getCounterQueueSpot(layout: ShopLayout, queueIndex: number): Poi
   if (spots.length === 0) {
     return {
       x: layout.counter.x + Math.round(layout.counter.w * 0.5),
-      y: layout.counter.y + layout.counter.h + layout.unit * 24,
+      y: layout.counter.y + layout.counter.h + layout.unit * 18,
     };
   }
   return { ...spots[Math.min(Math.max(0, queueIndex), spots.length - 1)] };
 }
 
-/** Feet-position bounds a Pokémon may wander to inside a pen. */
+/** Feet-position bounds a Pokémon may wander to inside a pen (clears fences cleanly). */
 export function getPenWanderBounds(layout: ShopLayout, penIndex: number): Rect | null {
   const pen = layout.pens[penIndex];
   if (!pen) return null;
-  const s = layout.spriteSize;
+  const u = layout.unit;
   const { inner } = pen;
-  let minX = inner.x + s * 0.32;
-  let maxX = inner.x + inner.w - s * 0.32;
+  const marginX = Math.max(u * 14, layout.spriteSize * 0.26);
+  let minX = inner.x + marginX;
+  let maxX = inner.x + inner.w - marginX;
   if (minX > maxX) minX = maxX = inner.x + inner.w / 2;
-  const maxY = inner.y + inner.h - layout.unit;
-  let minY = inner.y + s * 0.78;
+  const maxY = inner.y + inner.h - u * 3;
+  let minY = inner.y + Math.max(u * 22, layout.spriteSize * 0.45);
   if (minY > maxY) minY = maxY;
   return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
 }
 
-/** Feet anchor for a sleeping Pokémon resting on a nap-bed pillow. */
+/** Feet anchor for a sleeping Pokémon resting on a nap-bed cushion. */
 export function getBedAnchor(layout: ShopLayout, bedIndex: number): Point | null {
   const bed = layout.beds[bedIndex];
   if (!bed) return null;
-  return { x: bed.x + Math.round(bed.w / 2), y: bed.y + Math.round(bed.h * 0.86) };
+  return { x: bed.x + Math.round(bed.w / 2), y: bed.y + Math.round(bed.h * 0.74) };
 }
 
-/** Where the n-th browsing shopper stands: at the pen's front-right corner, side by side. */
+/**
+ * Where the n-th browsing shopper stands: grounded on the PokéMart tile floor right outside
+ * the pen's front-right fence rail so Y-sorting places the fence between shopper & Pokémon.
+ */
 export function getCustomerSpot(layout: ShopLayout, penIndex: number, visitorIndex: number): Point {
   const pen = layout.pens[penIndex] ?? layout.pens[0];
   if (!pen) return { ...layout.doorSpot };
   const u = layout.unit;
-  const x = Math.max(pen.x + u * 6, pen.x + pen.w - u * 8 - visitorIndex * u * 10);
-  return { x, y: pen.y + pen.h - Math.round(u * 1.5) };
+  const x = Math.max(pen.x + u * 8, pen.x + pen.w - u * 10 - visitorIndex * u * 12);
+  return { x, y: pen.y + pen.h + u * 8 };
 }
 
 /** Builds a walking route from the door along walkways to a browsing spot. */

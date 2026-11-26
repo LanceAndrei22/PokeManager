@@ -34,6 +34,7 @@ import {
   spawnZzz,
   updateParticles,
 } from '../../src/canvas/particles';
+import { periodicNoise } from '../../src/canvas/organicTerrain';
 import { createSeededRng } from '../../src/engine/rng';
 
 describe('Canvas Shop Floor & High-Res Desktop Indoor Geometry', () => {
@@ -94,14 +95,23 @@ describe('Canvas Shop Floor & High-Res Desktop Indoor Geometry', () => {
 
     for (const layout of [hd, fhd, qhd]) {
       expect(layout.counterQueueSpots).toHaveLength(4);
-      expect(layout.pcStation.x).toBeGreaterThan(layout.incubatorStation.x);
-      expect(layout.upgradesStation.x).toBeGreaterThan(layout.pcStation.x);
-      expect(layout.upgradesStation.x + layout.upgradesStation.w).toBeLessThanOrEqual(layout.width);
+      // Integrated PokéMart floorplan: PC kiosk flush beside counter, Upgrades board mounted on
+      // back wall, Resting Corner + Incubator pedestal cleanly below Display Pens.
+      expect(layout.pcStation.x).toBeGreaterThan(layout.counter.x + layout.counter.w);
+      expect(layout.pcStation.y).toBeLessThan(layout.wall.h);
+      expect(layout.upgradesStation.x).toBeGreaterThan(layout.window.x + layout.window.w);
+      expect(layout.upgradesStation.y + layout.upgradesStation.h).toBeLessThanOrEqual(layout.wall.h);
+      expect(layout.upgradesStation.x + layout.upgradesStation.w).toBeLessThan(layout.door.x);
+      expect(layout.incubatorStation.x).toBeGreaterThan(layout.napArea.x + layout.napArea.w);
       expect(layout.napArea.y + layout.napArea.h).toBeLessThan(layout.height);
       const lastPen = layout.pens[layout.pens.length - 1];
       expect(lastPen.y + lastPen.h).toBeLessThanOrEqual(layout.napArea.y);
       expect(getCounterQueueSpot(layout, 1)).toEqual(layout.counterQueueSpots[1]);
     }
+
+    // Organic terrain periodic noise wraps with zero seam between x = 0 and x = period
+    expect(periodicNoise(0, 14.5, 32, 101)).toBeCloseTo(periodicNoise(32, 14.5, 32, 101), 10);
+    expect(periodicNoise(7.25, 22, 64, 401)).toBeCloseTo(periodicNoise(71.25, 22, 64, 401), 10);
   });
 });
 
