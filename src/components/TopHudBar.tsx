@@ -170,18 +170,29 @@ export function TopHudBar({
             </button>
           )}
 
-          <div
-            className="pmd-pill hidden min-h-[36px] shrink-0 items-center gap-2 whitespace-nowrap px-2.5 py-1.5 text-xs min-[1440px]:flex"
-            title={`${rankInfo.title} (${rankInfo.xp} XP)`}
-          >
-            <span className="pmd-num font-semibold text-[#ffd84d]">Rk.{rankInfo.rank}</span>
-            <progress
-              aria-label="Shop rank progress"
-              max={100}
-              value={rankInfo.progressPct}
-              className="h-1.5 w-10 accent-[#6ee7a0]"
-            />
-            <span className="text-[#b5d4ff]">{trend.badge}</span>
+          <div className="pmd-pill hidden min-h-[36px] shrink-0 items-center gap-2 whitespace-nowrap px-2.5 py-1.5 text-xs min-[1440px]:flex">
+            <div
+              className="flex items-center gap-1.5"
+              title={`Shop Rank ${rankInfo.rank}: ${rankInfo.title} (${rankInfo.xp} XP) — Higher ranks unlock rarer species & VIP Contracts`}
+            >
+              <span className="pmd-num font-semibold text-[#ffd84d]">
+                Rank {rankInfo.rank}
+              </span>
+              <progress
+                aria-label="Shop rank progress"
+                max={100}
+                value={rankInfo.progressPct}
+                className="h-1.5 w-10 accent-[#6ee7a0]"
+              />
+            </div>
+            <span className="text-[#4e78bd]">|</span>
+            <div
+              className="flex items-center gap-1"
+              title={`Today's Market Trend — ${trend.title}: ${trend.description}`}
+            >
+              <span className="font-semibold text-[#9ec4ff]">Trend:</span>
+              <span className="font-semibold text-[#6ee7a0]">{trend.badge}</span>
+            </div>
           </div>
 
           <div className="pmd-pill flex min-h-[36px] shrink-0 items-center gap-1.5 px-2.5 py-1.5 text-xs">

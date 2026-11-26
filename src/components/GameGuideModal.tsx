@@ -169,6 +169,30 @@ export function GameGuideModal({ open, onClose }: GameGuideModalProps) {
               </div>
             </section>
 
+            <section className="pmd-inset space-y-2 p-3.5">
+              <h2 className="text-base font-semibold text-[#ffd84d]">
+                Reading the Top HUD Bar
+              </h2>
+              <div className="grid gap-2 sm:grid-cols-2 text-xs">
+                <div className="border border-[#3a61a3] bg-[#0b1736] p-2.5">
+                  <strong className="text-[#ffd84d]">Rank 1–10 + Green XP Bar:</strong> Shows your
+                  current <strong className="text-white">Shop Rank</strong> and XP progress toward
+                  the next tier. Ranking up unlocks rarer Gen 1–4 species in Wholesale and{' '}
+                  <strong className="text-[#ffd84d]">VIP Legendary Contracts</strong> (Rank 6+, or
+                  Rank 4+ on High Stakes).
+                </div>
+                <div className="border border-[#3a61a3] bg-[#0b1736] p-2.5">
+                  <strong className="text-[#6ee7a0]">Trend: (e.g. Fire / Fighting / Cozy +40%):</strong>{' '}
+                  Today&apos;s rotating <strong className="text-white">Daily Market Trend</strong>.
+                  Matching <strong className="text-white">any</strong> listed Type or Trait grants{' '}
+                  <strong className="text-[#6ee7a0]">+40% value</strong>,{' '}
+                  <strong className="text-white">+6% buy chance</strong>,{' '}
+                  <strong className="text-white">+8% haggle odds</strong>, plus an extra{' '}
+                  <strong className="text-[#ffd84d]">+30%</strong> from Trend Fans!
+                </div>
+              </div>
+            </section>
+
             <div className="border-2 border-[#6ee7a0] bg-[#103324] px-3.5 py-2.5 text-xs text-[#d6ffe6]">
               <strong className="text-[#6ee7a0]">Quick Tip:</strong> You can{' '}
               <strong className="text-white">Pause Shift</strong> anytime to safely reorganize pens,
