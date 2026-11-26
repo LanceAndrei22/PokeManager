@@ -114,6 +114,9 @@ export function saveProfileGameState(
 ): void {
   storage.setItem(getProfileSaveKey(state.profileId), JSON.stringify(state));
 
+  const mascotMon =
+    state.pokemon.find((mon) => mon.uid === state.mascotUid) ?? state.pokemon[0];
+
   const index = loadProfileIndex(storage);
   if (index) {
     const nextProfiles = index.profiles.map((meta) =>
@@ -122,6 +125,7 @@ export function saveProfileGameState(
             ...meta,
             name: state.profileName,
             difficulty: state.difficulty,
+            mascotSpeciesId: mascotMon?.speciesId ?? meta.mascotSpeciesId ?? 133,
             updatedAt: Date.now(),
           }
         : meta,
@@ -158,6 +162,7 @@ export function ensureInitialProfileStore(storage: StorageLike = getDefaultStora
     id: defaultId,
     name: defaultName,
     difficulty: 'standard',
+    mascotSpeciesId: 133,
     createdAt: now,
     updatedAt: now,
   };
@@ -172,11 +177,12 @@ export function ensureInitialProfileStore(storage: StorageLike = getDefaultStora
   return { index, activeState: initialState };
 }
 
-/** Creates a brand-new isolated v2 Shift Manager profile with chosen Difficulty mode. */
+/** Creates a brand-new isolated v2 Shift Manager profile with chosen Difficulty & Starter Mascot. */
 export function createProfile(
   rawName: string,
   difficulty: DifficultyId = 'standard',
   storage: StorageLike = getDefaultStorage(),
+  starterSpeciesId = 133,
 ): { index: ProfileIndex; activeState: GameState } {
   const trimmed = rawName.trim().slice(0, 24) || 'Trainer';
   const current = ensureInitialProfileStore(storage).index;
@@ -188,14 +194,23 @@ export function createProfile(
     difficulty,
     false,
     (now ^ (trimmed.length * 131)) >>> 0,
+    starterSpeciesId,
   );
+  const resolvedStarterId = newState.pokemon[0]?.speciesId ?? 133;
 
   const nextIndex: ProfileIndex = {
     version: 2,
     activeProfileId: newId,
     profiles: [
       ...current.profiles,
-      { id: newId, name: trimmed, difficulty, createdAt: now, updatedAt: now },
+      {
+        id: newId,
+        name: trimmed,
+        difficulty,
+        mascotSpeciesId: resolvedStarterId,
+        createdAt: now,
+        updatedAt: now,
+      },
     ],
   };
 
@@ -235,11 +250,14 @@ export function resetProfile(
 
   const prevState = loadProfileGameState(profileId, storage);
   const diff = difficultyOverride ?? prevState?.difficulty ?? targetMeta.difficulty ?? 'standard';
+  const starterId = targetMeta.mascotSpeciesId ?? 133;
   const freshState = createInitialGameState(
     targetMeta.id,
     targetMeta.name,
     diff,
     prevState?.muted ?? false,
+    1042,
+    starterId,
   );
   saveProfileGameState(freshState, storage);
   return freshState;

@@ -41,7 +41,8 @@ const CORE_PMD_IDS = [
   40, 113, 143, // Cozy Collectors: Wigglytuff, Chansey, Snorlax
   279, 272, 417, // Trend Fans: Pelipper, Ludicolo, Pachirisu
   53, 430, 448, // Shiny & VIP Seekers: Persian, Honchkrow, Lucario
-  133, 79, 54, // Starter Store Mascots: Eevee, Slowpoke, Psyduck
+  133, 25, 1, 4, 7, 393, // 6 Iconic Starter Mascots: Eevee, Pikachu, Bulbasaur, Charmander, Squirtle, Piplup
+  79, 54, // Cozy Shop Companions: Slowpoke, Psyduck
 ];
 
 const EGG_GROUP_LABELS = {

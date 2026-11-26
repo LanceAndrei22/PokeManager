@@ -1,19 +1,27 @@
 /**
- * Save & Profile Transfer Modal:
- * Manages isolated local Shift Manager profiles (create, switch, reset, delete)
- * and checksum-validated Base64 Save Export/Import.
+ * Save & Profile Transfer Modal in PMD Navy & Gold:
+ * Manages isolated local Shift Manager profiles (create with Difficulty/Starter,
+ * switch, reset, delete) and checksum-validated Base64 Save Export/Import.
  */
 import { useEffect, useState, type FormEvent } from 'react';
-import type { GameState, ProfileIndex } from '../data/types';
+import { DIFFICULTIES, DIFFICULTY_LIST } from '../data/difficulties';
+import { getSpecies } from '../data/species';
+import {
+  STARTER_MASCOT_IDS,
+  type DifficultyId,
+  type GameState,
+  type ProfileIndex,
+} from '../data/types';
 import { exportSaveCode } from '../engine/storage';
 import { CozyDialog } from './CozyDialog';
+import { PokemonSprite } from './PokemonSprite';
 
 export interface SaveTransferModalProps {
   open: boolean;
   profileIndex: ProfileIndex;
   activeState: GameState;
   onClose: () => void;
-  onCreateProfile: (name: string) => void;
+  onCreateProfile: (name: string, difficulty: DifficultyId, starterSpeciesId: number) => void;
   onSwitchProfile: (profileId: string) => void;
   onResetProfile: (profileId: string) => void;
   onDeleteProfile: (profileId: string) => void;
@@ -32,6 +40,8 @@ export function SaveTransferModal({
   onImportSaveCode,
 }: SaveTransferModalProps) {
   const [newProfileName, setNewProfileName] = useState('');
+  const [newDifficulty, setNewDifficulty] = useState<DifficultyId>('standard');
+  const [newStarterId, setNewStarterId] = useState<number>(133);
   const [importInput, setImportInput] = useState('');
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [statusError, setStatusError] = useState(false);
@@ -48,7 +58,7 @@ export function SaveTransferModal({
   const handleCreate = (event: FormEvent) => {
     event.preventDefault();
     if (!newProfileName.trim()) return;
-    onCreateProfile(newProfileName.trim());
+    onCreateProfile(newProfileName.trim(), newDifficulty, newStarterId);
     setStatusMessage(`Created & switched to profile "${newProfileName.trim()}".`);
     setStatusError(false);
     setNewProfileName('');
@@ -75,15 +85,15 @@ export function SaveTransferModal({
   };
 
   return (
-    <CozyDialog open={open} onClose={onClose} title="Local Profiles & Save Transfer">
-      <div className="space-y-4 text-xs">
+    <CozyDialog open={open} onClose={onClose} title="Local Profiles &amp; Save Transfer">
+      <div className="space-y-4 text-xs text-[#e2eeff]">
         {statusMessage && (
           <div
             role="status"
-            className={`rounded-lg border-2 px-3 py-2 font-bold ${
+            className={`border-2 px-3 py-2 font-bold ${
               statusError
-                ? 'border-berry-500 bg-berry-100 text-wood-900'
-                : 'border-sage-600 bg-sage-100 text-sage-800'
+                ? 'border-[#e74c3c] bg-[#4a161b] text-[#ffd4d0]'
+                : 'border-[#2ecc71] bg-[#123d28] text-[#cfffe3]'
             }`}
           >
             {statusMessage}
@@ -91,34 +101,54 @@ export function SaveTransferModal({
         )}
 
         {/* Profile List */}
-        <section className="ds-inset space-y-2 rounded-xl p-3">
-          <h2 className="text-sm font-extrabold text-wood-900">Shift Manager Profiles</h2>
-          <p className="text-wood-700">
-            Every profile is stored locally in its own isolated browser save slot.
+        <section className="pmd-inset space-y-2.5 p-3">
+          <h2 className="text-sm font-bold text-[#ffd84d]">Shift Manager Profiles</h2>
+          <p className="text-[#a8c4f0]">
+            Every profile is stored locally in its own isolated v2 browser save slot.
           </p>
 
           <div className="space-y-1.5">
             {profileIndex.profiles.map((meta) => {
               const isActive = meta.id === profileIndex.activeProfileId;
+              const diff = DIFFICULTIES[meta.difficulty ?? 'standard'];
+              const mascotId = meta.mascotSpeciesId ?? 133;
+              const mascotSpecies = getSpecies(mascotId);
+
               return (
                 <div
                   key={meta.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-wood-300 bg-cream-50 px-2.5 py-1.5"
+                  className={`flex flex-wrap items-center justify-between gap-2 border-2 px-2.5 py-2 ${
+                    isActive
+                      ? 'border-[#ffd84d] bg-[#1b366d]'
+                      : 'border-[#3a61a3] bg-[#0e1e44]'
+                  }`}
                 >
-                  <div>
-                    <span className="font-extrabold text-wood-900">{meta.name}</span>
-                    {isActive && (
-                      <span className="ml-2 rounded bg-sage-100 px-1.5 py-0.5 text-[10px] font-bold text-sage-800">
-                        Active
-                      </span>
-                    )}
+                  <div className="flex items-center gap-2">
+                    <PokemonSprite
+                      speciesId={mascotId}
+                      name={mascotSpecies.name}
+                      size={32}
+                    />
+                    <div>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="font-bold text-white">{meta.name}</span>
+                        <span className="border border-[#78a8f0] bg-[#13295c] px-1.5 py-0.5 text-[10px] font-bold text-[#a8d0ff]">
+                          {diff.name}
+                        </span>
+                        {isActive && (
+                          <span className="border border-[#2ecc71] bg-[#14472c] px-1.5 py-0.5 text-[10px] font-bold text-[#9effc3]">
+                            Active
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {!isActive && (
                       <button
                         type="button"
                         onClick={() => onSwitchProfile(meta.id)}
-                        className="rounded border border-sage-800 bg-sage-600 px-2 py-0.5 font-bold text-cream-50"
+                        className="pmd-btn-emerald px-2.5 py-1 font-bold"
                       >
                         Load
                       </button>
@@ -130,7 +160,7 @@ export function SaveTransferModal({
                         setStatusMessage(`Reset "${meta.name}" to a fresh Shift #1.`);
                         setStatusError(false);
                       }}
-                      className="rounded border border-wood-500 bg-cream-100 px-2 py-0.5 font-bold text-wood-900"
+                      className="pmd-btn px-2.5 py-1 font-bold"
                     >
                       Reset
                     </button>
@@ -142,7 +172,7 @@ export function SaveTransferModal({
                           setStatusMessage(`Deleted profile "${meta.name}".`);
                           setStatusError(false);
                         }}
-                        className="rounded border border-berry-500 bg-berry-100 px-2 py-0.5 font-bold text-wood-900"
+                        className="pmd-btn-danger px-2.5 py-1 font-bold"
                       >
                         Delete
                       </button>
@@ -153,35 +183,59 @@ export function SaveTransferModal({
             })}
           </div>
 
-          <form onSubmit={handleCreate} className="flex flex-wrap gap-2 pt-1">
-            <input
-              type="text"
-              aria-label="Create new Shift Manager profile"
-              placeholder="New Shift Manager name..."
-              value={newProfileName}
-              onChange={(e) => setNewProfileName(e.target.value)}
-              maxLength={24}
-              className="flex-1 rounded-md border-2 border-wood-500 bg-cream-50 px-2.5 py-1 text-xs text-wood-900"
-            />
-            <button
-              type="submit"
-              className="rounded-md border-2 border-sage-800 bg-sage-600 px-3 py-1 font-bold text-cream-50"
-            >
-              Create Profile
-            </button>
+          <form onSubmit={handleCreate} className="space-y-2 border-t border-[#3b60a0] pt-2.5">
+            <div className="text-[11px] font-bold text-[#ffd84d]">Create New Trainer Profile</div>
+            <div className="flex flex-wrap gap-2">
+              <input
+                type="text"
+                aria-label="Create new Shift Manager profile"
+                placeholder="New Shift Manager name..."
+                value={newProfileName}
+                onChange={(e) => setNewProfileName(e.target.value)}
+                maxLength={24}
+                className="min-w-[180px] flex-1 border-2 border-[#78a8f0] bg-[#0a1430] px-2.5 py-1 text-xs text-white placeholder:text-[#6f8ec2]"
+              />
+              <select
+                aria-label="New profile difficulty"
+                value={newDifficulty}
+                onChange={(e) => setNewDifficulty(e.target.value as DifficultyId)}
+                className="border-2 border-[#78a8f0] bg-[#0a1430] px-2 py-1 text-xs font-bold text-[#ffd84d]"
+              >
+                {DIFFICULTY_LIST.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+              <select
+                aria-label="New profile starter mascot"
+                value={newStarterId}
+                onChange={(e) => setNewStarterId(Number(e.target.value))}
+                className="border-2 border-[#78a8f0] bg-[#0a1430] px-2 py-1 text-xs font-bold text-white"
+              >
+                {STARTER_MASCOT_IDS.map((id) => (
+                  <option key={id} value={id}>
+                    {getSpecies(id).name}
+                  </option>
+                ))}
+              </select>
+              <button type="submit" className="pmd-btn-gold px-3 py-1 font-bold">
+                Create Profile
+              </button>
+            </div>
           </form>
         </section>
 
         {/* Export / Import */}
-        <section className="ds-inset space-y-2 rounded-xl p-3">
+        <section className="pmd-inset space-y-2 p-3">
           <div className="flex items-center justify-between gap-2">
-            <h2 className="text-sm font-extrabold text-wood-900">
+            <h2 className="text-sm font-bold text-[#ffd84d]">
               Export Save Code ({activeState.profileName})
             </h2>
             <button
               type="button"
               onClick={handleCopy}
-              className="rounded border border-wood-700 bg-honey-100 px-2.5 py-1 font-bold text-wood-900"
+              className="pmd-btn-gold px-2.5 py-1 font-bold"
             >
               Copy Code
             </button>
@@ -191,10 +245,10 @@ export function SaveTransferModal({
             readOnly
             rows={3}
             value={exportCode}
-            className="w-full rounded-md border border-wood-500 bg-cream-50 p-2 font-mono text-[11px] text-wood-900"
+            className="w-full border-2 border-[#4e78bd] bg-[#091229] p-2 font-mono text-[11px] text-[#cfe0ff]"
           />
 
-          <label className="block pt-1 font-bold text-wood-900">
+          <label className="block pt-1 font-bold text-[#e2eeff]">
             <span>Import Save Code (replaces current active profile data)</span>
             <textarea
               aria-label="Import Save Code"
@@ -202,14 +256,14 @@ export function SaveTransferModal({
               placeholder="Paste Base64 save code here..."
               value={importInput}
               onChange={(e) => setImportInput(e.target.value)}
-              className="mt-1 w-full rounded-md border border-wood-500 bg-cream-50 p-2 font-mono text-[11px] text-wood-900"
+              className="mt-1 w-full border-2 border-[#4e78bd] bg-[#091229] p-2 font-mono text-[11px] text-white placeholder:text-[#6f8ec2]"
             />
           </label>
           <div className="flex justify-end">
             <button
               type="button"
               onClick={handleImport}
-              className="rounded-md border-2 border-wood-700 bg-sky-100 px-3 py-1 font-bold text-wood-900 hover:bg-sky-100/80"
+              className="pmd-btn px-3 py-1 font-bold"
             >
               Import Save into {activeState.profileName}
             </button>

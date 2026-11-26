@@ -12,18 +12,19 @@ import { pickShopperNpc } from '../data/npcs';
 import { getSpecies } from '../data/species';
 import { MARKET_TRENDS, getMarketTrend } from '../data/trends';
 import { UPGRADES_BY_ID, getUpgradeCost } from '../data/upgrades';
-import type {
-  ActivityEntry,
-  CounterOffer,
-  CustomerArchetypeId,
-  DifficultyId,
-  GameState,
-  GiftBallSlug,
-  ItemSlug,
-  PokemonInstance,
-  ShiftSettlement,
-  ShopCustomer,
-  ShopUpgradeId,
+import {
+  STARTER_MASCOT_IDS,
+  type ActivityEntry,
+  type CounterOffer,
+  type CustomerArchetypeId,
+  type DifficultyId,
+  type GameState,
+  type GiftBallSlug,
+  type ItemSlug,
+  type PokemonInstance,
+  type ShiftSettlement,
+  type ShopCustomer,
+  type ShopUpgradeId,
 } from '../data/types';
 import {
   advanceEggsTick,
@@ -100,8 +101,8 @@ function nextRng(state: GameState, providedRng?: RngFn): { rng: RngFn; nextSeed:
 
 /**
  * Creates a fresh v2 starting state for a local Shift Manager profile on the chosen
- * difficulty (`relaxed`, `standard`, or `high-stakes`).
- * Starts with bundled core mascots Eevee (`133`), Slowpoke (`79`), and napping Psyduck (`54`).
+ * difficulty (`relaxed`, `standard`, or `high-stakes`) and Starter Mascot species.
+ * Starts with chosen Starter Mascot (#133 Eevee default), Slowpoke (#79), and napping Psyduck (#54).
  */
 export function createInitialGameState(
   profileId: string,
@@ -109,17 +110,33 @@ export function createInitialGameState(
   difficulty: DifficultyId = 'standard',
   muted = false,
   seed = 1042,
+  starterSpeciesId = 133,
 ): GameState {
   const diff = getDifficultyConfig(difficulty);
   const rng = createSeededRng(seed);
+  const resolvedStarterId = STARTER_MASCOT_IDS.includes(
+    starterSpeciesId as (typeof STARTER_MASCOT_IDS)[number],
+  )
+    ? starterSpeciesId
+    : 133;
+  const starterSpecies = getSpecies(resolvedStarterId);
+  const starterUid =
+    resolvedStarterId === 133 ? 'mon-starter-eevee' : `mon-starter-${resolvedStarterId}`;
 
   const starterPokemon: PokemonInstance[] = [
     {
-      uid: 'mon-starter-eevee',
-      speciesId: 133,
+      uid: starterUid,
+      speciesId: resolvedStarterId,
       isShiny: false,
       trait: 'Cozy',
-      stats: { cute: 88, comfort: 82, rarity: 58 },
+      stats:
+        resolvedStarterId === 133
+          ? { cute: 88, comfort: 82, rarity: 58 }
+          : {
+              cute: Math.max(82, starterSpecies.baseStats.cute),
+              comfort: Math.max(80, starterSpecies.baseStats.comfort),
+              rarity: Math.max(56, starterSpecies.baseStats.rarity),
+            },
       location: 'pen',
       penIndex: 0,
       healingProgress: 100,
@@ -181,6 +198,7 @@ export function createInitialGameState(
     globalMarkup: 100,
     penMarkups: {},
     activeGiftBall: 'poke-ball',
+    mascotUid: starterUid,
     pokemon: starterPokemon,
     eggs: [],
     inventory: {
@@ -302,6 +320,25 @@ export function setActiveGiftBall(state: GameState, ball: GiftBallSlug): ActionR
 /** Toggles per-profile Web Audio SFX mute preference. */
 export function toggleMuteAction(state: GameState): GameState {
   return { ...state, muted: !state.muted, updatedAt: Date.now() };
+}
+
+/** Promotes any owned Pokémon to be the featured Store Mascot on the Main Menu spotlight. */
+export function setShopMascotAction(state: GameState, pokemonUid: string): ActionResult {
+  const target = state.pokemon.find((mon) => mon.uid === pokemonUid);
+  if (!target) {
+    return { state, ok: false, message: 'Pokémon not found in your shop.' };
+  }
+  const species = getSpecies(target.speciesId);
+  return {
+    state: {
+      ...state,
+      mascotUid: pokemonUid,
+      updatedAt: Date.now(),
+    },
+    ok: true,
+    message: `${target.isShiny ? '✨ Shiny ' : ''}${species.name} is now your Store Mascot!`,
+    sfx: 'click',
+  };
 }
 
 /** Purchases an offer from Wholesale, Rescue, Mystery Eggs, or VIP Legendary Contracts. */
@@ -818,6 +855,9 @@ export function acceptCounterOfferAction(state: GameState, offerUid: string): Ac
 
   const spName = getSpecies(targetMon.speciesId).name;
   const recentSales = state.recentSpeciesSales[targetMon.speciesId] ?? 0;
+  const remainingPokemon = state.pokemon.filter((mon) => mon.uid !== targetMon.uid);
+  const nextMascotUid =
+    state.mascotUid === targetMon.uid ? remainingPokemon[0]?.uid : state.mascotUid;
 
   return {
     state: {
@@ -826,7 +866,8 @@ export function acceptCounterOfferAction(state: GameState, offerUid: string): Ac
       cozyXp: state.cozyXp + xpGain,
       inventory: nextInv,
       activeGiftBall: nextActiveBall,
-      pokemon: state.pokemon.filter((mon) => mon.uid !== targetMon.uid),
+      mascotUid: nextMascotUid,
+      pokemon: remainingPokemon,
       counterQueue: state.counterQueue.filter(
         (q) => q.uid !== offerUid && q.pokemonUid !== targetMon.uid,
       ),
@@ -988,6 +1029,9 @@ export function liquidatePokemonAction(state: GameState, pokemonUid: string): Ac
   const payout = getLiquidationValue(target);
   const spName = getSpecies(target.speciesId).name;
   const nextCash = state.cash + payout;
+  const remainingPokemon = state.pokemon.filter((p) => p.uid !== pokemonUid);
+  const nextMascotUid =
+    state.mascotUid === pokemonUid ? remainingPokemon[0]?.uid : state.mascotUid;
 
   const updatedPending: ShiftSettlement | null = state.pendingSettlement
     ? {
@@ -1002,7 +1046,8 @@ export function liquidatePokemonAction(state: GameState, pokemonUid: string): Ac
     state: {
       ...state,
       cash: nextCash,
-      pokemon: state.pokemon.filter((p) => p.uid !== pokemonUid),
+      mascotUid: nextMascotUid,
+      pokemon: remainingPokemon,
       counterQueue: state.counterQueue.filter((q) => q.pokemonUid !== pokemonUid),
       pendingSettlement: updatedPending,
       shiftStats: {

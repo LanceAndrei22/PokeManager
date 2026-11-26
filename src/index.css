@@ -1,100 +1,311 @@
 @import "tailwindcss";
 
-@theme {
-  /* Cozy Gen 4 DS convenience-store palette: warm cream, oak wood, matcha sage, honey amber */
-  --color-cream-50: #fdf9f0;
-  --color-cream-100: #f7eedb;
-  --color-cream-200: #eedec1;
-  --color-wood-300: #c8ab86;
-  --color-wood-500: #9d7952;
-  --color-wood-700: #6b4e31;
-  --color-wood-900: #3c2918;
-  --color-sage-100: #e8f1e2;
-  --color-sage-300: #b7d2aa;
-  --color-sage-600: #527c4f;
-  --color-sage-800: #2f4f2e;
-  --color-honey-100: #fef2cf;
-  --color-honey-400: #efc15a;
-  --color-honey-600: #ba7c18;
-  --color-berry-100: #fce7ea;
-  --color-berry-500: #d16878;
-  --color-sky-100: #e5f1f8;
-  --color-sky-600: #3d7599;
-  --color-lavender-100: #eeeaf9;
-  --color-lavender-600: #6a5ca5;
+/* Self-hosted SIL OFL pixel fonts for offline crisp DS / PMD typography */
+@font-face {
+  font-family: "Pixelify Sans";
+  src: url("./assets/fonts/pixelify-sans-400.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
 
-  --font-sans: "Trebuchet MS", "Nunito", ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-mono: "Consolas", "Courier New", ui-monospace, SFMono-Regular, monospace;
+@font-face {
+  font-family: "Pixelify Sans";
+  src: url("./assets/fonts/pixelify-sans-700.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Silkscreen";
+  src: url("./assets/fonts/silkscreen-400.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Silkscreen";
+  src: url("./assets/fonts/silkscreen-700.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme {
+  /* PMD Mystery Dungeon DS Royal Navy & Gold palette */
+  --color-pmd-navy-950: #0c1733;
+  --color-pmd-navy-900: #13244b;
+  --color-pmd-navy-800: #1a3160;
+  --color-pmd-navy-700: #22417d;
+  --color-pmd-sky: #78a8f0;
+  --color-pmd-gold: #ffd84d;
+  --color-pmd-gold-deep: #f5b82e;
+  --color-pmd-emerald: #2ecc71;
+  --color-pmd-crimson: #e74c3c;
+  --color-pmd-ink: #eef5ff;
+
+  --font-sans: "Pixelify Sans", "Consolas", ui-monospace, monospace;
+  --font-display: "Silkscreen", "Pixelify Sans", "Consolas", monospace;
+  --font-mono: "Silkscreen", "Consolas", "Courier New", ui-monospace, monospace;
 }
 
 :root {
-  accent-color: var(--color-sage-600);
+  color-scheme: dark;
+  accent-color: var(--color-pmd-gold);
+  --target-size: 24px;
 }
 
-/* Crisp pixel-art scaling for Pokémon Platinum 80×80 PNGs and Gen 4 item icons */
+@media (pointer: coarse) {
+  :root {
+    --target-size: 44px;
+  }
+}
+
+html,
+body,
+#root {
+  height: 100dvh;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: var(--color-pmd-navy-950);
+  color: var(--color-pmd-ink);
+  font-family: var(--font-sans);
+  font-size-adjust: from-font;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+p,
+li {
+  text-wrap: pretty;
+}
+
+:where(button, select, textarea, input:not([type="checkbox"], [type="radio"]), [role="button"]) {
+  min-block-size: var(--target-size);
+}
+
+/* Crisp pixel-art scaling for PMD SpriteCollab PNGs, portraits, and item icons */
 .pixel-art {
   image-rendering: pixelated;
   image-rendering: crisp-edges;
 }
 
-/* Cozy DS-inspired soft retro card framing without heavy drop shadows */
-.ds-panel {
-  background-color: var(--color-cream-50);
-  border: 2px solid var(--color-wood-700);
-  box-shadow: 0 3px 0 var(--color-wood-300);
+/* PMD Royal-Blue DS double-bordered translucent window */
+.pmd-panel {
+  background: linear-gradient(180deg, rgba(30, 58, 115, 0.95) 0%, rgba(18, 36, 77, 0.96) 100%);
+  border: 3px solid #070d1f;
+  box-shadow:
+    inset 0 0 0 2px #78a8f0,
+    inset 0 0 0 4px #11224a,
+    0 4px 0 rgba(7, 13, 31, 0.78);
+  color: #eef5ff;
 }
 
-.ds-inset {
-  background-color: var(--color-cream-100);
-  border: 2px solid var(--color-wood-300);
+/* Deeper inset card inside a PMD window */
+.pmd-inset {
+  background-color: rgba(11, 22, 50, 0.88);
+  border: 2px solid #4e78bd;
+  box-shadow: inset 0 0 0 1px #081229;
+  color: #eef5ff;
+}
+
+/* Compact floating HUD pill */
+.pmd-pill {
+  background: rgba(15, 31, 68, 0.93);
+  border: 2px solid #070d1f;
+  box-shadow:
+    inset 0 0 0 1px #78a8f0,
+    0 3px 0 rgba(7, 13, 31, 0.75);
+  color: #eef5ff;
+}
+
+/* Standard PMD navy command button */
+.pmd-btn {
+  background: linear-gradient(180deg, #274a90 0%, #193266 100%);
+  border: 2px solid #070d1f;
+  box-shadow:
+    inset 0 0 0 2px #6fa0ec,
+    0 2px 0 #070d1f;
+  color: #eef5ff;
+  cursor: pointer;
+  transition: transform 80ms ease, filter 120ms ease, box-shadow 120ms ease;
+}
+
+.pmd-btn:hover:not(:disabled) {
+  filter: brightness(1.14);
+  box-shadow:
+    inset 0 0 0 2px #ffd84d,
+    0 2px 0 #070d1f;
+}
+
+.pmd-btn:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow:
+    inset 0 0 0 2px #ffd84d,
+    0 1px 0 #070d1f;
+}
+
+.pmd-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Golden CTA PMD button */
+.pmd-btn-gold {
+  background: linear-gradient(180deg, #ffd84d 0%, #eca719 100%);
+  border: 2px solid #070d1f;
+  box-shadow:
+    inset 0 0 0 2px #fff3ad,
+    0 3px 0 #070d1f;
+  color: #261600;
+  cursor: pointer;
+  transition: transform 80ms ease, filter 120ms ease;
+}
+
+.pmd-btn-gold:hover:not(:disabled) {
+  filter: brightness(1.07);
+}
+
+.pmd-btn-gold:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.pmd-btn-gold:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Emerald positive action button */
+.pmd-btn-emerald {
+  background: linear-gradient(180deg, #27ae60 0%, #1b7f44 100%);
+  border: 2px solid #070d1f;
+  box-shadow:
+    inset 0 0 0 2px #6ee7a0,
+    0 2px 0 #070d1f;
+  color: #f4fff8;
+  cursor: pointer;
+}
+
+.pmd-btn-emerald:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.pmd-btn-emerald:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Crimson warning / liquidate / decline button */
+.pmd-btn-danger {
+  background: linear-gradient(180deg, #d94638 0%, #9b281e 100%);
+  border: 2px solid #070d1f;
+  box-shadow:
+    inset 0 0 0 2px #ff9b91,
+    0 2px 0 #070d1f;
+  color: #fff5f5;
+  cursor: pointer;
+}
+
+.pmd-btn-danger:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.pmd-btn-danger:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Chunky golden-yellow title typography modeled after PokéSurvivor */
+.pmd-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 1rem + 2.2vw, 3.05rem);
+  font-size-adjust: cap-height from-font;
+  line-height: 1.08;
+  color: #ffd84d;
+  text-shadow:
+    3px 3px 0 #1b1200,
+    -2px -2px 0 #1b1200,
+    2px -2px 0 #1b1200,
+    -2px 2px 0 #1b1200,
+    0 5px 0 #070d1f;
+  letter-spacing: 0.02em;
+}
+
+.pmd-splash {
+  font-family: var(--font-sans);
+  color: #ffe266;
+  text-shadow:
+    2px 2px 0 #140d00,
+    -1px -1px 0 #140d00,
+    1px -1px 0 #140d00,
+    -1px 1px 0 #140d00;
+}
+
+/* Safe-area inset helpers for fullscreen mobile overlays */
+.safe-top-bar {
+  padding-top: max(0.5rem, env(safe-area-inset-top, 0px));
+  padding-left: max(0.5rem, env(safe-area-inset-left, 0px));
+  padding-right: max(0.5rem, env(safe-area-inset-right, 0px));
+}
+
+.safe-bottom-dock {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+  padding-left: max(0.5rem, env(safe-area-inset-left, 0px));
+  padding-right: max(0.5rem, env(safe-area-inset-right, 0px));
 }
 
 /* Native <dialog> modal styling & scroll-chaining containment per modern-web-guidance */
-dialog.cozy-dialog {
+dialog.pmd-dialog {
   margin: auto;
-  width: min(94vw, 48rem);
+  width: min(94vw, 54rem);
   max-height: 90dvh;
-  border: 2px solid var(--color-wood-700);
-  border-radius: 0.75rem;
-  background-color: var(--color-cream-50);
-  color: var(--color-wood-900);
-  box-shadow: 0 12px 32px rgba(60, 41, 24, 0.25);
+  background: linear-gradient(180deg, rgba(28, 55, 110, 0.97) 0%, rgba(16, 33, 72, 0.98) 100%);
+  border: 3px solid #070d1f;
+  box-shadow:
+    inset 0 0 0 2px #78a8f0,
+    0 14px 36px rgba(5, 10, 24, 0.72);
+  color: #eef5ff;
   padding: 0;
 }
 
-dialog.cozy-dialog:modal {
+dialog.pmd-dialog:modal {
   overscroll-behavior: contain;
 }
 
-dialog.cozy-dialog::backdrop {
-  background-color: rgba(45, 31, 18, 0.55);
+dialog.pmd-dialog::backdrop {
+  background-color: rgba(5, 11, 26, 0.68);
   backdrop-filter: blur(2px);
   overflow: hidden;
   overscroll-behavior: contain;
 }
 
-/* Accessible single-row tab underline using border (not color alone) */
-.cozy-tab {
+/* Active tab indicator using crisp gold bottom border (not color alone) */
+.pmd-tab {
   position: relative;
   flex: none;
 }
 
-.cozy-tab[aria-selected="true"]::after {
+.pmd-tab[aria-selected="true"]::after {
   content: "";
   position: absolute;
   inset: auto 0 0;
-  border-block-end: 3px solid var(--color-sage-600);
+  border-block-end: 3px solid #ffd84d;
 }
 
-/* Native range slider styled cleanly across WebKit/Blink and Firefox */
-input[type="range"].cozy-slider {
+/* Native range slider styled in PMD Navy & Gold */
+input[type="range"].pmd-slider {
   --slider-track-size: 0.5rem;
   --slider-thumb-size: 1.25rem;
-  --slider-track-radius: 999px;
-  --slider-thumb-radius: 999px;
-  --slider-track-color: var(--color-cream-200);
-  --slider-fill-color: var(--color-sage-600);
-  --slider-thumb-color: var(--color-wood-700);
+  --slider-track-color: #0b1632;
+  --slider-fill-color: #f5b82e;
+  --slider-thumb-color: #ffd84d;
   --attr-min: 80;
   --attr-max: 160;
   --control-value: 100;
@@ -111,10 +322,9 @@ input[type="range"].cozy-slider {
   cursor: pointer;
 }
 
-input[type="range"].cozy-slider::-webkit-slider-runnable-track {
+input[type="range"].pmd-slider::-webkit-slider-runnable-track {
   block-size: var(--slider-track-size);
-  border: 1px solid var(--color-wood-500);
-  border-radius: var(--slider-track-radius);
+  border: 1px solid #78a8f0;
   background: linear-gradient(
     to right,
     var(--slider-fill-color) var(--slider-progress),
@@ -122,39 +332,55 @@ input[type="range"].cozy-slider::-webkit-slider-runnable-track {
   );
 }
 
-input[type="range"].cozy-slider::-webkit-slider-thumb {
+input[type="range"].pmd-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   inline-size: var(--slider-thumb-size);
   block-size: var(--slider-thumb-size);
   margin-block-start: calc((var(--slider-track-size) - var(--slider-thumb-size)) / 2 - 1px);
-  border: 2px solid var(--color-cream-50);
-  border-radius: var(--slider-thumb-radius);
+  border: 2px solid #070d1f;
   background: var(--slider-thumb-color);
 }
 
-input[type="range"].cozy-slider::-moz-range-track {
+input[type="range"].pmd-slider::-moz-range-track {
   block-size: var(--slider-track-size);
-  border: 1px solid var(--color-wood-500);
-  border-radius: var(--slider-track-radius);
+  border: 1px solid #78a8f0;
   background: var(--slider-track-color);
 }
 
-input[type="range"].cozy-slider::-moz-range-progress {
+input[type="range"].pmd-slider::-moz-range-progress {
   block-size: var(--slider-track-size);
-  border-radius: var(--slider-track-radius);
   background: var(--slider-fill-color);
 }
 
-input[type="range"].cozy-slider::-moz-range-thumb {
+input[type="range"].pmd-slider::-moz-range-thumb {
   inline-size: var(--slider-thumb-size);
   block-size: var(--slider-thumb-size);
-  border: 2px solid var(--color-cream-50);
-  border-radius: var(--slider-thumb-radius);
+  border: 2px solid #070d1f;
   background: var(--slider-thumb-color);
 }
 
-input[type="range"].cozy-slider:focus-visible {
-  outline: 2px solid var(--color-sage-600);
+input[type="range"].pmd-slider:focus-visible {
+  outline: 2px solid #ffd84d;
   outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pmd-float-bob {
+    animation: none !important;
+  }
+}
+
+@keyframes pmdFloatBob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.pmd-float-bob {
+  animation: pmdFloatBob 2.2s steps(4, end) infinite;
 }

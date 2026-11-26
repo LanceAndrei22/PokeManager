@@ -1,12 +1,4 @@
 {
-  "0352": {
-    "anims": [
-      "Walk",
-      "Idle",
-      "Sleep"
-    ],
-    "portrait": true
-  },
   "0052": {
     "anims": [
       "Walk",
@@ -15,7 +7,7 @@
     ],
     "portrait": true
   },
-  "0263": {
+  "0352": {
     "anims": [
       "Walk",
       "Idle",
@@ -31,7 +23,23 @@
     ],
     "portrait": true
   },
+  "0263": {
+    "anims": [
+      "Walk",
+      "Idle",
+      "Sleep"
+    ],
+    "portrait": true
+  },
   "0040": {
+    "anims": [
+      "Walk",
+      "Idle",
+      "Sleep"
+    ],
+    "portrait": true
+  },
+  "0143": {
     "anims": [
       "Walk",
       "Idle",
@@ -55,14 +63,6 @@
     ],
     "portrait": true
   },
-  "0143": {
-    "anims": [
-      "Walk",
-      "Idle",
-      "Sleep"
-    ],
-    "portrait": true
-  },
   "0272": {
     "anims": [
       "Walk",
@@ -71,7 +71,7 @@
     ],
     "portrait": true
   },
-  "0430": {
+  "0053": {
     "anims": [
       "Walk",
       "Idle",
@@ -87,7 +87,7 @@
     ],
     "portrait": true
   },
-  "0053": {
+  "0430": {
     "anims": [
       "Walk",
       "Idle",
@@ -104,6 +104,46 @@
     "portrait": true
   },
   "0133": {
+    "anims": [
+      "Walk",
+      "Idle",
+      "Sleep"
+    ],
+    "portrait": true
+  },
+  "0025": {
+    "anims": [
+      "Walk",
+      "Idle",
+      "Sleep"
+    ],
+    "portrait": true
+  },
+  "0001": {
+    "anims": [
+      "Walk",
+      "Idle",
+      "Sleep"
+    ],
+    "portrait": true
+  },
+  "0004": {
+    "anims": [
+      "Walk",
+      "Idle",
+      "Sleep"
+    ],
+    "portrait": true
+  },
+  "0007": {
+    "anims": [
+      "Walk",
+      "Idle",
+      "Sleep"
+    ],
+    "portrait": true
+  },
+  "0393": {
     "anims": [
       "Walk",
       "Idle",

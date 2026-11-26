@@ -1,5 +1,5 @@
 /**
- * Accessible native <dialog> wrapper following modern-web-guidance:
+ * Accessible native <dialog> wrapper styled in PMD DS Royal Navy & Gold framing:
  * - Uses native showModal() / close() without redundant role="dialog" or aria-modal.
  * - Supports closedby="any" light dismiss plus a getBoundingClientRect() pointer fallback
  *   when closedBy is unsupported in older browsers or jsdom.
@@ -103,18 +103,18 @@ export function CozyDialog({
     <dialog
       ref={dialogRef}
       aria-labelledby={titleId}
-      className="cozy-dialog"
+      className="pmd-dialog"
       {...(closedByProp as Record<string, string>)}
     >
       <div className="flex max-h-[90dvh] flex-col">
-        <header className="flex items-center justify-between border-b-2 border-wood-300 bg-cream-100 px-4 py-3">
-          <h1 id={titleId} className="text-lg font-bold text-wood-900">
+        <header className="flex items-center justify-between gap-2 border-b-2 border-[#78a8f0] bg-[#11234d] px-4 py-3">
+          <h1 id={titleId} className="font-[family-name:var(--font-display)] text-sm font-bold text-[#ffd84d] sm:text-base">
             {title}
           </h1>
           <button
             type="button"
             onClick={() => dialogRef.current?.close()}
-            className="rounded-md border-2 border-wood-700 bg-cream-50 px-2.5 py-1 text-xs font-bold text-wood-900 hover:bg-cream-200 focus-visible:outline-2 focus-visible:outline-sage-600"
+            className="pmd-btn px-3 py-1 text-xs font-bold focus-visible:outline-2 focus-visible:outline-[#ffd84d]"
           >
             Close
           </button>

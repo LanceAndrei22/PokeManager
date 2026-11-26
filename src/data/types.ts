@@ -49,6 +49,12 @@ export type EggGroup =
 /** Rarity classification driving Wholesale rank gating, pricing, and VIP contracts. */
 export type RarityTier = 'common' | 'uncommon' | 'rare' | 'pseudo' | 'legendary' | 'mythical';
 
+/** Six iconic Gen 1–4 Starter Mascots bundled locally for New Trainer profiles. */
+export const STARTER_MASCOT_IDS = [133, 25, 1, 4, 7, 393] as const;
+
+/** Union of selectable Starter Mascot Pokédex IDs. */
+export type StarterMascotId = (typeof STARTER_MASCOT_IDS)[number];
+
 /** Three playable tycoon difficulty modes stored per Shift Manager profile. */
 export type DifficultyId = 'relaxed' | 'standard' | 'high-stakes';
 
@@ -393,6 +399,8 @@ export interface GameState {
   globalMarkup: number;
   penMarkups: Record<number, number | null>;
   activeGiftBall: GiftBallSlug;
+  /** UID of the player's featured Store Mascot shown on the Main Menu spotlight card. */
+  mascotUid?: string;
   pokemon: PokemonInstance[];
   eggs: EggInstance[];
   inventory: Partial<Record<ItemSlug, number>>;
@@ -430,6 +438,8 @@ export interface ProfileMeta {
   id: string;
   name: string;
   difficulty: DifficultyId;
+  /** Species ID of the profile's chosen or promoted Store Mascot portrait. */
+  mascotSpeciesId?: number;
   createdAt: number;
   updatedAt: number;
 }

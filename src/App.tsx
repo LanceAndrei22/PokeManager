@@ -142,8 +142,12 @@ export function App() {
     setToast(`Switched to ${next.activeState.profileName}'s PokéMart.`);
   };
 
-  const handleCreateProfile = (name: string) => {
-    const next = createProfile(name, 'standard');
+  const handleCreateProfile = (
+    name: string,
+    difficulty: 'relaxed' | 'standard' | 'high-stakes' = 'standard',
+    starterSpeciesId = 133,
+  ) => {
+    const next = createProfile(name, difficulty, undefined, starterSpeciesId);
     setStore({ index: next.index, game: next.activeState });
     setInspectUid(null);
     setToast(`Welcome, ${next.activeState.profileName}!`);
