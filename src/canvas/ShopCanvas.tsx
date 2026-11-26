@@ -18,8 +18,10 @@ import type {
   WholesaleOffer,
 } from '../data/types';
 import { computeIndoorLayout } from './layout';
+import { preloadAllHumanNpcs } from './humanNpcAnimator';
 import { buildIndoorBackgroundLayer, renderIndoorScene } from './indoorRenderer';
 import { createPmdSpriteAdapter } from './pmdLoader';
+import { onTilesetUpdate, preloadTilesets } from './tilesetLoader';
 import { usePrefersReducedMotion } from './useReducedMotion';
 import type { CanvasHitTarget, ShopLayout } from './types';
 import {
@@ -69,7 +71,7 @@ function describeIndoorStore(
     .map((p) => `${p.isShiny ? 'shiny ' : ''}${getSpecies(p.speciesId).name}`);
   return `Interactive Gen 4 PokéMart floor. On display: ${
     pens.length > 0 ? pens.join(', ') : 'none'
-  }. ${customers.length} browsing, ${counterQueue.length} waiting at Kecleon's counter.`;
+  }. ${customers.length} browsing, ${counterQueue.length} waiting at the PokéMart counter.`;
 }
 
 /** Full-screen animated Indoor PokéMart canvas. */
@@ -125,6 +127,17 @@ export function ShopCanvas({
     world.reducedMotion = reducedMotion;
     world.motionPaused = motionPaused;
   }, [world, reducedMotion, motionPaused]);
+
+  // Preload GBA PokéMart tilesets + 16 Human Trainer sheets and refresh layer on decode
+  useEffect(() => {
+    void preloadTilesets();
+    preloadAllHumanNpcs();
+    return onTilesetUpdate(() => {
+      if (layoutRef.current) {
+        backgroundRef.current = buildIndoorBackgroundLayer(layoutRef.current);
+      }
+    });
+  }, []);
 
   // Observe full-viewport container dimensions
   useEffect(() => {

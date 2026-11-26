@@ -226,10 +226,29 @@ describe('Shop World State Machine', () => {
       'shinx',
     );
   });
+
+  it('cycles store Pokémon across walk/hop/idle and eases sliding doors on entry', () => {
+    const rng = createSeededRng(99);
+    const layout = computeIndoorLayout(1280, 800, 3, 2, 1);
+    const world = createWorld();
+    const eevee = makePokemon({ uid: 'eevee-lively', speciesId: 133, penIndex: 0 });
+    const visitor = makeCustomer({ uid: 'c-door', targetPenIndex: 0 });
+
+    syncWorld(world, buildFloorSnapshot('p1', 1800, 1, [eevee], [visitor], []), layout, rng);
+    const ent = world.pokemon.get('eevee-lively')!;
+    const seenStates = new Set<string>([ent.state]);
+
+    for (let i = 0; i < 60; i += 1) {
+      stepWorld(world, 0.1, layout, rng);
+      seenStates.add(ent.state);
+    }
+    expect(seenStates.size).toBeGreaterThanOrEqual(2);
+    expect(world.eggWobblePhase).toBeGreaterThan(0);
+  });
 });
 
 describe('2D Canvas Indoor Pixel Renderer & ShopCanvas UI', () => {
-  it('enforces imageSmoothingEnabled = false and draws Kecleon, queued shoppers, stations, and sprites', () => {
+  it('enforces imageSmoothingEnabled = false and draws PMD store Pokémon + Human NPCs/stations', () => {
     const layout = computeIndoorLayout(1024, 768, 3, 2, 1);
     const world = createWorld();
     const rng = createSeededRng(88);
@@ -275,10 +294,10 @@ describe('2D Canvas Indoor Pixel Renderer & ShopCanvas UI', () => {
     expect(ctx.setTransform).toHaveBeenCalledWith(1, 0, 0, 1, 0, 0);
     expect(ctx.imageSmoothingEnabled).toBe(false);
     expect(ctx.drawImage).toHaveBeenCalled();
-    // Temporary Step 2 PMD fallback check before Step 3 swaps shoppers/clerk to Human Trainer sprites
-    expect(getFrame).toHaveBeenCalledWith(352, false, 'idle', expect.any(Number), 0);
-    expect(getFrame).toHaveBeenCalledWith(52, false, 'walk', expect.any(Number), expect.any(Number));
-    expect(getFrame).toHaveBeenCalledWith(40, false, 'idle', expect.any(Number), 4);
+    // Verifies 100% PMD SpriteCollab adapter is used for store Pokémon (Eevee #133 pen, Psyduck #54 sleep)
+    expect(getFrame).toHaveBeenCalledWith(133, false, expect.any(String), expect.any(Number), expect.any(Number));
+    expect(getFrame).toHaveBeenCalledWith(54, false, 'sleep', expect.any(Number), 0);
+    expect(getFrame).not.toHaveBeenCalledWith(352, expect.anything(), expect.anything(), expect.anything(), expect.anything());
 
     // Also confirm legacy renderer still honors reducedMotion static scale
     world.reducedMotion = true;

@@ -1,13 +1,13 @@
 /**
  * Canvas world state machine for the full-screen Indoor PokéMart shop floor.
  *
- * The world mirrors simulation snapshots into animated PMD entities:
- * - Pokémon in pens: `idle` ⇄ `hop` chains with 8-directional headings.
- * - Pokémon in nap beds: `sleep` (`Sleep-Anim.png` + drifting `Zzz`).
- * - PMD Shopper NPCs (`npcSpeciesId`): walk 8-directionally from the door → pens →
- *   exit, while interested buyers step up to `counterQueue` in front of Kecleon's
- *   register with live Patience Bars, bouncing `!` offer bubbles, and sweat drops.
- * - Store Clerk Kecleon (`0352`) animates behind the counter (`layout.counter`).
+ * The world mirrors simulation snapshots into lively animated entities:
+ * - Store Pokémon in pens (100% PMD SpriteCollab): cycle smoothly between `walk`,
+ *   `hop` (`Hop-Anim.png`), `idle`, and curious turns toward visiting shoppers.
+ * - Store Pokémon in nap beds (100% PMD SpriteCollab): `sleep` (`Sleep-Anim.png` + `Zzz`).
+ * - Human Trainer shoppers (`npcId`): walk 4-directionally from sliding glass doors
+ *   → pens → exit, while queued buyers wait in front of Clerk Leo's counter with
+ *   live Patience Bars, bouncing `!` offer bubbles, and sweat drops.
  */
 import type {
   CounterOffer,
@@ -17,9 +17,11 @@ import type {
   ShopCustomer,
   WholesaleOffer,
 } from '../data/types';
+import { resolveHumanNpcFallback } from '../data/npcs';
 import { getSpecies } from '../data/species';
 import { clamp, type RngFn } from '../engine/rng';
 import { HOP_DURATION, easeInOutSine, facingForDelta, lerp } from './animation';
+import { vectorToCardinalDirection, type CardinalDirection } from './humanNpcAnimator';
 import {
   buildEntryRoute,
   dedupePath,
@@ -81,11 +83,11 @@ export interface PokemonEntity {
 /** Shopper walker lifecycle states. */
 export type WalkerState = 'entering' | 'browsing' | 'leaving';
 
-/** Animated PMD Pokémon shopper visiting a pen. */
+/** Animated Human Trainer shopper visiting a pen. */
 export interface CustomerWalker {
   uid: string;
   archetypeId: CustomerArchetypeId;
-  npcSpeciesId: number;
+  npcId: string;
   penIndex: number;
   visitorIndex: number;
   state: WalkerState;
@@ -96,16 +98,17 @@ export interface CustomerWalker {
   y: number;
   facing: 1 | -1;
   direction: PmdDirection;
+  cardinalDir: CardinalDirection;
   distance: number;
   happy: boolean;
   time: number;
   look: number;
 }
 
-/** Animated shopper standing in front of Kecleon's counter waiting to haggle. */
+/** Animated Human Trainer standing in front of the PokéMart counter waiting to haggle. */
 export interface QueuedShopperEntity {
   offerUid: string;
-  npcSpeciesId: number;
+  npcId: string;
   customerName: string;
   archetypeId: CustomerArchetypeId;
   patience: number;
@@ -133,6 +136,9 @@ export interface ShopWorld {
   eggCount: number;
   readyEggCount: number;
   hasVipContract: boolean;
+  doorOpenAmount: number;
+  clerkWaveTimer: number;
+  eggWobblePhase: number;
   reducedMotion: boolean;
   motionPaused: boolean;
 }
@@ -159,6 +165,9 @@ export function createWorld(): ShopWorld {
     eggCount: 0,
     readyEggCount: 0,
     hasVipContract: false,
+    doorOpenAmount: 0,
+    clerkWaveTimer: 0,
+    eggWobblePhase: 0,
     reducedMotion: false,
     motionPaused: false,
   };
@@ -208,12 +217,12 @@ export function buildFloorSnapshot(
     customers: customers.map((c) => ({
       uid: c.uid,
       archetypeId: c.archetypeId,
-      npcSpeciesId: c.npcSpeciesId ?? 52,
+      npcId: c.npcId || resolveHumanNpcFallback(c.archetypeId).id,
       targetPenIndex: c.targetPenIndex,
     })),
     counterQueue: counterQueue.map((q) => ({
       uid: q.uid,
-      npcSpeciesId: q.npcSpeciesId ?? 40,
+      npcId: q.npcId || resolveHumanNpcFallback(q.archetypeId).id,
       customerName: q.customerName,
       archetypeId: q.archetypeId,
       patience: q.patience,
@@ -247,7 +256,7 @@ function placeEntity(ent: PokemonEntity, layout: ShopLayout, rng: RngFn): boolea
   ent.y = ent.fromY = ent.toY = randomIn(bounds.y, bounds.y + bounds.h, rng);
   ent.state = 'idle';
   ent.stateTime = 0;
-  ent.stateDuration = 0.6 + rng() * 2.4;
+  ent.stateDuration = 0.45 + rng() * 0.7;
   ent.hopsRemaining = 0;
   ent.ambientTimer = 0.3 + rng() * 0.6;
   return true;
@@ -257,12 +266,32 @@ function spriteCenter(ent: PokemonEntity, layout: ShopLayout): Point {
   return { x: ent.x, y: ent.y - layout.spriteSize * 0.4 };
 }
 
+function startWalk(ent: PokemonEntity, layout: ShopLayout, rng: RngFn): void {
+  const bounds = getPenWanderBounds(layout, ent.slot);
+  if (!bounds) return;
+  const maxStep = Math.max(layout.unit * 12, layout.spriteSize * 0.9);
+  const tx = clamp(ent.x + (rng() * 2 - 1) * maxStep, bounds.x, bounds.x + bounds.w);
+  const ty = clamp(ent.y + (rng() * 2 - 1) * maxStep * 0.45, bounds.y, bounds.y + bounds.h);
+  ent.fromX = ent.x;
+  ent.fromY = ent.y;
+  ent.toX = tx;
+  ent.toY = ty;
+  const dx = tx - ent.x;
+  const dy = ty - ent.y;
+  const dist = Math.hypot(dx, dy);
+  ent.facing = facingForDelta(dx, ent.facing, layout.unit);
+  ent.direction = vectorToPmdDirection(dx, dy, ent.direction, layout.unit * 0.35);
+  ent.state = 'walk';
+  ent.stateTime = 0;
+  ent.stateDuration = clamp(dist / Math.max(24, layout.spriteSize * 0.7), 0.65, 1.45);
+}
+
 function startHop(ent: PokemonEntity, layout: ShopLayout, rng: RngFn): void {
   const bounds = getPenWanderBounds(layout, ent.slot);
   if (!bounds) return;
-  const maxStep = Math.max(layout.unit * 6, layout.spriteSize * 0.45);
+  const maxStep = Math.max(layout.unit * 6, layout.spriteSize * 0.48);
   const tx = clamp(ent.x + (rng() * 2 - 1) * maxStep, bounds.x, bounds.x + bounds.w);
-  const ty = clamp(ent.y + (rng() * 2 - 1) * maxStep * 0.4, bounds.y, bounds.y + bounds.h);
+  const ty = clamp(ent.y + (rng() * 2 - 1) * maxStep * 0.42, bounds.y, bounds.y + bounds.h);
   ent.fromX = ent.x;
   ent.fromY = ent.y;
   ent.toX = tx;
@@ -270,7 +299,7 @@ function startHop(ent: PokemonEntity, layout: ShopLayout, rng: RngFn): void {
   const dx = tx - ent.x;
   const dy = ty - ent.y;
   ent.facing = facingForDelta(dx, ent.facing, layout.unit);
-  ent.direction = vectorToPmdDirection(dx, dy, ent.direction, layout.unit * 0.5);
+  ent.direction = vectorToPmdDirection(dx, dy, ent.direction, layout.unit * 0.4);
   ent.state = 'hop';
   ent.stateTime = 0;
   ent.stateDuration = HOP_DURATION;
@@ -280,7 +309,7 @@ function createWalker(
   world: ShopWorld,
   uid: string,
   archetypeId: CustomerArchetypeId,
-  npcSpeciesId: number,
+  npcId: string,
   penIndex: number,
   layout: ShopLayout,
   rng: RngFn,
@@ -296,7 +325,7 @@ function createWalker(
   return {
     uid,
     archetypeId,
-    npcSpeciesId,
+    npcId,
     penIndex: safePen,
     visitorIndex,
     state: instant ? 'browsing' : 'entering',
@@ -306,7 +335,8 @@ function createWalker(
     x: instant ? spot.x : layout.doorSpot.x,
     y: instant ? spot.y : layout.doorSpot.y,
     facing: 1,
-    direction: instant ? 6 : 0,
+    direction: instant ? 4 : 0,
+    cardinalDir: instant ? 'up' : 'down',
     distance: 0,
     happy: false,
     time: 0,
@@ -443,8 +473,11 @@ export function syncWorld(
     if (!world.walkers.has(c.uid)) {
       world.walkers.set(
         c.uid,
-        createWalker(world, c.uid, c.archetypeId, c.npcSpeciesId, c.targetPenIndex, layout, rng),
+        createWalker(world, c.uid, c.archetypeId, c.npcId, c.targetPenIndex, layout, rng),
       );
+      if (!firstSync) {
+        world.clerkWaveTimer = 1.25;
+      }
     }
   }
   for (const walker of world.walkers.values()) {
@@ -457,7 +490,7 @@ export function syncWorld(
     }
   }
 
-  // 4. Queued counter shoppers in front of Kecleon's register.
+  // 4. Queued counter shoppers in front of Clerk Leo's register.
   const queueUids = new Set((snapshot.counterQueue ?? []).map((q) => q.uid));
   for (const [uid, queued] of world.queuedShoppers) {
     if (!queueUids.has(uid)) {
@@ -480,9 +513,12 @@ export function syncWorld(
       existing.x = spot.x;
       existing.y = spot.y;
     } else {
+      if (!firstSync) {
+        world.clerkWaveTimer = 1.25;
+      }
       world.queuedShoppers.set(q.uid, {
         offerUid: q.uid,
-        npcSpeciesId: q.npcSpeciesId,
+        npcId: q.npcId,
         customerName: q.customerName,
         archetypeId: q.archetypeId,
         patience: q.patience,
@@ -519,7 +555,8 @@ export function relayoutWorld(world: ShopWorld, layout: ShopLayout, rng: RngFn):
     walker.pathLength = pathLength(walker.path);
     walker.progress = 1;
     walker.state = 'browsing';
-    walker.direction = 6;
+    walker.direction = 4;
+    walker.cardinalDir = 'up';
     walker.x = spot.x;
     walker.y = spot.y;
   }
@@ -562,9 +599,36 @@ function stepPokemon(
     return spawned;
   }
 
-  if (ent.state === 'idle' && ent.stateTime >= ent.stateDuration) {
-    ent.hopsRemaining = 1 + Math.floor(rng() * 3);
-    startHop(ent, layout, rng);
+  if (ent.state === 'idle') {
+    // Turn curiously toward browsing shoppers admiring this pen
+    for (const w of world.walkers.values()) {
+      if (w.state === 'browsing' && w.penIndex === ent.slot) {
+        ent.direction = vectorToPmdDirection(w.x - ent.x, w.y - ent.y, ent.direction, layout.unit);
+        ent.facing = facingForDelta(w.x - ent.x, ent.facing, layout.unit);
+        break;
+      }
+    }
+    if (ent.stateTime >= ent.stateDuration) {
+      if (rng() < 0.55) {
+        startWalk(ent, layout, rng);
+      } else {
+        ent.hopsRemaining = 1 + Math.floor(rng() * 3);
+        startHop(ent, layout, rng);
+      }
+    }
+  } else if (ent.state === 'walk') {
+    const p = ent.stateTime / Math.max(0.05, ent.stateDuration);
+    if (p >= 1) {
+      ent.x = ent.toX;
+      ent.y = ent.toY;
+      ent.state = 'idle';
+      ent.stateTime = 0;
+      ent.stateDuration = 0.55 + rng() * 0.8;
+    } else {
+      const k = easeInOutSine(p);
+      ent.x = lerp(ent.fromX, ent.toX, k);
+      ent.y = lerp(ent.fromY, ent.toY, k);
+    }
   } else if (ent.state === 'hop') {
     const p = ent.stateTime / HOP_DURATION;
     if (p >= 1) {
@@ -576,7 +640,7 @@ function stepPokemon(
       } else {
         ent.state = 'idle';
         ent.stateTime = 0;
-        ent.stateDuration = 1.4 + rng() * 2.6;
+        ent.stateDuration = 0.55 + rng() * 0.8;
       }
     } else {
       const k = easeInOutSine(p);
@@ -609,12 +673,14 @@ function stepWalker(world: ShopWorld, walker: CustomerWalker, dt: number): boole
   const dy = walker.y - prevY;
   walker.facing = facingForDelta(dx, walker.facing, 0.01);
   walker.direction = vectorToPmdDirection(dx, dy, walker.direction, 0.01);
+  walker.cardinalDir = vectorToCardinalDirection(dx, dy, walker.cardinalDir, 0.01);
   walker.distance += Math.hypot(dx, dy);
   if (walker.progress >= 1) {
     if (walker.state === 'leaving') return false;
     walker.state = 'browsing';
     walker.facing = 1;
-    walker.direction = 6;
+    walker.direction = 4;
+    walker.cardinalDir = 'up';
   }
   return true;
 }
@@ -628,6 +694,11 @@ export function stepWorld(
 ): void {
   if (world.motionPaused) return;
   world.time += dt;
+  world.clerkWaveTimer = Math.max(0, world.clerkWaveTimer - dt);
+  if (!world.reducedMotion) {
+    world.eggWobblePhase = (world.eggWobblePhase + dt * 4.2) % (Math.PI * 2);
+  }
+
   let spawned: Particle[] = [];
   for (const ent of world.pokemon.values()) {
     const extra = stepPokemon(world, ent, dt, layout, rng);
@@ -647,6 +718,26 @@ export function stepWorld(
       }
     }
   }
+
+  let doorTraffic = false;
+  const thresholdRadius = Math.max(layout.door.w * 1.15, layout.unit * 26);
+  for (const w of world.walkers.values()) {
+    if (Math.hypot(w.x - layout.doorSpot.x, w.y - layout.doorSpot.y) <= thresholdRadius) {
+      doorTraffic = true;
+      break;
+    }
+  }
+  const targetDoor = doorTraffic ? 1 : 0;
+  if (world.reducedMotion) {
+    world.doorOpenAmount = targetDoor;
+  } else {
+    world.doorOpenAmount = clamp(
+      world.doorOpenAmount + (targetDoor - world.doorOpenAmount) * Math.min(1, dt * 6),
+      0,
+      1,
+    );
+  }
+
   world.particles = updateParticles(addParticles(world.particles, spawned), dt);
 }
 

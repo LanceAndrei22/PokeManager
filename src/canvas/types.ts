@@ -98,14 +98,14 @@ export interface FloorPokemon {
 export interface FloorCustomer {
   uid: string;
   archetypeId: CustomerArchetypeId;
-  npcSpeciesId: number;
+  npcId: string;
   targetPenIndex: number;
 }
 
-/** Minimal queued register offer rendered in front of Kecleon's counter. */
+/** Minimal queued register offer rendered in front of the PokéMart counter. */
 export interface FloorCounterOffer {
   uid: string;
-  npcSpeciesId: number;
+  npcId: string;
   customerName: string;
   archetypeId: CustomerArchetypeId;
   patience: number;

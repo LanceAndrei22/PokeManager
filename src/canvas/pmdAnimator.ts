@@ -147,6 +147,33 @@ export interface PmdFrameSlice {
 }
 
 /**
+ * Converts elapsed milliseconds into the active frame column inside a PMD
+ * spritesheet using PMDCollab's 60 fps duration tick table.
+ */
+export function computePmdFrameIndexFromMs(
+  anim: PmdAnimDefinition,
+  elapsedMs: number,
+  maxCols?: number,
+): number {
+  const totalTicks = Math.max(1, anim.totalTicks);
+  // PMD AnimData durations are defined in 1/60s ticks (16.666... ms per tick)
+  const tickPos = ((((elapsedMs / 1000) * 60) % totalTicks) + totalTicks) % totalTicks;
+
+  let frameIndex = 0;
+  let accum = 0;
+  const limit = maxCols !== undefined ? Math.min(maxCols, anim.durations.length) : anim.durations.length;
+  for (let i = 0; i < limit; i += 1) {
+    accum += anim.durations[i];
+    if (tickPos < accum) {
+      frameIndex = i;
+      break;
+    }
+    frameIndex = i;
+  }
+  return frameIndex;
+}
+
+/**
  * Computes the exact source pixel rectangle inside a loaded PMD spritesheet for
  * `direction` (`0..7`) and `elapsedSec` using PMD's 60 fps tick durations.
  * Automatically clamps `rowIndex` so 1-row sheets (`Sleep`) always sample row 0.
@@ -164,22 +191,7 @@ export function computePmdFrameRect(
   const rows = Math.max(1, Math.floor(sheetHeight / sh));
 
   const rowIndex = Math.min(rows - 1, Math.max(0, direction));
-
-  // Advance elapsed ticks at 60 fps and wrap cleanly across totalTicks
-  const totalTicks = Math.max(1, anim.totalTicks);
-  const tickPos = (((elapsedSec * 60) % totalTicks) + totalTicks) % totalTicks;
-
-  let frameIndex = 0;
-  let accum = 0;
-  const maxFrames = Math.min(cols, anim.durations.length);
-  for (let i = 0; i < maxFrames; i += 1) {
-    accum += anim.durations[i];
-    if (tickPos < accum) {
-      frameIndex = i;
-      break;
-    }
-    frameIndex = i;
-  }
+  const frameIndex = computePmdFrameIndexFromMs(anim, elapsedSec * 1000, cols);
 
   return {
     sx: frameIndex * sw,

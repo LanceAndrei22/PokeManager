@@ -33,6 +33,7 @@ import {
 } from './pixelArt';
 import { particleAlpha, type Particle } from './particles';
 import { drawBackground } from './tiles';
+import { getHumanNpcFrame } from './humanNpcAnimator';
 import type { ShopLayout, SpriteEntityAdapter, SpriteFrame } from './types';
 import type { CustomerWalker, PokemonEntity, ShopWorld } from './world';
 
@@ -102,12 +103,30 @@ function drawClerk(
   world: ShopWorld,
   adapter: SpriteEntityAdapter,
 ): void {
+  const cx = Math.round(layout.counter.x + layout.counter.w * 0.55);
+  const cy = Math.round(layout.counter.y + layout.unit * 2);
+  const humanFrame = getHumanNpcFrame('mart_employee', 'down', false, 0);
+  if (humanFrame) {
+    const scale = Math.max(1, Math.round(layout.unit * 1.1));
+    const drawW = humanFrame.sw * scale;
+    const drawH = humanFrame.sh * scale;
+    ctx.drawImage(
+      humanFrame.image,
+      humanFrame.sx,
+      humanFrame.sy,
+      humanFrame.sw,
+      humanFrame.sh,
+      Math.round(cx - drawW / 2),
+      Math.round(cy - drawH + layout.unit * 2),
+      drawW,
+      drawH,
+    );
+    return;
+  }
+
   const still = world.reducedMotion || world.motionPaused;
   const animTime = still ? 0 : world.time;
   const frame = adapter.getFrame(352, false, 'idle', animTime, 0);
-  const cx = Math.round(layout.counter.x + layout.counter.w * 0.55);
-  const cy = Math.round(layout.counter.y + layout.unit * 2);
-
   if (!frame) return;
   const { drawW, drawH } = computeFrameDrawSize(frame, layout);
   ctx.drawImage(
@@ -196,31 +215,30 @@ function drawWalker(
   layout: ShopLayout,
   world: ShopWorld,
   walker: CustomerWalker,
-  adapter: SpriteEntityAdapter,
+  _adapter: SpriteEntityAdapter,
 ): void {
   const u = layout.unit;
   const still = world.reducedMotion || world.motionPaused;
   const walking = walker.state !== 'browsing' && !still;
-  const animState = walking ? 'walk' : 'idle';
-  const animTime = still ? 0 : walker.time;
 
   drawPixelShadow(ctx, walker.x, walker.y, u * 7, u, 0.2);
 
-  const pmdFrame = adapter.getFrame(
-    walker.npcSpeciesId,
-    false,
-    animState,
-    animTime,
-    walker.direction,
+  const humanFrame = getHumanNpcFrame(
+    walker.npcId,
+    walker.cardinalDir,
+    walking,
+    walker.distance,
   );
-  if (pmdFrame) {
-    const { drawW, drawH } = computeFrameDrawSize(pmdFrame, layout);
+  if (humanFrame) {
+    const scale = Math.max(1, Math.round(u * 1.1));
+    const drawW = humanFrame.sw * scale;
+    const drawH = humanFrame.sh * scale;
     ctx.drawImage(
-      pmdFrame.image,
-      pmdFrame.sx,
-      pmdFrame.sy,
-      pmdFrame.sw,
-      pmdFrame.sh,
+      humanFrame.image,
+      humanFrame.sx,
+      humanFrame.sy,
+      humanFrame.sw,
+      humanFrame.sh,
       Math.round(walker.x - drawW / 2),
       Math.round(walker.y - drawH + u),
       drawW,
@@ -229,7 +247,7 @@ function drawWalker(
     return;
   }
 
-  // Fallback pixel walker if PMD NPC sheet is still decoding
+  // Fallback pixel walker if Human NPC sheet is still decoding or running in jsdom
   const frameIdx = walking ? walkFrame(walker.distance, u * 4) : 0;
   const bitmap = SHOPPER_FRAMES[frameIdx];
   const { w: bw, h: bh } = bitmapSize(bitmap);
