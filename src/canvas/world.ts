@@ -1,14 +1,12 @@
 /**
  * Canvas world state machine for the PokéMart shop floor.
  *
- * The world mirrors simulation snapshots (pure engine state) into animated entities:
- * - Pokémon in pens: `idle` (breathing bob) ⇄ `hop` chains (squash-and-stretch + facing flips).
- * - Pokémon in nap beds: `sleep` (squish + drifting `Zzz`).
- * - Shoppers: `entering` (walk from door) → `browsing` (thought bubble) → `leaving` → removed.
- *
- * It also diffs consecutive snapshots to spawn feedback particles (adoption coins,
- * heal/hatch hearts, evolution sparkles). For per-frame performance the world is a
- * mutable object owned by one canvas; all logic stays DOM-free and testable.
+ * The world mirrors simulation snapshots into animated PMD entities:
+ * - Pokémon in pens: `idle` ⇄ `hop` chains with 8-directional headings.
+ * - Pokémon in nap beds: `sleep` (`Sleep-Anim.png` + drifting `Zzz`).
+ * - PMD Shopper NPCs (`npcSpeciesId`): walk 8-directionally from the door → pens →
+ *   register counter (`counterQueue`) → exit.
+ * - Store Clerk Kecleon (`0352`) animates behind the counter (`layout.counter`).
  */
 import type { CustomerArchetypeId, PokemonInstance, ShopCustomer } from '../data/types';
 import { clamp, type RngFn } from '../engine/rng';
@@ -31,8 +29,10 @@ import {
   updateParticles,
   type Particle,
 } from './particles';
+import { vectorToPmdDirection } from './pmdAnimator';
 import type {
   FloorSnapshot,
+  PmdDirection,
   Point,
   PokemonAnimState,
   ShopLayout,
@@ -59,21 +59,22 @@ export interface PokemonEntity {
   stateTime: number;
   stateDuration: number;
   hopsRemaining: number;
-  /** `1` = native left-facing Platinum art, `-1` = mirrored to face right. */
+  /** Fallback horizontal facing for single-frame test adapters. */
   facing: 1 | -1;
-  /** Random phase so neighbours never breathe in lockstep. */
+  /** 8-directional PMD heading (0 = South, clockwise to 7 = SW). */
+  direction: PmdDirection;
   phase: number;
-  /** Countdown to the next ambient particle (shiny sparkle or nap `Zzz`). */
   ambientTimer: number;
 }
 
 /** Shopper walker lifecycle states. */
 export type WalkerState = 'entering' | 'browsing' | 'leaving';
 
-/** Animated shopper visiting a pen. */
+/** Animated PMD Pokémon shopper visiting a pen. */
 export interface CustomerWalker {
   uid: string;
   archetypeId: CustomerArchetypeId;
+  npcSpeciesId: number;
   penIndex: number;
   visitorIndex: number;
   state: WalkerState;
@@ -83,12 +84,10 @@ export interface CustomerWalker {
   x: number;
   y: number;
   facing: 1 | -1;
-  /** Distance walked, driving the 2-frame leg cycle. */
+  direction: PmdDirection;
   distance: number;
-  /** True when leaving after adopting (shows a heart bubble). */
   happy: boolean;
   time: number;
-  /** Stable 0..1 seed for hair colour variety. */
   look: number;
 }
 
@@ -102,11 +101,10 @@ export interface ShopWorld {
   lastCash: number | null;
   shiftSpeed: 1 | 2;
   reducedMotion: boolean;
-  /** When true (user pressed Pause animation), entities hold still but state still syncs. */
   motionPaused: boolean;
 }
 
-/** Counts of feedback events detected during one `syncWorld` call (useful for tests/SFX). */
+/** Counts of feedback events detected during one `syncWorld` call. */
 export interface SyncEvents {
   sales: number;
   heals: number;
@@ -129,22 +127,21 @@ export function createWorld(): ShopWorld {
   };
 }
 
-/**
- * Converts engine state into the canvas snapshot. Nap-bed slots are assigned in
- * array order among `healing` Pokémon (matching the Nap Station panel order).
- */
+/** Converts engine state into the minimal canvas floor snapshot. */
 export function buildFloorSnapshot(
   profileId: string,
   cash: number,
   shiftSpeed: 1 | 2,
   pokemon: readonly PokemonInstance[],
   customers: readonly ShopCustomer[],
+  counterQueueCount = 0,
 ): FloorSnapshot {
   let bedSlot = 0;
   return {
     profileId,
     cash,
     shiftSpeed,
+    counterQueueCount,
     pokemon: pokemon.map((mon) => {
       let location: 'pen' | 'healing' | 'hidden' = 'hidden';
       let slot: number | null = null;
@@ -169,6 +166,7 @@ export function buildFloorSnapshot(
     customers: customers.map((c) => ({
       uid: c.uid,
       archetypeId: c.archetypeId,
+      npcSpeciesId: c.npcSpeciesId ?? 52,
       targetPenIndex: c.targetPenIndex,
     })),
   };
@@ -178,7 +176,6 @@ function randomIn(min: number, max: number, rng: RngFn): number {
   return max <= min ? min : min + rng() * (max - min);
 }
 
-/** Places an entity at a fresh spot for its slot. Returns false if the slot has no geometry. */
 function placeEntity(ent: PokemonEntity, layout: ShopLayout, rng: RngFn): boolean {
   if (ent.mode === 'bed') {
     const anchor = getBedAnchor(layout, ent.slot);
@@ -186,6 +183,7 @@ function placeEntity(ent: PokemonEntity, layout: ShopLayout, rng: RngFn): boolea
     ent.x = ent.fromX = ent.toX = anchor.x;
     ent.y = ent.fromY = ent.toY = anchor.y;
     ent.state = 'sleep';
+    ent.direction = 0;
     ent.stateTime = 0;
     ent.ambientTimer = 0.4 + rng() * 1.2;
     return true;
@@ -202,7 +200,6 @@ function placeEntity(ent: PokemonEntity, layout: ShopLayout, rng: RngFn): boolea
   return true;
 }
 
-/** Visual centre of a sprite (for particle anchors), relative to its feet. */
 function spriteCenter(ent: PokemonEntity, layout: ShopLayout): Point {
   return { x: ent.x, y: ent.y - layout.spriteSize * 0.4 };
 }
@@ -210,7 +207,6 @@ function spriteCenter(ent: PokemonEntity, layout: ShopLayout): Point {
 function startHop(ent: PokemonEntity, layout: ShopLayout, rng: RngFn): void {
   const bounds = getPenWanderBounds(layout, ent.slot);
   if (!bounds) return;
-  // Each hop covers at most ~45% of a sprite width so movement stays gentle.
   const maxStep = Math.max(layout.unit * 6, layout.spriteSize * 0.45);
   const tx = clamp(ent.x + (rng() * 2 - 1) * maxStep, bounds.x, bounds.x + bounds.w);
   const ty = clamp(ent.y + (rng() * 2 - 1) * maxStep * 0.4, bounds.y, bounds.y + bounds.h);
@@ -218,7 +214,10 @@ function startHop(ent: PokemonEntity, layout: ShopLayout, rng: RngFn): void {
   ent.fromY = ent.y;
   ent.toX = tx;
   ent.toY = ty;
-  ent.facing = facingForDelta(tx - ent.x, ent.facing, layout.unit);
+  const dx = tx - ent.x;
+  const dy = ty - ent.y;
+  ent.facing = facingForDelta(dx, ent.facing, layout.unit);
+  ent.direction = vectorToPmdDirection(dx, dy, ent.direction, layout.unit * 0.5);
   ent.state = 'hop';
   ent.stateTime = 0;
   ent.stateDuration = HOP_DURATION;
@@ -228,6 +227,7 @@ function createWalker(
   world: ShopWorld,
   uid: string,
   archetypeId: CustomerArchetypeId,
+  npcSpeciesId: number,
   penIndex: number,
   layout: ShopLayout,
   rng: RngFn,
@@ -243,6 +243,7 @@ function createWalker(
   return {
     uid,
     archetypeId,
+    npcSpeciesId,
     penIndex: safePen,
     visitorIndex,
     state: instant ? 'browsing' : 'entering',
@@ -252,6 +253,7 @@ function createWalker(
     x: instant ? spot.x : layout.doorSpot.x,
     y: instant ? spot.y : layout.doorSpot.y,
     facing: 1,
+    direction: instant ? 6 : 0,
     distance: 0,
     happy: false,
     time: 0,
@@ -261,7 +263,6 @@ function createWalker(
 
 function startLeaving(walker: CustomerWalker, layout: ShopLayout, happy: boolean): void {
   const route = buildEntryRoute(layout, walker.penIndex, { x: walker.x, y: walker.y });
-  // Retrace the entry route backwards from wherever the shopper currently stands.
   const path = dedupePath([{ x: walker.x, y: walker.y }, ...route.slice(0, -1).reverse()]);
   walker.state = 'leaving';
   walker.path = path;
@@ -270,11 +271,7 @@ function startLeaving(walker: CustomerWalker, layout: ShopLayout, happy: boolean
   walker.happy = happy;
 }
 
-/**
- * Diffs a new simulation snapshot into the world.
- * Adoption detection: a pen Pokémon vanished from the save entirely (not merely moved to
- * the Reserve Kennel) while cash rose in the same update → spawn `+₽` coins and hearts.
- */
+/** Diffs a new simulation snapshot into the animated canvas world. */
 export function syncWorld(
   world: ShopWorld,
   snapshot: FloorSnapshot,
@@ -284,7 +281,6 @@ export function syncWorld(
   const events: SyncEvents = { sales: 0, heals: 0, evolutions: 0, hatches: 0 };
   const firstSync = world.profileId !== snapshot.profileId;
   if (firstSync) {
-    // Profile switch / first mount: rebuild silently, never celebrate pre-existing state.
     world.profileId = snapshot.profileId;
     world.pokemon.clear();
     world.walkers.clear();
@@ -344,6 +340,7 @@ export function syncWorld(
         stateDuration: 1,
         hopsRemaining: 0,
         facing: rng() < 0.5 ? 1 : -1,
+        direction: rng() < 0.5 ? 0 : rng() < 0.5 ? 1 : 7,
         phase: rng() * Math.PI * 2,
         ambientTimer: 1,
       };
@@ -382,11 +379,14 @@ export function syncWorld(
     ent.needsRecovery = mon.needsRecovery;
   }
 
-  // 3. Shoppers: new uids walk in; vanished uids walk out (happily if their pen just sold).
+  // 3. Shoppers: new uids walk in; vanished uids walk out.
   const customerUids = new Set(snapshot.customers.map((c) => c.uid));
   for (const c of snapshot.customers) {
     if (!world.walkers.has(c.uid)) {
-      world.walkers.set(c.uid, createWalker(world, c.uid, c.archetypeId, c.targetPenIndex, layout, rng));
+      world.walkers.set(
+        c.uid,
+        createWalker(world, c.uid, c.archetypeId, c.npcSpeciesId, c.targetPenIndex, layout, rng),
+      );
     }
   }
   for (const walker of world.walkers.values()) {
@@ -404,11 +404,7 @@ export function syncWorld(
   return events;
 }
 
-/**
- * Re-fits every entity after a resize / pen-count change: Pokémon get fresh spots in
- * their (moved) slot rectangles, browsing shoppers snap to their new spots, and
- * in-flight walkers are retired to avoid walking along stale geometry.
- */
+/** Re-fits every entity after a resize or pen-count change. */
 export function relayoutWorld(world: ShopWorld, layout: ShopLayout, rng: RngFn): void {
   for (const [uid, ent] of world.pokemon) {
     if (!placeEntity(ent, layout, rng)) world.pokemon.delete(uid);
@@ -423,13 +419,20 @@ export function relayoutWorld(world: ShopWorld, layout: ShopLayout, rng: RngFn):
     walker.pathLength = pathLength(walker.path);
     walker.progress = 1;
     walker.state = 'browsing';
+    walker.direction = 6;
     walker.x = spot.x;
     walker.y = spot.y;
   }
   world.particles = [];
 }
 
-function stepPokemon(world: ShopWorld, ent: PokemonEntity, dt: number, layout: ShopLayout, rng: RngFn): Particle[] {
+function stepPokemon(
+  world: ShopWorld,
+  ent: PokemonEntity,
+  dt: number,
+  layout: ShopLayout,
+  rng: RngFn,
+): Particle[] {
   const spawned: Particle[] = [];
   const u = layout.unit;
   ent.stateTime += dt;
@@ -441,7 +444,9 @@ function stepPokemon(world: ShopWorld, ent: PokemonEntity, dt: number, layout: S
       ent.ambientTimer -= dt;
       if (ent.ambientTimer <= 0) {
         ent.ambientTimer = 1.5 + rng() * 0.9;
-        spawned.push(spawnZzz(ent.x + layout.spriteSize * 0.18, ent.y - layout.spriteSize * 0.55, u, rng));
+        spawned.push(
+          spawnZzz(ent.x + layout.spriteSize * 0.18, ent.y - layout.spriteSize * 0.55, u, rng),
+        );
       }
     }
     return spawned;
@@ -469,7 +474,6 @@ function stepPokemon(world: ShopWorld, ent: PokemonEntity, dt: number, layout: S
         ent.stateDuration = 1.4 + rng() * 2.6;
       }
     } else {
-      // Horizontal travel eases in/out; the vertical arc comes from hopPose() at render time.
       const k = easeInOutSine(p);
       ent.x = lerp(ent.fromX, ent.toX, k);
       ent.y = lerp(ent.fromY, ent.toY, k);
@@ -492,28 +496,31 @@ function stepWalker(world: ShopWorld, walker: CustomerWalker, dt: number): boole
   if (walker.state === 'browsing') return true;
   const prevX = walker.x;
   const prevY = walker.y;
-  // Time-based walking: a full route always takes WALK_DURATION / shiftSpeed seconds,
-  // so shoppers arrive before their browse timer (≥3 ticks) runs out at both speeds.
   walker.progress = Math.min(1, walker.progress + (dt * world.shiftSpeed) / WALK_DURATION);
   const pt = pointAlongPath(walker.path, walker.pathLength, walker.progress);
   walker.x = pt.x;
   walker.y = pt.y;
-  walker.facing = facingForDelta(walker.x - prevX, walker.facing, 0.01);
-  walker.distance += Math.hypot(walker.x - prevX, walker.y - prevY);
+  const dx = walker.x - prevX;
+  const dy = walker.y - prevY;
+  walker.facing = facingForDelta(dx, walker.facing, 0.01);
+  walker.direction = vectorToPmdDirection(dx, dy, walker.direction, 0.01);
+  walker.distance += Math.hypot(dx, dy);
   if (walker.progress >= 1) {
     if (walker.state === 'leaving') return false;
     walker.state = 'browsing';
-    // Spots sit at a pen's right edge, so browsing shoppers face left toward the Pokémon.
     walker.facing = 1;
+    walker.direction = 6; // Face West toward the pen
   }
   return true;
 }
 
-/**
- * Advances the world by `dt` seconds: Pokémon state machines, shopper walks, ambient
- * particles, and particle integration. While `motionPaused`, nothing moves.
- */
-export function stepWorld(world: ShopWorld, dt: number, layout: ShopLayout, rng: RngFn): void {
+/** Advances the world by `dt` seconds unless `motionPaused` is true. */
+export function stepWorld(
+  world: ShopWorld,
+  dt: number,
+  layout: ShopLayout,
+  rng: RngFn,
+): void {
   if (world.motionPaused) return;
   world.time += dt;
   let spawned: Particle[] = [];
@@ -527,16 +534,23 @@ export function stepWorld(world: ShopWorld, dt: number, layout: ShopLayout, rng:
   world.particles = updateParticles(addParticles(world.particles, spawned), dt);
 }
 
-/**
- * Hit-tests a backing-store point against Pokémon sprites (front-most first) and
- * returns the uid under the pointer, if any.
- */
-export function hitTestPokemon(world: ShopWorld, layout: ShopLayout, x: number, y: number): string | null {
+/** Hit-tests a backing-store point against Pokémon sprites on the floor. */
+export function hitTestPokemon(
+  world: ShopWorld,
+  layout: ShopLayout,
+  x: number,
+  y: number,
+): string | null {
   const s = layout.spriteSize;
   const sorted = [...world.pokemon.values()].sort((a, b) => b.y - a.y);
   for (const ent of sorted) {
     const halfW = s * 0.34;
-    if (x >= ent.x - halfW && x <= ent.x + halfW && y >= ent.y - s * 0.82 && y <= ent.y + layout.unit * 2) {
+    if (
+      x >= ent.x - halfW &&
+      x <= ent.x + halfW &&
+      y >= ent.y - s * 0.82 &&
+      y <= ent.y + layout.unit * 2
+    ) {
       return ent.uid;
     }
   }

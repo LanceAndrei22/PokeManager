@@ -14,7 +14,7 @@ import { useEffect, useMemo, useRef, useState, type MouseEvent, type PointerEven
 import { getSpecies } from '../data/species';
 import type { PokemonInstance, ShopCustomer } from '../data/types';
 import { computeShopCssHeight, computeShopLayout } from './layout';
-import { createPlatinumSpriteAdapter } from './platinumAdapter';
+import { createPmdSpriteAdapter } from './pmdLoader';
 import { renderScene } from './renderer';
 import { buildBackgroundLayer } from './tiles';
 import type { ShopLayout } from './types';
@@ -103,7 +103,7 @@ export function ShopFloorCanvas({
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [world] = useState(createWorld);
-  const [adapter] = useState(createPlatinumSpriteAdapter);
+  const [adapter] = useState(createPmdSpriteAdapter);
   const layoutRef = useRef<ShopLayout | null>(null);
   const backgroundRef = useRef<HTMLCanvasElement | null>(null);
   const runningRef = useRef(shiftRunning);

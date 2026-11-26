@@ -1,12 +1,16 @@
 /**
- * Shared types for the PokéMart HTML5 2D Canvas shop floor.
+ * Shared types for the PokéMart HTML5 2D Canvas shop floor using PMD SpriteCollab sheets.
  *
  * Coordinate convention: every position and size below is in canvas *backing-store*
- * pixels (CSS px × devicePixelRatio). The renderer never applies a global scale
- * transform, so 80×80 Platinum sprites can be blitted at exact integer multiples
- * and stay crisp on HiDPI screens.
+ * pixels (CSS px × devicePixelRatio).
  */
 import type { CustomerArchetypeId } from '../data/types';
+
+/**
+ * Standard PMD 8-directional spritesheet row index (ordered clockwise from South):
+ * 0 = South, 1 = SE, 2 = East, 3 = NE, 4 = North, 5 = NW, 6 = West, 7 = SW.
+ */
+export type PmdDirection = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
 /** 2D point in backing-store pixels. */
 export interface Point {
@@ -37,11 +41,11 @@ export interface ShopLayout {
   /** Backing-store height (`canvas.height`). */
   height: number;
   dpr: number;
-  /** Size of one procedural "art pixel" (tiles, particles, shoppers) in backing px. */
+  /** Size of one procedural "art pixel" (tiles, particles, UI accents) in backing px. */
   unit: number;
-  /** Integer multiplier applied to 80×80 Platinum sprites (1 source px → k×k backing px). */
+  /** Integer base scale factor derived from pen size. */
   spriteScale: number;
-  /** Rendered sprite box edge length (`80 × spriteScale`). */
+  /** Nominal sprite reference box edge length. */
   spriteSize: number;
   wall: Rect;
   door: Rect;
@@ -75,6 +79,7 @@ export interface FloorPokemon {
 export interface FloorCustomer {
   uid: string;
   archetypeId: CustomerArchetypeId;
+  npcSpeciesId: number;
   targetPenIndex: number;
 }
 
@@ -85,10 +90,12 @@ export interface FloorSnapshot {
   shiftSpeed: 1 | 2;
   pokemon: FloorPokemon[];
   customers: FloorCustomer[];
+  /** Number of shoppers currently waiting in front of Kecleon's counter. */
+  counterQueueCount?: number;
 }
 
 /** Animation state of a Pokémon entity on the floor. */
-export type PokemonAnimState = 'idle' | 'hop' | 'sleep';
+export type PokemonAnimState = 'idle' | 'hop' | 'sleep' | 'walk';
 
 /** A drawable source rectangle returned by a sprite adapter. */
 export interface SpriteFrame {
@@ -97,14 +104,15 @@ export interface SpriteFrame {
   sy: number;
   sw: number;
   sh: number;
-  /** Whether the source art faces left (Platinum front sprites do). Drives `scaleX(-1)` flips. */
+  /** True when the spritesheet already contains directional rows (PMD sheets). */
+  usesDirectionRow?: boolean;
+  /** Fallback hint for static left-facing sheets without directional rows. */
   facesLeft: boolean;
 }
 
 /**
- * Pluggable sprite source. Phase 5 ships a static Platinum front-sprite adapter;
- * an optional PMD overworld spritesheet adapter can later return per-state, per-time
- * frames without any change to `src/engine/` or the world state machine.
+ * Pluggable sprite source supporting multi-frame, 8-directional PMD SpriteCollab
+ * sheets (`Walk`, `Idle`, `Sleep`, `Hop`) as well as lightweight test stubs.
  */
 export interface SpriteEntityAdapter {
   getFrame(
@@ -112,5 +120,6 @@ export interface SpriteEntityAdapter {
     isShiny: boolean,
     state: PokemonAnimState,
     timeSec: number,
+    direction?: PmdDirection,
   ): SpriteFrame | null;
 }

@@ -1,8 +1,10 @@
 /**
- * Per-frame shop floor renderer: blits the cached background, depth-sorts Pokémon and
- * shoppers by feet Y (painter's algorithm), applies squash/stretch/bob/flip poses,
- * draws archetype thought bubbles and pixel particles, and layers warm lamp lighting.
+ * Per-frame shop floor renderer using PMD SpriteCollab 8-directional sheets:
+ * blits the cached background, animates Kecleon (`0352`) behind the register,
+ * depth-sorts store Pokémon and PMD Pokémon shoppers by feet Y, draws archetype
+ * thought bubbles and pixel particles, and layers warm lamp lighting.
  */
+import { CLERK_NPC } from '../data/npcs';
 import type { CustomerArchetypeId } from '../data/types';
 import {
   HOP_DURATION,
@@ -31,7 +33,7 @@ import {
 } from './pixelArt';
 import { particleAlpha, type Particle } from './particles';
 import { drawBackground } from './tiles';
-import type { ShopLayout, SpriteEntityAdapter } from './types';
+import type { ShopLayout, SpriteEntityAdapter, SpriteFrame } from './types';
 import type { CustomerWalker, PokemonEntity, ShopWorld } from './world';
 
 /** Per-frame render options supplied by the React host. */
@@ -45,25 +47,78 @@ const ARCHETYPE_SHIRTS: Record<CustomerArchetypeId, string> = {
   'bargain-browser': PALETTE.sage,
   'trend-fan': PALETTE.honeyDeep,
   'shiny-seeker': PALETTE.lavender,
+  'vip-seeker': '#7c3aed',
 };
 
-/** Thought-bubble icon per archetype (matches the DOM preference badges). */
 const BUBBLE_ICONS: Record<CustomerArchetypeId, PixelBitmap> = {
   'cozy-collector': HEART,
   'bargain-browser': COIN,
   'trend-fan': STAR,
   'shiny-seeker': SPARKLE,
+  'vip-seeker': SPARKLE,
 };
 
 const HAIR_COLORS = ['#3c2918', '#7a4a2a', '#c27c3e', '#2f3a56', '#8e5b9a', '#d9a441'];
 const HOVER_CARET: PixelBitmap = ['yyyyy', '.yyy.', '..y..'];
 
 /** Resolves the current pose for a Pokémon entity (static when motion is reduced/paused). */
-export function getPokemonPose(world: ShopWorld, ent: PokemonEntity, size: number, unit: number): Pose {
+export function getPokemonPose(
+  world: ShopWorld,
+  ent: PokemonEntity,
+  size: number,
+  unit: number,
+): Pose {
   const still = world.reducedMotion || world.motionPaused;
   if (ent.state === 'sleep') return still ? STATIC_SLEEP_POSE : sleepPose(world.time, ent.phase);
   if (ent.state === 'hop' && !still) return hopPose(ent.stateTime / HOP_DURATION, size * 0.14);
   return still ? STATIC_POSE : breathingPose(world.time, ent.phase, unit * 0.75);
+}
+
+/**
+ * Computes crisp integer scaling for variable-size PMD sprite frames so small/medium
+ * Pokémon stay bold (~2× art scale) while large Legendaries still fit cleanly inside pens.
+ */
+function computeFrameDrawSize(
+  frame: SpriteFrame,
+  layout: ShopLayout,
+): { drawW: number; drawH: number } {
+  const maxDim = Math.max(frame.sw, frame.sh);
+  if (!frame.usesDirectionRow) {
+    return { drawW: layout.spriteSize, drawH: layout.spriteSize };
+  }
+  const maxAllowed = layout.spriteSize * 1.3;
+  const scale =
+    maxDim * layout.unit <= maxAllowed
+      ? layout.unit
+      : Math.max(1, Math.floor(maxAllowed / maxDim));
+  return { drawW: frame.sw * scale, drawH: frame.sh * scale };
+}
+
+function drawClerk(
+  ctx: CanvasRenderingContext2D,
+  layout: ShopLayout,
+  world: ShopWorld,
+  adapter: SpriteEntityAdapter,
+): void {
+  const still = world.reducedMotion || world.motionPaused;
+  const animTime = still ? 0 : world.time;
+  const frame = adapter.getFrame(CLERK_NPC.speciesId, false, 'idle', animTime, 0);
+  const cx = Math.round(layout.counter.x + layout.counter.w * 0.55);
+  const cy = Math.round(layout.counter.y + layout.unit * 2);
+
+  if (!frame) return;
+  const { drawW, drawH } = computeFrameDrawSize(frame, layout);
+  ctx.drawImage(
+    frame.image,
+    frame.sx,
+    frame.sy,
+    frame.sw,
+    frame.sh,
+    Math.round(cx - drawW / 2),
+    Math.round(cy - drawH + layout.unit * 2),
+    drawW,
+    drawH,
+  );
 }
 
 function drawPokemon(
@@ -80,22 +135,42 @@ function drawPokemon(
   const feetX = Math.round(ent.x);
   const feetY = Math.round(ent.y);
 
-  // Shadow shrinks as the sprite rises, so hops read as height rather than sliding.
   const lift = Math.max(0, -pose.offsetY);
   const shadowScale = 1 - Math.min(0.45, lift / (size * 0.35));
-  drawPixelShadow(ctx, feetX, feetY, size * 0.44 * shadowScale * pose.scaleX, u, ent.state === 'sleep' ? 0.16 : 0.22);
+  drawPixelShadow(
+    ctx,
+    feetX,
+    feetY,
+    size * 0.44 * shadowScale * pose.scaleX,
+    u,
+    ent.state === 'sleep' ? 0.16 : 0.22,
+  );
 
-  const frame = adapter.getFrame(ent.speciesId, ent.isShiny, ent.state, world.time);
+  const animTime = world.reducedMotion || world.motionPaused ? 0 : world.time;
+  const frame = adapter.getFrame(ent.speciesId, ent.isShiny, ent.state, animTime, ent.direction);
+
   ctx.save();
   ctx.translate(feetX, Math.round(feetY + pose.offsetY));
-  // Facing flip: Platinum fronts face left; mirror (scaleX(-1)) while heading right.
-  const mirror = frame && !frame.facesLeft ? -ent.facing : ent.facing;
-  ctx.scale(mirror * pose.scaleX, pose.scaleY);
-  // The 80×80 box has ~6 source px of transparent padding below the feet; sink it so feet touch the floor.
-  const footPad = 6 * layout.spriteScale;
+
   if (frame) {
-    ctx.drawImage(frame.image, frame.sx, frame.sy, frame.sw, frame.sh, -size / 2, -size + footPad, size, size);
+    // PMD 8-directional sheets already provide each facing row; static sheets flip via scaleX(-1).
+    const mirror = frame.usesDirectionRow ? 1 : frame.facesLeft ? ent.facing : -ent.facing;
+    ctx.scale(mirror * pose.scaleX, pose.scaleY);
+    const { drawW, drawH } = computeFrameDrawSize(frame, layout);
+    const footPad = frame.usesDirectionRow ? u * 1.5 : 6 * layout.spriteScale;
+    ctx.drawImage(
+      frame.image,
+      frame.sx,
+      frame.sy,
+      frame.sw,
+      frame.sh,
+      Math.round(-drawW / 2),
+      Math.round(-drawH + footPad),
+      drawW,
+      drawH,
+    );
   } else {
+    ctx.scale(ent.facing * pose.scaleX, pose.scaleY);
     ctx.fillStyle = PALETTE.creamDeep;
     fillPixelRoundRect(ctx, -u * 4, -u * 8, u * 8, u * 8, u);
   }
@@ -103,21 +178,61 @@ function drawPokemon(
 
   if (hovered) {
     const { w } = bitmapSize(HOVER_CARET);
-    drawBitmap(ctx, HOVER_CARET, feetX - (w * u) / 2, feetY - size * 0.86 + pose.offsetY - u * 4, u, ICON_COLORS);
+    drawBitmap(
+      ctx,
+      HOVER_CARET,
+      feetX - (w * u) / 2,
+      feetY - size * 0.86 + pose.offsetY - u * 4,
+      u,
+      ICON_COLORS,
+    );
   }
 }
 
-function drawWalker(ctx: CanvasRenderingContext2D, layout: ShopLayout, world: ShopWorld, walker: CustomerWalker): void {
+function drawWalker(
+  ctx: CanvasRenderingContext2D,
+  layout: ShopLayout,
+  world: ShopWorld,
+  walker: CustomerWalker,
+  adapter: SpriteEntityAdapter,
+): void {
   const u = layout.unit;
   const still = world.reducedMotion || world.motionPaused;
   const walking = walker.state !== 'browsing' && !still;
+  const animState = walking ? 'walk' : 'idle';
+  const animTime = still ? 0 : walker.time;
+
+  drawPixelShadow(ctx, walker.x, walker.y, u * 7, u, 0.2);
+
+  const pmdFrame = adapter.getFrame(
+    walker.npcSpeciesId,
+    false,
+    animState,
+    animTime,
+    walker.direction,
+  );
+  if (pmdFrame) {
+    const { drawW, drawH } = computeFrameDrawSize(pmdFrame, layout);
+    ctx.drawImage(
+      pmdFrame.image,
+      pmdFrame.sx,
+      pmdFrame.sy,
+      pmdFrame.sw,
+      pmdFrame.sh,
+      Math.round(walker.x - drawW / 2),
+      Math.round(walker.y - drawH + u),
+      drawW,
+      drawH,
+    );
+    return;
+  }
+
+  // Fallback pixel walker if PMD NPC sheet is still decoding
   const frameIdx = walking ? walkFrame(walker.distance, u * 4) : 0;
   const bitmap = SHOPPER_FRAMES[frameIdx];
   const { w: bw, h: bh } = bitmapSize(bitmap);
-  // One-art-pixel bounce on the stride frame gives the 2-frame walk cycle some life.
   const bounce = walking && frameIdx === 1 ? -u : 0;
 
-  drawPixelShadow(ctx, walker.x, walker.y, u * 7, u, 0.2);
   const colors = {
     h: HAIR_COLORS[Math.floor(walker.look * HAIR_COLORS.length) % HAIR_COLORS.length],
     s: PALETTE.skin,
@@ -133,7 +248,12 @@ function drawWalker(ctx: CanvasRenderingContext2D, layout: ShopLayout, world: Sh
   ctx.restore();
 }
 
-function drawBubble(ctx: CanvasRenderingContext2D, layout: ShopLayout, world: ShopWorld, walker: CustomerWalker): void {
+function drawBubble(
+  ctx: CanvasRenderingContext2D,
+  layout: ShopLayout,
+  world: ShopWorld,
+  walker: CustomerWalker,
+): void {
   const showing = walker.state === 'browsing' || (walker.state === 'leaving' && walker.happy);
   if (!showing) return;
   const u = layout.unit;
@@ -142,10 +262,9 @@ function drawBubble(ctx: CanvasRenderingContext2D, layout: ShopLayout, world: Sh
   const bw = (iw + 4) * u;
   const bh = (ih + 4) * u;
   const still = world.reducedMotion || world.motionPaused;
-  // Float snaps to whole art pixels (−1, 0, +1 units) to stay crisp.
   const float = still ? 0 : Math.round(Math.sin(walker.time * 3) * 0.8) * u;
   const x = Math.round(walker.x - bw / 2);
-  const y = Math.round(walker.y - SHOPPER_FRAMES[0].length * u - bh - u * 3 + float);
+  const y = Math.round(walker.y - SHOPPER_FRAMES[0].length * u - bh - u * 4 + float);
   const tailX = x + Math.round(bw / 2);
 
   ctx.fillStyle = PALETTE.woodDark;
@@ -169,7 +288,6 @@ function drawParticle(ctx: CanvasRenderingContext2D, layout: ShopLayout, p: Part
       drawBitmap(ctx, SPARKLE, p.x - 3.5 * small, p.y - 2.5 * small, small, ICON_COLORS);
       break;
     case 'zzz': {
-      // Zs sway gently and grow as they float upward.
       const sway = Math.sin(p.age * 3 + p.phase) * u * 2;
       const zu = Math.max(1, Math.round(small * (0.7 + (p.age / p.life) * 0.8)));
       drawBitmap(ctx, LETTER_Z, p.x + sway, p.y, zu, ICON_COLORS);
@@ -209,11 +327,6 @@ function drawDoorSign(ctx: CanvasRenderingContext2D, layout: ShopLayout, open: b
   ctx.textAlign = 'start';
 }
 
-/**
- * Warm cozy lighting: soft-light honey glows under each pendant lamp, a gentle
- * multiply vignette, and a lavender twilight tint while the shop is paused.
- * No flashing — lighting only changes when the shop opens/pauses.
- */
 function drawLighting(ctx: CanvasRenderingContext2D, layout: ShopLayout, open: boolean): void {
   const { width, height } = layout;
   ctx.save();
@@ -229,7 +342,14 @@ function drawLighting(ctx: CanvasRenderingContext2D, layout: ShopLayout, open: b
   ctx.globalCompositeOperation = 'multiply';
   const cx = width / 2;
   const cy = height / 2;
-  const vignette = ctx.createRadialGradient(cx, cy, Math.min(width, height) * 0.35, cx, cy, Math.max(width, height) * 0.75);
+  const vignette = ctx.createRadialGradient(
+    cx,
+    cy,
+    Math.min(width, height) * 0.35,
+    cx,
+    cy,
+    Math.max(width, height) * 0.75,
+  );
   vignette.addColorStop(0, '#ffffff');
   vignette.addColorStop(1, '#e8d6bf');
   ctx.fillStyle = vignette;
@@ -241,7 +361,7 @@ function drawLighting(ctx: CanvasRenderingContext2D, layout: ShopLayout, open: b
   ctx.restore();
 }
 
-/** Draws one full frame of the shop floor. */
+/** Draws one full frame of the PMD animated shop floor. */
 export function renderScene(
   ctx: CanvasRenderingContext2D,
   layout: ShopLayout,
@@ -251,7 +371,7 @@ export function renderScene(
   options: RenderOptions,
 ): void {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  // Re-applied every frame: resizing a canvas resets all 2D context state, including smoothing.
+  // Re-applied every frame: resizing a canvas resets 2D context smoothing state.
   ctx.imageSmoothingEnabled = false;
   ctx.globalAlpha = 1;
   ctx.globalCompositeOperation = 'source-over';
@@ -259,22 +379,28 @@ export function renderScene(
 
   if (background) ctx.drawImage(background, 0, 0);
   else drawBackground(ctx, layout);
-  drawDoorSign(ctx, layout, options.shiftRunning);
 
-  // Painter's algorithm: draw back-to-front by feet Y so nearer entities overlap farther ones.
+  drawDoorSign(ctx, layout, options.shiftRunning);
+  drawClerk(ctx, layout, world, adapter);
+
   const drawables: Array<{ y: number; draw: () => void }> = [];
   for (const ent of world.pokemon.values()) {
-    drawables.push({ y: ent.y, draw: () => drawPokemon(ctx, layout, world, ent, adapter, ent.uid === options.hoverUid) });
+    drawables.push({
+      y: ent.y,
+      draw: () => drawPokemon(ctx, layout, world, ent, adapter, ent.uid === options.hoverUid),
+    });
   }
   for (const walker of world.walkers.values()) {
-    drawables.push({ y: walker.y + 0.5, draw: () => drawWalker(ctx, layout, world, walker) });
+    drawables.push({
+      y: walker.y + 0.5,
+      draw: () => drawWalker(ctx, layout, world, walker, adapter),
+    });
   }
   drawables.sort((a, b) => a.y - b.y);
   for (const d of drawables) d.draw();
 
   drawLighting(ctx, layout, options.shiftRunning);
 
-  // Bubbles and particles sit above the lighting so feedback stays bright and readable.
   for (const walker of world.walkers.values()) drawBubble(ctx, layout, world, walker);
   for (const p of world.particles) drawParticle(ctx, layout, p);
 }
