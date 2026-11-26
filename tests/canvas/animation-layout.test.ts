@@ -15,7 +15,6 @@ import {
   clampDpr,
   computeDesktopResScale,
   computeIndoorLayout,
-  computeShopLayout,
   getBedAnchor,
   getCounterQueueSpot,
   getPenColumns,
@@ -54,9 +53,9 @@ describe('Canvas Shop Floor & High-Res Desktop Indoor Geometry', () => {
   });
 
   it('computes integer sprite scaling and valid pen/bed/walkway/station bounds', () => {
-    const desktopLayout = computeShopLayout(900, 4, 2, 2);
+    const desktopLayout = computeIndoorLayout(1280, 800, 4, 2, 2);
     expect(desktopLayout.dpr).toBe(2);
-    expect(desktopLayout.width).toBe(1800);
+    expect(desktopLayout.width).toBe(2560);
     expect(desktopLayout.spriteScale).toBeGreaterThanOrEqual(1);
     expect(Number.isInteger(desktopLayout.spriteScale)).toBe(true);
     expect(desktopLayout.spriteSize).toBe(SPRITE_SOURCE_SIZE * desktopLayout.spriteScale);

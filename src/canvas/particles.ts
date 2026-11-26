@@ -128,7 +128,7 @@ export function spawnCoin(x: number, y: number, unit: number, label: string): Pa
   return makeParticle({ kind: 'coin', x, y, vx: 0, vy: -unit * 26, life: 1.8, label, phase: 0 });
 }
 
-/** An urgent cyan sweat drop arcing off an impatient shopper at Kecleon's counter. */
+/** An urgent cyan sweat drop arcing off an impatient shopper at the Human Clerk counter. */
 export function spawnSweatDrop(x: number, y: number, unit: number, rng: RngFn): Particle {
   return makeParticle({
     kind: 'sweat',

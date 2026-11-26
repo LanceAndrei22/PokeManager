@@ -316,7 +316,7 @@ export function setPenMarkup(
   };
 }
 
-/** Selects the active gift-wrap Poké Ball used when accepting offers at Kecleon's counter. */
+/** Selects the active gift-wrap Poké Ball used when accepting offers at the Human Clerk counter. */
 export function setActiveGiftBall(state: GameState, ball: GiftBallSlug): ActionResult {
   if (ball !== 'poke-ball' && (state.inventory[ball] ?? 0) <= 0) {
     return { state, ok: false, message: `No ${getItemDefinition(ball).name}s in your bag yet.` };
@@ -864,7 +864,7 @@ export function purchaseUpgradeAction(
 }
 
 /**
- * Accepts a queued customer's offer at Kecleon's counter, completes checkout with
+ * Accepts a queued customer's offer at the Human Clerk counter, completes checkout with
  * optional Gift-Wrap Ball tips, awards Shop XP, and updates lifetime tycoon stats.
  */
 export function acceptCounterOfferAction(state: GameState, offerUid: string): ActionResult {
@@ -1034,7 +1034,7 @@ export function haggleCounterOfferAction(
   };
 }
 
-/** Politely declines a queued shopper at Kecleon's counter without XP penalty. */
+/** Politely declines a queued shopper at the Human Clerk counter without XP penalty. */
 export function declineCounterOfferAction(state: GameState, offerUid: string): ActionResult {
   const offer = state.counterQueue.find((q) => q.uid === offerUid);
   if (!offer) return { state, ok: false, message: 'Customer already left.' };
@@ -1323,9 +1323,9 @@ export function startNextShift(state: GameState, providedRng?: RngFn): GameState
 /**
  * Advances the live-tick tycoon simulation by one tick (`open` phase):
  * 1. Advances napping strays and incubating eggs
- * 2. Ticks down live Patience meters for every customer queued at Kecleon's counter
+ * 2. Ticks down live Patience meters for every customer queued at the Human Clerk counter
  * 3. Moves finished browsers from display pens into `counterQueue` (NO auto-selling!)
- * 4. Spawns new PMD Pokémon shoppers with archetype-matched species
+ * 4. Spawns new Human Trainer shoppers with archetype-matched profiles
  * 5. Triggers `resolveShiftEnd` on closing time
  */
 export function advanceShiftTick(state: GameState, providedRng?: RngFn): TickResult {
@@ -1433,7 +1433,7 @@ export function advanceShiftTick(state: GameState, providedRng?: RngFn): TickRes
   }
   nextState.counterQueue = activeQueue;
 
-  // 4. Resolve pen browsers -> queue at Kecleon's counter (ZERO auto-sales!)
+  // 4. Resolve pen browsers -> queue at the Human Clerk counter (ZERO auto-sales!)
   const remainingCustomers: ShopCustomer[] = [];
   for (const customer of nextState.customers) {
     const nextTimer = customer.ticksRemaining - 1;

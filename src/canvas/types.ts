@@ -126,7 +126,7 @@ export interface FloorSnapshot {
   shiftSpeed: 1 | 2;
   pokemon: FloorPokemon[];
   customers: FloorCustomer[];
-  /** Customers waiting at Kecleon's counter with live Patience Bars. */
+  /** Customers waiting at the PokéMart counter with live Patience Bars. */
   counterQueue: FloorCounterOffer[];
   counterQueueCount?: number;
   eggCount?: number;
@@ -158,7 +158,7 @@ export interface SpriteFrame {
 
 /**
  * Pluggable sprite source supporting multi-frame, 8-directional PMD SpriteCollab
- * sheets (`Walk`, `Idle`, `Sleep`, `Hop`) as well as lightweight test stubs.
+ * grounded sheets (`Walk`, `Idle`, `Sleep`) as well as lightweight test stubs.
  */
 export interface SpriteEntityAdapter {
   getFrame(

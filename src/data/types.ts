@@ -130,8 +130,8 @@ export type GiftBallSlug =
 /** Functional item classification for bag filtering and wholesale shelves. */
 export type ItemCategory = 'stone' | 'care' | 'candy' | 'ball' | 'egg';
 
-/** Supported PMD SpriteCollab spritesheet animation names. */
-export type PmdAnimKey = 'Walk' | 'Idle' | 'Sleep' | 'Hop';
+/** Supported grounded PMD SpriteCollab spritesheet animation names. */
+export type PmdAnimKey = 'Walk' | 'Idle' | 'Sleep';
 
 /** Pre-verified PMD SpriteCollab asset availability from `tracker.json`. */
 export interface PmdAnimAvailability {
@@ -227,7 +227,7 @@ export interface CustomerArchetype {
   description: string;
   markupTolerance: number;
   bonusMultiplier: number;
-  /** Base patience ticks at Kecleon's counter before difficulty scaling. */
+  /** Base patience ticks at the PokéMart counter before difficulty scaling. */
   basePatience: number;
   /** Base haggle resistance offset (negative = tougher negotiator). */
   haggleEase: number;
@@ -241,8 +241,9 @@ export interface ShopCustomer {
   npcId: string;
   /** Human Trainer pixel portrait URL (`public/assets/npcs/portraits/...`). */
   npcPortraitUrl: string;
-  /** Deprecated v2.0 Pokémon NPC ID kept optional solely for legacy save migration. */
+  /** @deprecated Legacy v2.0 save migration only */
   npcSpeciesId?: number;
+  /** @deprecated Legacy v2.0 save migration only */
   npcPaddedId?: string;
   name: string;
   targetPenIndex: number;
@@ -257,8 +258,9 @@ export interface CounterOffer {
   archetypeId: CustomerArchetypeId;
   npcId: string;
   npcPortraitUrl: string;
-  /** Deprecated v2.0 Pokémon NPC ID kept optional solely for legacy save migration. */
+  /** @deprecated Legacy v2.0 save migration only */
   npcSpeciesId?: number;
+  /** @deprecated Legacy v2.0 save migration only */
   npcPaddedId?: string;
   customerName: string;
   pokemonUid: string;
@@ -425,7 +427,7 @@ export interface GameState {
   inventory: Partial<Record<ItemSlug, number>>;
   wholesaleCatalog: WholesaleOffer[];
   customers: ShopCustomer[];
-  /** Live-clock shoppers waiting at Kecleon's counter to be accepted, haggled, or declined. */
+  /** Live-clock shoppers waiting at the PokéMart counter to be accepted, haggled, or declined. */
   counterQueue: CounterOffer[];
   upgrades: Record<ShopUpgradeId, number>;
   recentSpeciesSales: Record<number, number>;

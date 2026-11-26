@@ -5,9 +5,8 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { getHumanHeadTopY, renderIndoorScene } from '../../src/canvas/indoorRenderer';
-import { computeIndoorLayout, computeShopLayout } from '../../src/canvas/layout';
+import { computeIndoorLayout } from '../../src/canvas/layout';
 import { spawnCoin, spawnSweatDrop } from '../../src/canvas/particles';
-import { renderScene } from '../../src/canvas/renderer';
 import { ShopCanvas } from '../../src/canvas/ShopCanvas';
 import type { SpriteEntityAdapter } from '../../src/canvas/types';
 import {
@@ -114,7 +113,7 @@ function createMockContext(): CanvasRenderingContext2D {
 describe('Shop World State Machine', () => {
   it('diffs snapshots for silent init, adoption sales, heals, evolutions, hatches, and queued counter shoppers', () => {
     const rng = createSeededRng(101);
-    const layout = computeShopLayout(800, 3, 2, 1);
+    const layout = computeIndoorLayout(1280, 800, 3, 2, 1);
     const world = createWorld();
 
     const eevee = makePokemon({ uid: 'eevee', speciesId: 133, penIndex: 0 });
@@ -418,22 +417,6 @@ describe('2D Canvas Indoor Pixel Renderer & ShopCanvas UI', () => {
     expect(vi.mocked(hoverCtx.fillRect).mock.calls.length).toBeGreaterThan(
       vi.mocked(noHoverCtx.fillRect).mock.calls.length,
     );
-
-    // Also confirm legacy renderer still honors reducedMotion static scale
-    world.reducedMotion = true;
-    const staticCtx = createMockContext();
-    renderScene(staticCtx, layout, world, null, {
-      getFrame: () => ({
-        image: fakeImage,
-        sx: 0,
-        sy: 0,
-        sw: 80,
-        sh: 80,
-        usesDirectionRow: false,
-        facesLeft: true,
-      }),
-    }, { shiftRunning: false, hoverUid: null });
-    expect(staticCtx.scale).toHaveBeenCalledWith(-1, 1);
   });
 
   it('renders full-viewport ShopCanvas with pixel-art class and click target callbacks', () => {

@@ -277,7 +277,7 @@ export const HUMAN_SHOPPER_NPCS_BY_ARCHETYPE: Record<CustomerArchetypeId, HumanN
   ],
 };
 
-/** Backward-compatible alias preserved for external imports. */
+/** @deprecated Legacy v2.0 save migration only */
 export const SHOPPER_NPCS_BY_ARCHETYPE = HUMAN_SHOPPER_NPCS_BY_ARCHETYPE;
 
 /** Flat lookup map across Clerk + all unique Human Trainer NPCs by `id`. */

@@ -3,7 +3,7 @@
  *
  * Asset lookup priority:
  * 1. Bundled local core assets (`./assets/pmd/{paddedId}/...`) listed in `pmdCoreManifest.json`
- *    for instant offline boot (Kecleon clerk + 12 PMD shoppers + starter mascots).
+ *    for instant offline boot (21 bundled Gen 1–4 store Pokémon & starter mascots).
  * 2. Browser Cache API (`pokemart-pmd-v2`) for cached remote GitHub Raw responses.
  * 3. On-demand GitHub Raw fetches (`crossOrigin = "anonymous"`) for all 493 Gen 1–4
  *    species + shiny `0000/0001/` variants, gated by `species.pmdAnims` from `tracker.json`
@@ -31,7 +31,7 @@ interface CoreManifestEntry {
 
 const CORE_MANIFEST = rawCoreManifest as Record<string, CoreManifestEntry>;
 
-/** Maps grounded entity animation state to preferred PMD sheet lookup order (no Hop). */
+/** Maps grounded entity animation state to preferred PMD sheet lookup order. */
 export const STATE_ANIM_PRIORITY: Record<PokemonAnimState, PmdAnimKey[]> = {
   sleep: ['Sleep', 'Idle', 'Walk'],
   idle: ['Idle', 'Walk'],

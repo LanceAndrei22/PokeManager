@@ -138,7 +138,7 @@ export function calculatePokemonValuation(
   };
 }
 
-/** Computes whether a browsing shopper decides to step up to Kecleon's counter. */
+/** Computes whether a browsing shopper decides to step up to the Human Clerk counter. */
 export function calculateBuyProbability(
   archetypeId: CustomerArchetypeId,
   markupPercent: number,
