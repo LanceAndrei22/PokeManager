@@ -3,15 +3,18 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
+  PROFILE_SAVE_PREFIX,
   createProfile,
   ensureInitialProfileStore,
   exportSaveCode,
   importSaveCode,
+  loadProfileGameState,
   resetProfile,
   saveProfileGameState,
   switchActiveProfile,
   type StorageLike,
 } from '../../src/engine/storage';
+import { createInitialGameState } from '../../src/engine/simulation';
 
 function createMemoryStorage(): StorageLike {
   const map = new Map<string, string>();
@@ -85,5 +88,63 @@ describe('Per-Profile Local Storage & Base64 Save Transfer', () => {
     expect(() => importSaveCode(tampered, 'target-id')).toThrow(/checksum|format|Invalid/i);
     expect(() => importSaveCode('not-valid-base64!!!', 'target-id')).toThrow();
     expect(() => importSaveCode('', 'target-id')).toThrow();
+  });
+
+  it('migrates legacy Checkpoint 2 saves missing Human NPC fields and audio defaults', () => {
+    const storage = createMemoryStorage();
+    const base = createInitialGameState('legacy-1', 'Legacy Host', 'standard');
+    const legacyPayload = {
+      ...base,
+      bgmMuted: undefined,
+      sfxVolume: undefined,
+      bgmVolume: undefined,
+      customers: [
+        {
+          uid: 'cust-old',
+          archetypeId: 'cozy-collector',
+          npcSpeciesId: 40,
+          npcPaddedId: '0040',
+          name: 'Mina (Wigglytuff)',
+          targetPenIndex: 0,
+          statusText: 'Admiring Eevee...',
+          ticksRemaining: 3,
+        },
+      ],
+      counterQueue: [
+        {
+          uid: 'offer-old',
+          customerUid: 'cust-old',
+          archetypeId: 'bargain-browser',
+          npcSpeciesId: 52,
+          npcPaddedId: '0052',
+          customerName: 'Nori (Meowth)',
+          pokemonUid: 'mon-starter-eevee',
+          speciesId: 133,
+          isShiny: false,
+          penIndex: 0,
+          fairValue: 1000,
+          initialOffer: 950,
+          currentOffer: 950,
+          haggleAttempts: 0,
+          maxHaggleAttempts: 2,
+          patience: 10,
+          maxPatience: 10,
+          trendMatched: false,
+          archetypeMatched: false,
+          isVip: false,
+        },
+      ],
+    };
+
+    storage.setItem(`${PROFILE_SAVE_PREFIX}legacy-1`, JSON.stringify(legacyPayload));
+    const migrated = loadProfileGameState('legacy-1', storage);
+    expect(migrated).not.toBeNull();
+    expect(migrated!.bgmMuted).toBe(false);
+    expect(migrated!.sfxVolume).toBe(0.65);
+    expect(migrated!.bgmVolume).toBe(0.35);
+    expect(migrated!.customers[0].npcId).toBe('picnicker');
+    expect(migrated!.customers[0].npcPortraitUrl).toContain('./assets/npcs/portraits/');
+    expect(migrated!.counterQueue[0].npcId).toBe('youngster');
+    expect(migrated!.counterQueue[0].npcPortraitUrl).toContain('./assets/npcs/portraits/');
   });
 });

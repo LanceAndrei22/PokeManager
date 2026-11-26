@@ -4,6 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
+  computePmdFrameIndexFromMs,
   computePmdFrameRect,
   parseAnimDataXml,
   vectorToPmdDirection,
@@ -90,6 +91,12 @@ describe('PMD AnimData.xml Parser & Frame Slicer', () => {
     const sleepSlice = computePmdFrameRect(parsed.anims.Sleep, 64, 24, 6, 0.6);
     expect(sleepSlice.rowIndex).toBe(0);
     expect(sleepSlice.frameIndex).toBe(1);
+
+    // Millisecond conversion matches PMD 60 fps ticks (6 + 12 = 18 ticks = 300ms loop)
+    expect(computePmdFrameIndexFromMs(parsed.anims.Walk, 0, 2)).toBe(0);
+    expect(computePmdFrameIndexFromMs(parsed.anims.Walk, 50, 2)).toBe(0);
+    expect(computePmdFrameIndexFromMs(parsed.anims.Walk, 150, 2)).toBe(1);
+    expect(computePmdFrameIndexFromMs(parsed.anims.Walk, 350, 2)).toBe(0);
   });
 });
 

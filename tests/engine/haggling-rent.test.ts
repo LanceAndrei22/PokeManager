@@ -8,7 +8,11 @@ import { getDifficultyConfig } from '../../src/data/difficulties';
 import { getSpecies } from '../../src/data/species';
 import type { CounterOffer } from '../../src/data/types';
 import { generateWholesaleCatalog } from '../../src/engine/catalog';
-import { calculateShiftDues, getLiquidationValue } from '../../src/engine/economy';
+import {
+  calculateBuyProbability,
+  calculateShiftDues,
+  getLiquidationValue,
+} from '../../src/engine/economy';
 import { createSeededRng } from '../../src/engine/rng';
 import {
   acceptCounterOfferAction,
@@ -200,5 +204,56 @@ describe('3 Difficulties, Rent, Emergency Liquidation, Bankruptcy & VIP Contract
     const vipOffer = rank6Standard.find((o) => o.kind === 'vip-contract')!;
     const sp = getSpecies(vipOffer.speciesId);
     expect(sp.isLegendary || sp.isMythical).toBe(true);
+  });
+
+  it('has Normal Shopper buy non-Legendaries fairly while never offering on Legendaries or Mythicals', () => {
+    const buyProb = calculateBuyProbability('normal', 100, false, false);
+    expect(buyProb).toBeGreaterThanOrEqual(0.8);
+
+    // 1. Store holding ONLY Legendary #150 Mewtwo -> Normal Shopper must NEVER queue an offer
+    let legState = toggleShiftRunning(createInitialGameState('leg', 'VIP Shop', 'standard')).state;
+    legState = {
+      ...legState,
+      pokemon: [
+        {
+          ...legState.pokemon[0],
+          uid: 'mon-mewtwo',
+          speciesId: 150,
+          penIndex: 0,
+        },
+      ],
+    };
+    const seenNormalOnLeg: CounterOffer[] = [];
+    for (let t = 0; t < 70; t += 1) {
+      legState = advanceShiftTick(legState).state;
+      for (const offer of legState.counterQueue) {
+        if (offer.archetypeId === 'normal' && offer.speciesId === 150) {
+          seenNormalOnLeg.push(offer);
+        }
+      }
+      // Keep queue unblocked so later customers keep rolling
+      if (legState.counterQueue.length >= 2) {
+        legState = declineCounterOfferAction(legState, legState.counterQueue[0].uid).state;
+      }
+    }
+    expect(seenNormalOnLeg).toHaveLength(0);
+
+    // 2. Store holding non-Legendary #133 Eevee -> Normal Shopper spawns with Human Trainer fields
+    let regState = toggleShiftRunning(createInitialGameState('reg', 'Cozy Shop', 'standard')).state;
+    const seenNormal: CounterOffer[] = [];
+    for (let t = 0; t < 70; t += 1) {
+      regState = advanceShiftTick(regState).state;
+      for (const offer of regState.counterQueue) {
+        if (offer.archetypeId === 'normal') {
+          seenNormal.push(offer);
+        }
+      }
+      if (regState.counterQueue.length >= 2) {
+        regState = declineCounterOfferAction(regState, regState.counterQueue[0].uid).state;
+      }
+    }
+    expect(seenNormal.length).toBeGreaterThan(0);
+    expect(seenNormal[0].npcId).toBeTruthy();
+    expect(seenNormal[0].npcPortraitUrl).toContain('./assets/npcs/portraits/');
   });
 });

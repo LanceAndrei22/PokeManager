@@ -13,9 +13,9 @@
   --color-pmd-crimson: #e74c3c;
   --color-pmd-ink: #eef5ff;
 
-  --font-sans: "Pixelify Sans", "Consolas", ui-monospace, monospace;
-  --font-display: "Silkscreen", "Pixelify Sans", "Consolas", monospace;
-  --font-mono: "Pixelify Sans", "Consolas", ui-monospace, monospace;
+  --font-sans: "Chakra Petch", "Consolas", sans-serif;
+  --font-display: "Silkscreen", "Chakra Petch", monospace;
+  --font-mono: "Chakra Petch", "Consolas", ui-monospace, monospace;
 }
 
 :root {

@@ -160,11 +160,17 @@ function drawMartWall(ctx: CanvasRenderingContext2D, layout: ShopLayout): void {
   const clockImg = getTileImage('indoor', 'clock-wall');
 
   if (wallImg) {
-    // Upper PokéMart cream band + crisp GBA wall-tile band along the lower half of wall
+    // Upper Gen 4 PokéMart ceiling molding + wainscot + GBA wall-tile band
+    ctx.fillStyle = '#1b3d7a';
+    ctx.fillRect(wall.x, wall.y, wall.w, Math.max(u * 4, Math.round(wall.h * 0.2)));
     ctx.fillStyle = '#dde6f0';
-    ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
+    ctx.fillRect(wall.x, wall.y + u * 4, wall.w, Math.max(0, wall.h - u * 4));
+    ctx.fillStyle = '#c8d6e8';
+    for (let x = 0; x < width; x += u * 16) {
+      ctx.fillRect(x, wall.y + u * 4, seam(u), wall.h - u * 4);
+    }
     const tileW = u * 16;
-    const bandH = Math.min(wall.h, u * 32);
+    const bandH = Math.min(wall.h - u * 4, u * 32);
     const bandY = wall.h - bandH;
     for (let x = 0; x < width; x += tileW) {
       ctx.drawImage(wallImg, x, bandY, tileW, bandH);
@@ -223,7 +229,9 @@ function drawMartWall(ctx: CanvasRenderingContext2D, layout: ShopLayout): void {
   if (plantImg) {
     const pw = u * 12;
     const ph = u * 24;
-    ctx.drawImage(plantImg, Math.max(u * 2, layout.counter.x - pw), wall.h - ph + u * 2, pw, ph);
+    if (layout.counter.x - pw >= u * 2) {
+      ctx.drawImage(plantImg, layout.counter.x - pw, wall.h - ph + u * 2, pw, ph);
+    }
     if (layout.door.x + layout.door.w + pw + u * 2 < width) {
       ctx.drawImage(plantImg, layout.door.x + layout.door.w + u, wall.h - ph + u * 2, pw, ph);
     }
@@ -275,7 +283,7 @@ function drawStaticCounter(ctx: CanvasRenderingContext2D, layout: ShopLayout): v
 
   // Crisp PokéMart signboard front plate in Pixelify Sans
   const label = 'PokéMart';
-  ctx.font = `600 ${Math.max(10, Math.round(u * 4.2))}px "Pixelify Sans", sans-serif`;
+  ctx.font = `600 ${Math.max(10, Math.round(u * 4.2))}px "Chakra Petch", sans-serif`;
   const plateW = Math.min(c.w - u * 6, Math.ceil(ctx.measureText(label).width) + u * 5);
   const plateX = c.x + Math.round((c.w - plateW) / 2);
   const plateY = c.y + Math.max(u * 2, Math.round(c.h * 0.28));
@@ -346,7 +354,7 @@ function drawStaticPen(ctx: CanvasRenderingContext2D, pen: PenRect, u: number): 
   ctx.fillRect(pen.x + pen.w - post, pen.y + pen.h - post, post, post);
 
   // Crisp pen label plate
-  ctx.font = `600 ${Math.max(10, Math.round(u * 4))}px "Pixelify Sans", sans-serif`;
+  ctx.font = `600 ${Math.max(10, Math.round(u * 4))}px "Chakra Petch", sans-serif`;
   const label = `Pen ${pen.index + 1}`;
   const plateW = Math.ceil(ctx.measureText(label).width) + u * 4;
   const plateX = inner.x + u * 2;
@@ -385,7 +393,7 @@ function drawStationLabelBadge(
   label: string,
   u: number,
 ): void {
-  ctx.font = `600 ${Math.max(10, Math.round(u * 3.8))}px "Pixelify Sans", sans-serif`;
+  ctx.font = `600 ${Math.max(10, Math.round(u * 3.8))}px "Chakra Petch", sans-serif`;
   const badgeW = Math.min(rect.w - u * 2, Math.ceil(ctx.measureText(label).width) + u * 4);
   const badgeH = u * 6;
   const bx = Math.round(rect.x + (rect.w - badgeW) / 2);
@@ -436,7 +444,7 @@ function drawStaticStations(ctx: CanvasRenderingContext2D, layout: ShopLayout): 
     ctx.fillStyle = '#d9ecd2';
     fillPixelRoundRect(ctx, nap.x, nap.y, nap.w, nap.h, u * 2);
   }
-  ctx.font = `600 ${Math.max(10, Math.round(u * 4))}px "Pixelify Sans", sans-serif`;
+  ctx.font = `600 ${Math.max(10, Math.round(u * 4))}px "Chakra Petch", sans-serif`;
   const napTagW = Math.ceil(ctx.measureText('Nap Corner').width) + u * 4;
   ctx.fillStyle = 'rgba(19, 36, 75, 0.9)';
   ctx.fillRect(nap.x + u * 2, nap.y + u * 1.5, napTagW, u * 6);
@@ -552,7 +560,7 @@ function drawSlidingDoors(
   ctx.lineWidth = Math.max(1, seam(u));
   ctx.strokeRect(d.x, badgeY, d.w, badgeH);
   ctx.fillStyle = '#ffffff';
-  ctx.font = `700 ${Math.max(9, Math.round(u * 3.5))}px "Pixelify Sans", sans-serif`;
+  ctx.font = `700 ${Math.max(9, Math.round(u * 3.5))}px "Chakra Petch", sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(shiftRunning ? 'OPEN' : 'CLOSED', d.x + d.w / 2, badgeY + badgeH / 2, d.w - u);
@@ -642,7 +650,7 @@ function drawDynamicStations(
   }
   if (world.hasVipContract) {
     ctx.fillStyle = '#ffd84d';
-    ctx.font = `700 ${Math.max(10, Math.round(u * 3.8))}px "Pixelify Sans", sans-serif`;
+    ctx.font = `700 ${Math.max(10, Math.round(u * 3.8))}px "Chakra Petch", sans-serif`;
     ctx.textAlign = 'center';
     ctx.fillText('VIP!', pc.x + pc.w / 2, pc.y + u * 5);
     ctx.textAlign = 'start';
@@ -940,7 +948,7 @@ function drawParticle(ctx: CanvasRenderingContext2D, layout: ShopLayout, p: Part
     case 'coin': {
       drawBitmap(ctx, COIN, p.x - 3.5 * u, p.y - 3 * u, u, ICON_COLORS);
       if (p.label) {
-        ctx.font = `700 ${Math.max(10, Math.round(u * 5))}px "Pixelify Sans", sans-serif`;
+        ctx.font = `700 ${Math.max(10, Math.round(u * 5))}px "Chakra Petch", sans-serif`;
         ctx.textBaseline = 'middle';
         ctx.lineWidth = Math.max(2, u);
         ctx.strokeStyle = '#070d1f';

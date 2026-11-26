@@ -19,8 +19,18 @@ describe('PokéMart: Low Cortisol Shift Full-Screen PMD UI Integration', () => {
     const user = userEvent.setup();
     render(<App />);
 
-    // 1. Main Menu renders chunky title, mascot spotlight, fan notice, and New Trainer Creator
+    // 1. Main Menu renders chunky title, AudioControls (BGM/SFX/Vol), mascot spotlight, and New Trainer Creator
     expect(screen.getByRole('heading', { name: /PokéMart: Low Cortisol Shift/i })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Mute background music/i }));
+    expect(screen.getByRole('button', { name: /Unmute background music/i })).toHaveTextContent('BGM: Off');
+    await user.click(screen.getByRole('button', { name: /Unmute background music/i }));
+
+    await user.click(screen.getByRole('button', { name: /Audio volume mixer/i }));
+    const mixerRegion = screen.getByRole('region', { name: 'Audio Mixer' });
+    expect(within(mixerRegion).getByLabelText(/Music \(BGM\)/i)).toBeInTheDocument();
+    expect(within(mixerRegion).getByLabelText(/Effects \(SFX\)/i)).toBeInTheDocument();
+    await user.click(within(mixerRegion).getByRole('button', { name: 'Done' }));
+
     await user.click(screen.getByRole('button', { name: /\+ New Trainer/i }));
     await user.type(screen.getByLabelText('Trainer Name'), 'Dawn');
     await user.click(screen.getByRole('button', { name: /Eevee/i }));

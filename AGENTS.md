@@ -13,9 +13,11 @@
 - Never install global npm packages or run `git config --global`. Use repo-local `.npmrc` (`cache=.npm-cache`) and `NPM_CONFIG_CACHE=D:\PokeManager\.npm-cache`.
 - Target **Node.js 26.13.1** and relative `./assets/...` paths (`base: './'` in `vite.config.ts`) for static GitHub Pages compatibility.
 
-## 3. PMD SpriteCollab Architecture & 493 Gen 1–4 Pokédex
-- **Primary Sprite Set:** **PMDCollab / SpriteCollab (`CC BY-NC 4.0`)** multi-frame spritesheets (`Walk-Anim.png`, `Idle-Anim.png`, `Sleep-Anim.png`, `Hop-Anim.png`), `AnimData.xml`, and `portrait/{paddedId}/Normal.png` (plus shiny `0000/0001/` subfolders) covering **all 493 Gen 1–4 (`#001–#493`)** species (including Legendaries and Mythicals) plus **PMD Pokémon NPCs** (Kecleon clerk `0352` + 12 animated Pokémon shoppers).
-- **Hybrid Loader Strategy:** Bundle the tiny core NPC cast (13) + 3 starter species locally under `public/assets/pmd/` for instant offline boot, embed per-species animation/portrait availability from SpriteCollab `tracker.json` in `src/data/species.json` so missing sheets are never fetched (0 404 errors), and load all other 493 species + shiny forms dynamically via GitHub Raw (`crossOrigin = "anonymous"`) + browser Cache API. (The old v1 `< 2 MB` static Platinum cap is lifted in favor of this hybrid loader.)
+## 3. PMD SpriteCollab Store Pokémon, Human NPCs & GBA Tilesets (v2.1)
+- **Store Pokémon Sprites (100% PMDCollab / SpriteCollab, `CC BY-NC 4.0`):** Multi-frame spritesheets (`Walk-Anim.png`, `Idle-Anim.png`, `Sleep-Anim.png`, `Hop-Anim.png`), `AnimData.xml`, and `portrait/{paddedId}/Normal.png` (plus shiny `0000/0001/` subfolders) covering **all 493 Gen 1–4 (`#001–#493`)** species (including Legendaries and Mythicals).
+- **Hybrid Loader Strategy:** Bundle the 21 core species (`Walk`, `Idle`, `Sleep`, `Hop`) locally under `public/assets/pmd/` for instant offline boot, embed per-species animation/portrait availability from SpriteCollab `tracker.json` in `src/data/species.json` so missing sheets are never fetched (0 404 errors), and load all other 493 species + shiny forms dynamically via GitHub Raw (`crossOrigin = "anonymous"`) + browser Cache API.
+- **Human Trainer NPCs (`pret/pokeemerald` + Pokémon Showdown):** Clerk Leo (`mart_employee`) and 15 Human Trainer shoppers across 6 archetypes — including **Normal Shopper** (~40% spawn weight, accepts non-Legendaries fairly without trait/trend match and never offers on Legendaries/Mythicals) — rendered with 4-direction `64×128` overworlds and counter trainer portraits.
+- **Tilesets, Audio & Sharp Pixel Typography:** Authentic decoded `pret/pokeemerald` outdoor meadow & PokéMart indoor tilesets (`public/assets/tiles/`) plus custom GBA-palette Pet Shop stations (`scripts/fetch-world-assets.mjs`), cross-browser capture-unlocked Web Audio SFX + dual BGM tracks (`menu` ~80 BPM & `shop` ~100 BPM) + per-profile mixer (`sfx.ts`, `bgm.ts`, `AudioControls.tsx`), and self-hosted **Chakra Petch** (`500/600/700` Latin + Latin-Ext `₽`) UI/currency typography paired with **Silkscreen** (`400` ONLY on `>= 18px` headings/logo).
 
 ## 4. Documentation & Code Commenting Standards
 - Add concise file-level summary headers on source modules.
@@ -46,15 +48,20 @@ D:\PokeManager\
 ├── AGENTS.md                          # Always-on project rules & architecture source of truth
 ├── .agents/rules/sprites-and-animation.md # Model-decision rules for PMD SpriteCollab & Canvas
 ├── public/assets/
-│   ├── pmd/                           # Bundled core PMD NPCs & starter spritesheets/portraits
+│   ├── fonts/                         # Self-hosted Chakra Petch, Pixelify Sans & Silkscreen WOFF2 fonts
+│   ├── npcs/                          # 16 pret/pokeemerald overworlds + Showdown Human Trainer portraits
+│   ├── tiles/                         # Decoded pret/pokeemerald outdoor & indoor tiles + Pet Shop props
+│   ├── pmd/                           # Bundled core 21 PMD species sheets (Walk/Idle/Sleep/Hop) & portraits
 │   ├── items/                         # Curated Gen 4 pixel item icons
-│   └── CREDITS.md                     # Non-commercial PMDCollab CC BY-NC 4.0 & PokeAPI credits
-├── scripts/build-pokedex.mjs          # Generates 493-species Gen 1–4 catalog & core PMD bundle
+│   └── CREDITS.md                     # Non-commercial PMDCollab, pret/pokeemerald, Showdown & PokeAPI credits
+├── scripts/
+│   ├── build-pokedex.mjs              # Generates 493-species Gen 1–4 catalog & core PMD bundle
+│   └── fetch-world-assets.mjs         # Decodes pret/pokeemerald metatiles, trainers & Pet Shop props
 ├── src/
-│   ├── data/                          # 493 species JSON/TS, difficulties, NPCs, items, trends, upgrades
-│   ├── engine/                        # Pure tycoon simulation, haggling, rent, debt, breeding, storage, SFX
-│   ├── canvas/                        # HTML5 2D Canvas shop floor, PMD loader & AnimData.xml animator
-│   └── components/                    # React + Tailwind UI components & accessible modals
+│   ├── data/                          # 493 species JSON/TS, difficulties, Human NPCs, items, trends, upgrades
+│   ├── engine/                        # Tycoon sim, haggling, rent, debt, breeding, storage, SFX & dual BGM
+│   ├── canvas/                        # Tiled indoor floor, nature backdrop, PMD & Human animators
+│   └── components/                    # React + Tailwind HUD, AudioControls, Counter & accessible modals
 └── tests/                             # Vitest unit tests & React Testing Library integration tests
 ```
 

@@ -94,12 +94,13 @@ export function MainMenu({
           </div>
 
           {/* Quick Fan Badges Bar (Top Right) */}
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="pmd-pill pmd-num flex items-center gap-1.5 px-3 py-1 text-sm font-semibold">
+          <div className="flex flex-wrap items-center gap-1.5 lg:flex-nowrap">
+            <div className="pmd-pill pmd-num flex shrink-0 items-center gap-1.5 whitespace-nowrap px-2.5 py-1 text-sm font-semibold">
               <span className="text-[#ffd84d]">₽</span>
               <span>{activeState.cash.toLocaleString()}</span>
             </div>
             <AudioControls
+              compact
               bgmMuted={Boolean(activeState.bgmMuted)}
               sfxMuted={Boolean(activeState.muted)}
               bgmVolume={activeState.bgmVolume ?? 0.35}
@@ -112,14 +113,14 @@ export function MainMenu({
             <button
               type="button"
               onClick={onOpenSaveModal}
-              className="pmd-btn px-3 py-1 text-sm font-semibold"
+              className="pmd-btn shrink-0 whitespace-nowrap px-2.5 py-1 text-xs font-semibold"
             >
               Save / Profiles
             </button>
             <button
               type="button"
               onClick={onOpenCredits}
-              className="pmd-btn px-3 py-1 text-sm font-semibold"
+              className="pmd-btn shrink-0 whitespace-nowrap px-2.5 py-1 text-xs font-semibold"
             >
               Credits
             </button>

@@ -415,11 +415,11 @@ export function App() {
             onReturnToMenu={handleReturnToMenu}
           />
 
-          {/* Transient Feedback Toast */}
-          {toast && (
+          {/* Transient Feedback Toast docked cleanly above Bottom Dock (never overlaps Top HUD) */}
+          {toast && !activeOffer && (
             <div
               role="status"
-              className="pmd-pill pointer-events-none fixed left-1/2 top-24 z-30 -translate-x-1/2 px-3 py-1.5 text-center text-xs font-bold text-[#6ee7a0] sm:top-16"
+              className="pmd-pill pointer-events-none fixed bottom-20 left-1/2 z-30 max-w-lg -translate-x-1/2 px-3.5 py-1.5 text-center text-sm font-semibold text-[#6ee7a0]"
             >
               {toast}
             </div>
