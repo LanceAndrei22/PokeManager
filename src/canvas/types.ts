@@ -48,8 +48,8 @@ export interface ShopLayout {
   /** Backing-store height (`canvas.height`). */
   height: number;
   dpr: number;
-  /** True on compact narrow viewports (<768 CSS px). */
-  isPortrait: boolean;
+  /** Desktop resolution scale factor (1.0 at 1280×760, ~1.42 at 1920×1080, ~1.89 at 2560×1440). */
+  resScale: number;
   /** Size of one procedural "art pixel" (tiles, particles, UI accents) in backing px. */
   unit: number;
   /** Integer base scale factor derived from pen size. */
@@ -63,7 +63,7 @@ export interface ShopLayout {
   /** Where shoppers appear/disappear (just inside the door, on the floor). */
   doorSpot: Point;
   counter: Rect;
-  /** Queue positions standing in front of Kecleon's register (up to 4). */
+  /** Queue positions standing in front of Clerk Leo's register (up to 4). */
   counterQueueSpots: Point[];
   window: Rect;
   /** Horizontal walkway directly below the back wall. */

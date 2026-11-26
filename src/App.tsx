@@ -649,6 +649,25 @@ export function App() {
       />
 
       <CreditsModal open={creditsModalOpen} onClose={() => setCreditsModalOpen(false)} />
+
+      {/* Lightweight Desktop-Only Notice when browser viewport is narrower than 960px */}
+      <div
+        role="region"
+        aria-label="Desktop browser required"
+        className="fixed inset-0 z-50 hidden items-center justify-center bg-[#0c1733]/98 p-6 max-[959px]:flex"
+      >
+        <div className="pmd-panel max-w-md space-y-3 p-6 text-center">
+          <h2 className="pmd-heading-display text-[#ffd84d]">Desktop Browser Only</h2>
+          <p className="text-sm leading-relaxed text-[#dbe8ff]">
+            <strong>PokéMart: Low Cortisol Shift</strong> is built for PC desktop web browsers
+            with mouse &amp; keyboard (minimum <strong>1280×720</strong>, optimized for{' '}
+            <strong>1920×1080</strong> and <strong>2560×1440+</strong>).
+          </p>
+          <p className="text-xs text-[#b5d4ff]">
+            Widen this browser window to at least 960px or open the game on a PC monitor.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

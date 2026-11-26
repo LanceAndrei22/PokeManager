@@ -24,12 +24,6 @@
   --target-size: 24px;
 }
 
-@media (pointer: coarse) {
-  :root {
-    --target-size: 44px;
-  }
-}
-
 html,
 body,
 #root {
@@ -235,23 +229,10 @@ li {
     -1px 1px 0 #140d00;
 }
 
-/* Safe-area inset helpers for fullscreen mobile overlays */
-.safe-top-bar {
-  padding-top: max(0.5rem, env(safe-area-inset-top, 0px));
-  padding-left: max(0.5rem, env(safe-area-inset-left, 0px));
-  padding-right: max(0.5rem, env(safe-area-inset-right, 0px));
-}
-
-.safe-bottom-dock {
-  padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
-  padding-left: max(0.5rem, env(safe-area-inset-left, 0px));
-  padding-right: max(0.5rem, env(safe-area-inset-right, 0px));
-}
-
 /* Native <dialog> modal styling & scroll-chaining containment per modern-web-guidance */
 dialog.pmd-dialog {
   margin: auto;
-  width: min(94vw, 54rem);
+  width: min(92vw, 64rem);
   max-height: 90dvh;
   background: linear-gradient(180deg, rgba(28, 55, 110, 0.97) 0%, rgba(16, 33, 72, 0.98) 100%);
   border: 3px solid #070d1f;
@@ -370,23 +351,5 @@ input[type="range"].pmd-slider:focus-visible {
 
 .pmd-float-bob {
   animation: pmdFloatBob 2.2s steps(4, end) infinite;
-}
-
-/* Slim dark-themed dock scroller on narrow phones */
-.pmd-scroll-strip {
-  scrollbar-width: thin;
-  scrollbar-color: #78a8f0 #0c1733;
-}
-
-.pmd-scroll-strip::-webkit-scrollbar {
-  height: 5px;
-}
-
-.pmd-scroll-strip::-webkit-scrollbar-track {
-  background: #0c1733;
-}
-
-.pmd-scroll-strip::-webkit-scrollbar-thumb {
-  background: #4e78bd;
 }
 

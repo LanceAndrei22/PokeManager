@@ -78,23 +78,23 @@ export function MainMenu({
     <div className="relative h-dvh w-screen overflow-y-auto overflow-x-hidden">
       <MenuBackdropCanvas />
 
-      <div className="relative z-10 mx-auto flex min-h-dvh max-w-6xl flex-col justify-between px-3 py-4 sm:px-6 sm:py-5">
+      <div className="relative z-10 mx-auto flex min-h-dvh max-w-[1440px] flex-col justify-between px-8 py-6">
         {/* Top Title Header */}
-        <header className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
+        <header className="flex items-center justify-between gap-4">
           <div className="relative">
             <h1 className="pmd-title">PokéMart: Low Cortisol Shift</h1>
             <div className="mt-1.5 flex flex-wrap items-center gap-x-6 gap-y-1.5">
               <span className="pmd-text-shadow text-sm font-semibold tracking-wider text-[#dbe8ff] uppercase">
                 GEN 4 PET SHOP &amp; COUNTER TYCOON
               </span>
-              <span className="pmd-splash inline-block -rotate-2 text-sm font-semibold sm:text-base">
+              <span className="pmd-splash inline-block -rotate-2 text-base font-semibold">
                 {SPLASH_LINES[splashIndex]}
               </span>
             </div>
           </div>
 
           {/* Quick Fan Badges Bar (Top Right) */}
-          <div className="flex flex-wrap items-center gap-1.5 lg:flex-nowrap">
+          <div className="flex shrink-0 items-center gap-1.5">
             <div className="pmd-pill pmd-num flex shrink-0 items-center gap-1.5 whitespace-nowrap px-2.5 py-1 text-sm font-semibold">
               <span className="text-[#ffd84d]">₽</span>
               <span>{activeState.cash.toLocaleString()}</span>
@@ -128,10 +128,10 @@ export function MainMenu({
         </header>
 
         {/* Main Hub + Floating "Your Mascot" Spotlight */}
-        <main className="my-auto grid items-center gap-5 py-4 lg:grid-cols-[1.35fr_0.9fr]">
+        <main className="my-auto grid grid-cols-[1.35fr_0.9fr] items-center gap-8 py-4">
           {/* Left Royal-Blue PMD Command Hub */}
-          <section aria-label="Store Menu Hub" className="pmd-panel space-y-3 p-3 sm:p-4">
-            <div className="grid gap-3 sm:grid-cols-[1fr_1.3fr]">
+          <section aria-label="Store Menu Hub" className="pmd-panel space-y-3.5 p-5">
+            <div className="grid grid-cols-[1fr_1.35fr] gap-3.5">
               {/* Prominent Play Tile Button */}
               <button
                 type="button"

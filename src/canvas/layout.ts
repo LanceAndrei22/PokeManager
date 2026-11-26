@@ -1,22 +1,24 @@
 /**
- * Pure indoor PokéMart shop floor geometry: converts CSS dimensions, pen count,
- * nap-bed count, and devicePixelRatio into backing-store rectangles for both
- * full-viewport desktop landscape and adaptive mobile portrait rooms, plus integer
- * PMD sprite scaling and walkway routes. No DOM access, so it is 100% unit-testable.
+ * Pure PC desktop indoor PokéMart shop floor geometry: converts desktop CSS dimensions
+ * (`1280×720` minimum, optimized for `1920×1080` and `2560×1440+`), pen count, nap-bed
+ * count, and devicePixelRatio into backing-store rectangles with crisp integer pixel
+ * scaling and walkway routes. No DOM access, so it is 100% unit-testable.
  */
 import type { PenRect, Point, Rect, ShopLayout } from './types';
 
-/** Layout constants in CSS pixels (converted to backing px via DPR). */
+/** Desktop layout constants in CSS pixels (converted to backing px via DPR and `resScale`). */
 export const FLOOR_CSS = {
   padding: 10,
   wallHeight: 66,
   penHeight: 138,
   gap: 12,
   napHeight: 100,
-  /** Below this CSS width pens switch from 3 columns to 2 columns. */
-  mobileBreakpoint: 560,
-  /** Below this CSS width the full-viewport indoor room switches to portrait stacking. */
-  portraitBreakpoint: 768,
+  /** Minimum supported desktop canvas width in CSS px. */
+  minDesktopWidth: 960,
+  /** Reference desktop width used to derive proportional high-res scaling. */
+  baseDesktopWidth: 1280,
+  /** Reference desktop height used to derive proportional high-res scaling. */
+  baseDesktopHeight: 760,
 } as const;
 
 /** Native edge length of fallback static sprites. */
@@ -28,10 +30,25 @@ export function clampDpr(dpr: number): number {
   return Math.min(3, Math.max(1, dpr));
 }
 
-/** Number of pen columns for a given CSS width (2 on phones, 3 on wider screens). */
-export function getPenColumns(cssWidth: number, penCount: number): number {
-  const maxCols = cssWidth < FLOOR_CSS.mobileBreakpoint ? 2 : 3;
-  return Math.max(1, Math.min(maxCols, penCount));
+/**
+ * Computes a proportional widescreen desktop scale factor:
+ * `1.0` at `1280×760`, `~1.42` at `1920×1080`, `~1.89` at `2560×1440` (capped at `2.2`).
+ */
+export function computeDesktopResScale(cssWidth: number, cssHeight: number): number {
+  const safeW = Math.max(FLOOR_CSS.minDesktopWidth, cssWidth);
+  const safeH = Math.max(600, cssHeight);
+  return Math.min(
+    2.2,
+    Math.max(
+      1,
+      Math.min(safeW / FLOOR_CSS.baseDesktopWidth, safeH / FLOOR_CSS.baseDesktopHeight),
+    ),
+  );
+}
+
+/** Number of pen columns on desktop (up to 3 columns across the main floor). */
+export function getPenColumns(_cssWidth: number, penCount: number): number {
+  return Math.max(1, Math.min(3, penCount));
 }
 
 /** Number of pen rows needed to fit `penCount` pens. */
@@ -47,9 +64,9 @@ export function computeShopCssHeight(cssWidth: number, penCount: number): number
 }
 
 /**
- * Computes full-viewport indoor Gen 4 PokéMart geometry fitting cleanly between the
- * floating Top Pill HUD and Bottom DS Action Dock on both desktop (e.g. 1280×800)
- * and mobile portrait (e.g. 390×844) with zero page scroll.
+ * Computes full-viewport PC desktop indoor Gen 4 PokéMart geometry fitting cleanly between
+ * the floating Top Pill HUD and Bottom DS Action Dock across `1280×800`, `1920×1080`, and
+ * `2560×1440+` with crisp integer pixel scaling and zero page scroll.
  */
 export function computeIndoorLayout(
   cssWidth: number,
@@ -60,174 +77,81 @@ export function computeIndoorLayout(
 ): ShopLayout {
   const dpr = clampDpr(rawDpr);
   const px = (css: number) => Math.round(css * dpr);
-  const safeCssW = Math.max(320, cssWidth);
-  const safeCssH = Math.max(460, cssHeight);
-  const isPortrait = safeCssW < FLOOR_CSS.portraitBreakpoint;
+  const safeCssW = Math.max(FLOOR_CSS.minDesktopWidth, cssWidth);
+  const safeCssH = Math.max(600, cssHeight);
+  const resScale = computeDesktopResScale(safeCssW, safeCssH);
+  const spx = (cssAt1280: number) => Math.round(cssAt1280 * resScale * dpr);
 
   const width = px(safeCssW);
   const height = px(safeCssH);
-  const unit = Math.max(2, Math.round((isPortrait ? 1.75 : 2) * dpr));
-  const pad = px(isPortrait ? 10 : 18);
-  const gap = px(isPortrait ? 8 : 12);
 
-  // Reserve generous top & bottom bands so floating HUD pills and Bottom Dock never hide Kecleon,
-  // counter queue shoppers, or bottom stations on either Desktop (1280x800) or Mobile (390x844).
-  const topBand = px(isPortrait ? 152 : 94);
-  const bottomBand = px(isPortrait ? 80 : 78);
+  // Crisp integer backing-store art-pixel size:
+  // 2px @ 1280×800 (1× DPR), 3px @ 1920×1080 (1× DPR), 4px @ 2560×1440 (1× DPR).
+  const unit = Math.max(2, Math.round(2 * resScale * dpr));
+  const pad = spx(20);
+  const gap = spx(14);
 
-  const wallH = topBand + px(isPortrait ? 54 : 72);
+  // Clear the fixed desktop Top HUD bar and Bottom Action Dock cleanly across resolutions.
+  const topBand = px(Math.round(72 + (resScale - 1) * 20));
+  const bottomBand = px(Math.round(76 + (resScale - 1) * 20));
+
+  const wallH = topBand + spx(74);
   const wall: Rect = { x: 0, y: 0, w: width, h: wallH };
 
-  const doorW = px(isPortrait ? 44 : 56);
-  const doorH = px(isPortrait ? 46 : 56);
+  const doorW = spx(60);
+  const doorH = spx(60);
   const door: Rect = {
-    x: width - pad - px(8) - doorW,
+    x: width - pad - spx(10) - doorW,
     y: wall.h - doorH,
     w: doorW,
     h: doorH,
   };
 
   const foyer: Rect = {
-    x: door.x - px(10),
+    x: door.x - spx(10),
     y: wall.h,
-    w: doorW + px(20),
-    h: px(isPortrait ? 18 : 26),
+    w: doorW + spx(20),
+    h: spx(26),
   };
 
-  const counterW = Math.min(px(isPortrait ? 148 : 204), Math.round(width * (isPortrait ? 0.44 : 0.28)));
-  const counterH = px(isPortrait ? 24 : 30);
+  const counterW = Math.min(spx(248), Math.round(width * 0.27));
+  const counterH = spx(34);
   const counter: Rect = {
-    x: pad + px(4),
+    x: pad + spx(6),
     y: wall.h - counterH,
     w: counterW,
     h: counterH,
   };
 
-  const windowW = Math.min(px(isPortrait ? 84 : 150), Math.round(width * 0.2));
+  const windowW = Math.min(spx(164), Math.round(width * 0.18));
   const windowRect: Rect = {
-    x: Math.round(width * (isPortrait ? 0.58 : 0.52) - windowW / 2),
-    y: topBand + px(10),
+    x: Math.round(width * 0.52 - windowW / 2),
+    y: topBand + spx(12),
     w: windowW,
-    h: px(isPortrait ? 24 : 32),
+    h: spx(34),
   };
 
-  // Up to 4 shoppers stand directly in front of Kecleon's counter along the top aisle.
-  const queueY = wall.h + px(isPortrait ? 28 : 34);
-  const queueStartX = counter.x + px(18);
-  const queueStepX = Math.max(px(28), Math.round((counterW - px(20)) / 3.4));
+  // Up to 4 shoppers stand cleanly below Clerk Leo's counter so Patience Bars and `!`
+  // badges sit tightly above each trainer's head without overlapping Clerk Leo or the sign.
+  const queueY = wall.h + unit * 26;
+  const queueStartX = counter.x + unit * 12;
+  const queueStepX = Math.max(unit * 18, Math.round((counterW - unit * 24) / 3));
   const counterQueueSpots: Point[] = Array.from({ length: 4 }, (_, i) => ({
     x: queueStartX + i * queueStepX,
     y: queueY + (i % 2) * unit * 2,
   }));
 
-  const aisleY = wall.h + Math.round(px(isPortrait ? 14 : 20));
+  const aisleY = wall.h + Math.round(unit * 12);
   const doorSpot: Point = {
     x: door.x + Math.round(door.w / 2),
     y: aisleY,
   };
 
   const floorBottom = height - bottomBand;
-
-  if (isPortrait) {
-    // Portrait vertical zoning: Counter Queue -> 2-col Pens -> Healing Corner -> 3 Bottom Stations
-    const stationStripH = px(62);
-    const stationY = floorBottom - stationStripH;
-    const stationW = Math.floor((width - pad * 2 - gap * 2) / 3);
-    const pcStation: Rect = { x: pad, y: stationY, w: stationW, h: stationStripH };
-    const incubatorStation: Rect = {
-      x: pad + stationW + gap,
-      y: stationY,
-      w: stationW,
-      h: stationStripH,
-    };
-    const upgradesStation: Rect = {
-      x: pad + (stationW + gap) * 2,
-      y: stationY,
-      w: stationW,
-      h: stationStripH,
-    };
-
-    const napH = px(74);
-    const napArea: Rect = {
-      x: pad,
-      y: stationY - gap - napH,
-      w: width - pad * 2,
-      h: napH,
-    };
-
-    const cols = 2;
-    const rows = Math.max(1, Math.ceil(penCount / cols));
-    const pensTop = queueY + px(14);
-    const pensBottom = napArea.y - gap;
-    const availPenH = Math.max(px(120), pensBottom - pensTop);
-    const penH = Math.min(px(136), Math.floor((availPenH - gap * (rows - 1)) / rows));
-    const penW = Math.floor((width - pad * 2 - gap * (cols - 1)) / cols);
-    const fence = unit * 3;
-
-    const pens: PenRect[] = Array.from({ length: penCount }, (_, index) => {
-      const col = index % cols;
-      const row = Math.floor(index / cols);
-      const x = pad + col * (penW + gap);
-      const y = pensTop + row * (penH + gap);
-      return {
-        index,
-        x,
-        y,
-        w: penW,
-        h: penH,
-        inner: { x: x + fence, y: y + fence, w: penW - fence * 2, h: penH - fence * 2 },
-      };
-    });
-
-    const innerH = Math.max(px(40), penH - fence * 2);
-    const maxFit = Math.floor((innerH * 0.9) / SPRITE_SOURCE_SIZE);
-    const preferred = Math.round((innerH * 0.66) / SPRITE_SOURCE_SIZE);
-    const spriteScale = Math.max(1, Math.min(maxFit, preferred));
-
-    const labelH = px(18);
-    const slots = Math.max(1, bedCount);
-    const bedW = Math.min(px(108), Math.floor((napArea.w - gap * (slots + 1)) / slots));
-    const bedH = Math.max(px(28), napArea.h - labelH - px(6));
-    const beds: Rect[] = Array.from({ length: bedCount }, (_, i) => ({
-      x: napArea.x + gap + i * (bedW + gap),
-      y: napArea.y + labelH,
-      w: bedW,
-      h: bedH,
-    }));
-
-    return {
-      cssWidth: safeCssW,
-      cssHeight: safeCssH,
-      width,
-      height,
-      dpr,
-      isPortrait: true,
-      unit,
-      spriteScale,
-      spriteSize: SPRITE_SOURCE_SIZE * spriteScale,
-      wall,
-      door,
-      foyer,
-      doorSpot,
-      counter,
-      counterQueueSpots,
-      window: windowRect,
-      aisleY,
-      pens,
-      napArea,
-      beds,
-      incubatorStation,
-      pcStation,
-      upgradesStation,
-      lamps: [
-        { x: Math.round(width * 0.34), y: topBand + px(24) },
-        { x: Math.round(width * 0.72), y: topBand + px(24) },
-      ],
-    };
-  }
-
-  // Landscape Desktop Indoor Room
-  const wingH = Math.min(px(116), Math.max(px(88), Math.round((floorBottom - wall.h) * 0.23)));
+  const wingH = Math.min(
+    spx(136),
+    Math.max(spx(98), Math.round((floorBottom - wall.h) * 0.23)),
+  );
   const wingY = floorBottom - wingH;
   const wingTotalW = width - pad * 2;
   const napW = Math.round(wingTotalW * 0.43);
@@ -255,14 +179,15 @@ export function computeIndoorLayout(
 
   const cols = getPenColumns(safeCssW, penCount);
   const rows = Math.max(1, Math.ceil(penCount / cols));
-  const pensTop = Math.max(wall.h + gap * 2, queueY + px(18));
+  const pensTop = Math.max(wall.h + gap * 2, queueY + spx(18));
   const pensBottom = wingY - gap;
-  const availPenH = Math.max(px(130), pensBottom - pensTop);
-  const penH = Math.min(px(176), Math.floor((availPenH - gap * (rows - 1)) / rows));
+  const availPenH = Math.max(spx(140), pensBottom - pensTop);
+  const maxPenH = spx(rows === 1 ? 216 : 176);
+  const penH = Math.min(maxPenH, Math.floor((availPenH - gap * (rows - 1)) / rows));
   const penW = Math.floor((width - pad * 2 - gap * (cols - 1)) / cols);
   const fence = unit * 3;
 
-  // Vertically center the pen grid in the middle floor band
+  // Vertically center the pen grid in the open floor band between queue and stations
   const totalGridH = rows * penH + (rows - 1) * gap;
   const gridStartY = pensTop + Math.max(0, Math.floor((availPenH - totalGridH) / 2));
 
@@ -281,15 +206,15 @@ export function computeIndoorLayout(
     };
   });
 
-  const innerH = Math.max(px(50), penH - fence * 2);
+  const innerH = Math.max(spx(54), penH - fence * 2);
   const maxFit = Math.floor((innerH * 0.92) / SPRITE_SOURCE_SIZE);
   const preferred = Math.round((innerH * 0.64) / SPRITE_SOURCE_SIZE);
   const spriteScale = Math.max(1, Math.min(maxFit, preferred));
 
-  const labelH = px(20);
+  const labelH = spx(22);
   const slots = Math.max(1, bedCount);
-  const bedW = Math.min(px(132), Math.floor((napArea.w - gap * (slots + 1)) / slots));
-  const bedH = Math.max(px(36), napArea.h - labelH - px(8));
+  const bedW = Math.min(spx(148), Math.floor((napArea.w - gap * (slots + 1)) / slots));
+  const bedH = Math.max(spx(42), napArea.h - labelH - spx(8));
   const beds: Rect[] = Array.from({ length: bedCount }, (_, i) => ({
     x: napArea.x + gap + i * (bedW + gap),
     y: napArea.y + labelH,
@@ -303,7 +228,7 @@ export function computeIndoorLayout(
     width,
     height,
     dpr,
-    isPortrait: false,
+    resScale,
     unit,
     spriteScale,
     spriteSize: SPRITE_SOURCE_SIZE * spriteScale,
@@ -322,8 +247,8 @@ export function computeIndoorLayout(
     pcStation,
     upgradesStation,
     lamps: [
-      { x: Math.round(width * 0.29), y: topBand + px(28) },
-      { x: Math.round(width * 0.72), y: topBand + px(28) },
+      { x: Math.round(width * 0.29), y: topBand + spx(28) },
+      { x: Math.round(width * 0.72), y: topBand + spx(28) },
     ],
   };
 }
@@ -437,7 +362,7 @@ export function computeShopLayout(
     width,
     height,
     dpr,
-    isPortrait: cssWidth < FLOOR_CSS.portraitBreakpoint,
+    resScale: 1,
     unit,
     spriteScale,
     spriteSize: SPRITE_SOURCE_SIZE * spriteScale,
@@ -462,13 +387,13 @@ export function computeShopLayout(
   };
 }
 
-/** Queue anchor point in front of Kecleon's register for the i-th queued shopper. */
+/** Queue anchor point in front of Clerk Leo's register for the i-th queued shopper. */
 export function getCounterQueueSpot(layout: ShopLayout, queueIndex: number): Point {
   const spots = layout.counterQueueSpots;
   if (spots.length === 0) {
     return {
       x: layout.counter.x + Math.round(layout.counter.w * 0.5),
-      y: layout.counter.y + layout.counter.h + layout.unit * 8,
+      y: layout.counter.y + layout.counter.h + layout.unit * 24,
     };
   }
   return { ...spots[Math.min(Math.max(0, queueIndex), spots.length - 1)] };

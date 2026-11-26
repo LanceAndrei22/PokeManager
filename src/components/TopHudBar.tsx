@@ -78,12 +78,12 @@ export function TopHudBar({
   return (
     <header
       aria-label="Shop Top HUD"
-      className="safe-top-bar pointer-events-none fixed inset-x-0 top-0 z-20"
+      className="pointer-events-none fixed inset-x-0 top-0 z-20 px-4 pt-2.5"
     >
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-1.5 xl:flex-nowrap">
+      <div className="mx-auto flex max-w-[1760px] items-center justify-between gap-2">
         {/* Left: Funds + Rent Due + Shift Timer & Controls */}
-        <div className="pointer-events-auto flex flex-wrap items-center gap-1.5 xl:flex-nowrap">
-          <div className="pmd-pill pmd-num flex shrink-0 items-center gap-1.5 whitespace-nowrap px-2 py-1 text-xs font-semibold sm:text-sm">
+        <div className="pointer-events-auto flex items-center gap-1.5">
+          <div className="pmd-pill pmd-num flex shrink-0 items-center gap-1.5 whitespace-nowrap px-2.5 py-1 text-sm font-semibold">
             <span className="text-[#ffd84d]" title={`${profileName} • ${difficulty.name}`}>
               ₽{cash.toLocaleString()}
             </span>
@@ -96,16 +96,16 @@ export function TopHudBar({
             </span>
           </div>
 
-          <div className="pmd-pill flex flex-wrap items-center gap-1.5 px-2 py-1 text-xs xl:flex-nowrap">
-            <span className="pmd-num whitespace-nowrap text-xs font-semibold text-[#ffd84d] sm:text-sm">
+          <div className="pmd-pill flex items-center gap-1.5 px-2.5 py-1 text-xs">
+            <span className="pmd-num whitespace-nowrap text-sm font-semibold text-[#ffd84d]">
               Shift #{shiftNumber}
             </span>
-            <div className="hidden items-center gap-1 sm:flex">
+            <div className="flex items-center gap-1">
               <progress
                 aria-label="Shift time progress"
                 max={shiftDurationTicks}
                 value={shiftTick}
-                className="h-2 w-11 accent-[#ffd84d]"
+                className="h-2 w-12 accent-[#ffd84d]"
               />
               <span className="pmd-num whitespace-nowrap text-xs text-[#dbe8ff]">
                 {shiftTick}/{shiftDurationTicks}s
@@ -115,7 +115,7 @@ export function TopHudBar({
               type="button"
               disabled={hasPendingSettlement}
               onClick={onToggleRunning}
-              className={`whitespace-nowrap px-2 py-0.5 text-xs font-semibold ${
+              className={`whitespace-nowrap px-2.5 py-0.5 text-xs font-semibold ${
                 shiftRunning ? 'pmd-btn-gold' : 'pmd-btn-emerald'
               }`}
             >
@@ -156,12 +156,12 @@ export function TopHudBar({
         </div>
 
         {/* Right: Counter Queue Alert + Rank/Trend + Audio & Utilities */}
-        <div className="pointer-events-auto flex flex-wrap items-center gap-1.5 xl:flex-nowrap">
+        <div className="pointer-events-auto flex items-center gap-1.5">
           {counterQueue.length > 0 && (
             <button
               type="button"
               onClick={onOpenCounterQueue}
-              className="pmd-btn-gold flex shrink-0 items-center gap-1 whitespace-nowrap px-2 py-1 text-xs font-semibold"
+              className="pmd-btn-gold flex shrink-0 items-center gap-1 whitespace-nowrap px-2.5 py-1 text-xs font-semibold"
             >
               <span>!</span>
               <span>Counter: {counterQueue.length} waiting</span>
@@ -169,7 +169,7 @@ export function TopHudBar({
           )}
 
           <div
-            className="pmd-pill hidden items-center gap-2 whitespace-nowrap px-2 py-1 text-xs 2xl:flex"
+            className="pmd-pill hidden items-center gap-2 whitespace-nowrap px-2.5 py-1 text-xs min-[1400px]:flex"
             title={`${rankInfo.title} (${rankInfo.xp} XP)`}
           >
             <span className="pmd-num font-semibold text-[#ffd84d]">Rk.{rankInfo.rank}</span>
@@ -182,7 +182,7 @@ export function TopHudBar({
             <span className="text-[#b5d4ff]">{trend.badge}</span>
           </div>
 
-          <div className="pmd-pill flex flex-wrap items-center gap-1 px-1.5 py-0.5 text-xs xl:flex-nowrap">
+          <div className="pmd-pill flex items-center gap-1 px-1.5 py-0.5 text-xs">
             <button
               type="button"
               onClick={onOpenLog}
@@ -195,7 +195,7 @@ export function TopHudBar({
               type="button"
               onClick={onToggleMotionPaused}
               aria-label={motionPaused ? 'Play animation' : 'Pause animation'}
-              className="pmd-btn hidden whitespace-nowrap px-2 py-0.5 font-semibold sm:inline-flex"
+              className="pmd-btn inline-flex whitespace-nowrap px-2 py-0.5 font-semibold"
             >
               {motionPaused ? 'Play' : 'Anim'}
             </button>

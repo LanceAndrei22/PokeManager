@@ -1,5 +1,5 @@
 /**
- * Unit tests for Checkpoint 2 indoor shop layout geometry (desktop landscape + mobile portrait),
+ * Unit tests for PC desktop indoor shop layout geometry (1280×800, 1920×1080, 2560×1440+),
  * sprite animation math, and procedural pixel particle simulation (including sweat drops).
  */
 import { describe, expect, it } from 'vitest';
@@ -12,10 +12,10 @@ import {
   walkFrame,
 } from '../../src/canvas/animation';
 import {
-  FLOOR_CSS,
   SPRITE_SOURCE_SIZE,
   buildEntryRoute,
   clampDpr,
+  computeDesktopResScale,
   computeIndoorLayout,
   computeShopLayout,
   getBedAnchor,
@@ -38,16 +38,20 @@ import {
 } from '../../src/canvas/particles';
 import { createSeededRng } from '../../src/engine/rng';
 
-describe('Canvas Shop Floor & Full-Viewport Indoor Geometry', () => {
-  it('clamps DPR to [1, 3] and switches pen columns at the mobile breakpoint', () => {
+describe('Canvas Shop Floor & High-Res Desktop Indoor Geometry', () => {
+  it('clamps DPR to [1, 3], derives desktop resolution scale, and keeps 3-column desktop pens', () => {
     expect(clampDpr(0)).toBe(1);
     expect(clampDpr(Number.NaN)).toBe(1);
     expect(clampDpr(1.5)).toBe(1.5);
     expect(clampDpr(5)).toBe(3);
 
-    expect(getPenColumns(390, 3)).toBe(2);
-    expect(getPenColumns(FLOOR_CSS.mobileBreakpoint, 3)).toBe(3);
-    expect(getPenColumns(1000, 2)).toBe(2);
+    expect(computeDesktopResScale(1280, 800)).toBeCloseTo(1, 2);
+    expect(computeDesktopResScale(1920, 1080)).toBeGreaterThan(1.35);
+    expect(computeDesktopResScale(2560, 1440)).toBeGreaterThan(1.8);
+
+    expect(getPenColumns(1280, 3)).toBe(3);
+    expect(getPenColumns(1920, 6)).toBe(3);
+    expect(getPenColumns(1280, 2)).toBe(2);
   });
 
   it('computes integer sprite scaling and valid pen/bed/walkway/station bounds', () => {
@@ -77,23 +81,29 @@ describe('Canvas Shop Floor & Full-Viewport Indoor Geometry', () => {
     expect(pointAlongPath(route, len, 1)).toEqual({ x: 200, y: 260 });
   });
 
-  it('builds full-viewport indoor layouts cleanly for desktop (1280x800) and mobile (390x844)', () => {
-    const desktop = computeIndoorLayout(1280, 800, 5, 2, 2);
-    expect(desktop.isPortrait).toBe(false);
-    expect(desktop.counterQueueSpots).toHaveLength(4);
-    expect(desktop.pens).toHaveLength(5);
-    expect(desktop.pcStation.x).toBeGreaterThan(desktop.incubatorStation.x);
-    expect(desktop.upgradesStation.x).toBeGreaterThan(desktop.pcStation.x);
-    expect(desktop.upgradesStation.x + desktop.upgradesStation.w).toBeLessThanOrEqual(desktop.width);
-    expect(getCounterQueueSpot(desktop, 1)).toEqual(desktop.counterQueueSpots[1]);
+  it('scales desktop indoor layouts proportionally across 1280x800, 1920x1080, and 2560x1440', () => {
+    const hd = computeIndoorLayout(1280, 800, 5, 2, 1);
+    const fhd = computeIndoorLayout(1920, 1080, 5, 2, 1);
+    const qhd = computeIndoorLayout(2560, 1440, 6, 3, 1);
 
-    const mobile = computeIndoorLayout(390, 844, 6, 2, 2);
-    expect(mobile.isPortrait).toBe(true);
-    expect(mobile.pens).toHaveLength(6);
-    expect(mobile.pcStation.y).toBe(mobile.incubatorStation.y);
-    expect(mobile.incubatorStation.y).toBe(mobile.upgradesStation.y);
-    expect(mobile.pcStation.y + mobile.pcStation.h).toBeLessThan(mobile.height);
-    expect(mobile.pens[5].y + mobile.pens[5].h).toBeLessThanOrEqual(mobile.napArea.y);
+    // Crisp integer art-pixel unit scales up across larger desktop monitors
+    expect(hd.unit).toBe(2);
+    expect(fhd.unit).toBe(3);
+    expect(qhd.unit).toBe(4);
+    expect(fhd.counter.w).toBeGreaterThan(hd.counter.w);
+    expect(qhd.counter.w).toBeGreaterThan(fhd.counter.w);
+    expect(fhd.pens[0].h).toBeGreaterThan(hd.pens[0].h);
+
+    for (const layout of [hd, fhd, qhd]) {
+      expect(layout.counterQueueSpots).toHaveLength(4);
+      expect(layout.pcStation.x).toBeGreaterThan(layout.incubatorStation.x);
+      expect(layout.upgradesStation.x).toBeGreaterThan(layout.pcStation.x);
+      expect(layout.upgradesStation.x + layout.upgradesStation.w).toBeLessThanOrEqual(layout.width);
+      expect(layout.napArea.y + layout.napArea.h).toBeLessThan(layout.height);
+      const lastPen = layout.pens[layout.pens.length - 1];
+      expect(lastPen.y + lastPen.h).toBeLessThanOrEqual(layout.napArea.y);
+      expect(getCounterQueueSpot(layout, 1)).toEqual(layout.counterQueueSpots[1]);
+    }
   });
 });
 

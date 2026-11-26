@@ -73,9 +73,9 @@ export function BottomActionDock({
   return (
     <nav
       aria-label="Shop Action Dock"
-      className="safe-bottom-dock pointer-events-none fixed inset-x-0 bottom-0 z-20 flex justify-center"
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-20 flex justify-center px-4 pb-2.5"
     >
-      <div className="pmd-panel pmd-scroll-strip pointer-events-auto flex max-w-full items-center gap-1.5 overflow-x-auto px-2 py-1.5">
+      <div className="pmd-panel pointer-events-auto flex items-center gap-1.5 px-2.5 py-1.5">
         {buttons.map((btn) => {
           const isOpen = activeModal === btn.id;
           return (
@@ -84,7 +84,7 @@ export function BottomActionDock({
               type="button"
               aria-pressed={isOpen}
               onClick={() => onSelectModal(btn.id)}
-              className={`flex shrink-0 flex-col items-center justify-center px-2.5 py-1 text-center ${
+              className={`flex shrink-0 flex-col items-center justify-center px-3 py-1 text-center ${
                 btn.highlightGold
                   ? 'pmd-btn-gold'
                   : isOpen
@@ -92,7 +92,7 @@ export function BottomActionDock({
                     : 'pmd-btn'
               }`}
             >
-              <span className="whitespace-nowrap text-xs font-semibold leading-tight sm:text-sm">
+              <span className="whitespace-nowrap text-sm font-semibold leading-tight">
                 {btn.label}
               </span>
               <span

@@ -4,7 +4,8 @@
 - **Title:** **PokéMart: Low Cortisol Shift**
   - **Note:** *"Low Cortisol Shift"* is solely the title aesthetic—not a passive or zero-stakes constraint.
 - **Genre & Core Loop:** Active **Click-to-Manage** Pokémon pet shop, healing center, breeding, and counter-haggling tycoon simulator with timed shifts (`Open → Run Shift → Close & Pay Rent`), live-clock counter negotiation, **3 Difficulty Modes** (`relaxed`, `standard`, `high-stakes`), daily rent and pen/bed upkeep, Debt Grace, **Emergency Liquidation**, and **Bankruptcy**.
-- **Visual Direction:** Gen 4 DS / Pokémon Mystery Dungeon pixel-art aesthetic — warm cream, soft oak wood, matcha sage, honey amber, and berry rose palette; crisp pixel borders; `image-rendering: pixelated` sprites; `ctx.imageSmoothingEnabled = false`.
+- **Target Platform:** **PC desktop web browsers only** (minimum `1280×720`, optimized for `1920×1080` and `2560×1440+` widescreen displays with mouse & keyboard; mobile/phone viewports are intentionally unsupported).
+- **Visual Direction:** Gen 4 DS / Pokémon Mystery Dungeon pixel-art aesthetic — royal navy & gold DS HUD framing over lush pixel-art tilesets; crisp integer pixel scaling; `image-rendering: pixelated` sprites; `ctx.imageSmoothingEnabled = false`.
 - **Tech Stack:** Vite 8, React 19, TypeScript, Tailwind CSS v4 (`@tailwindcss/vite`), plain HTML5 2D Canvas, Vitest + React Testing Library (`jsdom`), and zero-KB Web Audio API chiptune SFX. Ignore all backend, PHP, or Laravel conventions.
 
 ## 2. Strict Workspace & Tooling Isolation
@@ -17,7 +18,7 @@
 - **Store Pokémon Sprites (100% PMDCollab / SpriteCollab, `CC BY-NC 4.0`):** Multi-frame spritesheets (`Walk-Anim.png`, `Idle-Anim.png`, `Sleep-Anim.png`, `Hop-Anim.png`), `AnimData.xml`, and `portrait/{paddedId}/Normal.png` (plus shiny `0000/0001/` subfolders) covering **all 493 Gen 1–4 (`#001–#493`)** species (including Legendaries and Mythicals).
 - **Hybrid Loader Strategy:** Bundle the 21 core species (`Walk`, `Idle`, `Sleep`, `Hop`) locally under `public/assets/pmd/` for instant offline boot, embed per-species animation/portrait availability from SpriteCollab `tracker.json` in `src/data/species.json` so missing sheets are never fetched (0 404 errors), and load all other 493 species + shiny forms dynamically via GitHub Raw (`crossOrigin = "anonymous"`) + browser Cache API.
 - **Human Trainer NPCs (`pret/pokeemerald` + Pokémon Showdown):** Clerk Leo (`mart_employee`) and 15 Human Trainer shoppers across 6 archetypes — including **Normal Shopper** (~40% spawn weight, accepts non-Legendaries fairly without trait/trend match and never offers on Legendaries/Mythicals) — rendered with 4-direction `64×128` overworlds and counter trainer portraits.
-- **Tilesets, Audio & Sharp Pixel Typography:** Authentic decoded `pret/pokeemerald` outdoor meadow & PokéMart indoor tilesets (`public/assets/tiles/`) plus custom GBA-palette Pet Shop stations (`scripts/fetch-world-assets.mjs`), cross-browser capture-unlocked Web Audio SFX + dual BGM tracks (`menu` ~80 BPM & `shop` ~100 BPM) + per-profile mixer (`sfx.ts`, `bgm.ts`, `AudioControls.tsx`), and self-hosted **Chakra Petch** (`500/600/700` Latin + Latin-Ext `₽`) UI/currency typography paired with **Silkscreen** (`400` ONLY on `>= 18px` headings/logo).
+- **Tilesets, Audio & Sharp Pixel Typography:** Authentic decoded `pret/pokeemerald` outdoor meadow (continuously rolling Main Menu nature background) & PokéMart indoor tilesets (`public/assets/tiles/`) plus custom GBA-palette Pet Shop stations (`scripts/fetch-world-assets.mjs`), cross-browser capture-unlocked Web Audio SFX + dual BGM tracks (`menu` ~80 BPM & `shop` ~100 BPM) + per-profile mixer (`sfx.ts`, `bgm.ts`, `AudioControls.tsx`), and self-hosted **Chakra Petch** (`500/600/700` Latin + Latin-Ext `₽`) UI/currency typography paired with **Silkscreen** (`400` ONLY on `>= 18px` headings/logo).
 
 ## 4. Documentation & Code Commenting Standards
 - Add concise file-level summary headers on source modules.
@@ -67,5 +68,5 @@ D:\PokeManager\
 
 ## 8. Mandatory Self-Verification Rules & Waived Opus Gate
 - After every checkpoint or fix, run `npm run typecheck`, `npm test`, and `npm run build` and resolve all failures.
-- Verify UI flows on desktop (`1280×800`) and mobile (`390×844`) viewports in Checkpoint 2 with **0 runtime console errors** and **0 failed (`404`) asset requests**.
+- Verify UI flows on desktop (`1280×800`) and Full HD widescreen (`1920×1080`) viewports with **0 runtime console errors** and **0 failed (`404`) asset requests**.
 - **Model Gate Status:** The v1 Claude Opus 5.5 gate is explicitly waived for this v2 overhaul.

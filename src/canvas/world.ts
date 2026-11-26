@@ -804,7 +804,8 @@ export function stepWorld(
       q.sweatTimer -= dt;
       if (q.sweatTimer <= 0) {
         q.sweatTimer = 0.55 + rng() * 0.35;
-        spawned.push(spawnSweatDrop(q.x, q.y - layout.unit * 14, layout.unit, rng));
+        const humanScale = Math.max(2, layout.unit);
+        spawned.push(spawnSweatDrop(q.x, q.y - humanScale * 18, layout.unit, rng));
       }
     }
   }
@@ -881,11 +882,12 @@ export function hitTestIndoorScene(
 ): CanvasHitTarget | null {
   const u = layout.unit;
 
-  // 1. Queued shoppers at Kecleon's register (sprite + above-head patience/! bubble)
+  // 1. Queued shoppers at Clerk Leo's register (sprite + tightly anchored patience/! bubble)
+  const humanScale = Math.max(2, u);
   const sortedQueue = [...world.queuedShoppers.values()].sort((a, b) => b.y - a.y);
   for (const q of sortedQueue) {
-    const halfW = Math.max(u * 11, layout.spriteSize * 0.3);
-    const topY = q.y - Math.max(u * 30, layout.spriteSize * 1.15);
+    const halfW = Math.max(u * 10, humanScale * 9);
+    const topY = q.y - humanScale * 22 - u * 13;
     if (x >= q.x - halfW && x <= q.x + halfW && y >= topY && y <= q.y + u * 4) {
       return {
         kind: 'counter-offer',

@@ -2,9 +2,9 @@
  * Full-viewport click-to-manage HTML5 2D Canvas host for Indoor Gen 4 PokéMart.
  *
  * Responsibilities:
- * - Fills the entire viewport (`100vw × 100dvh`) with adaptive landscape/portrait rooms.
+ * - Fills the full PC desktop viewport (`100vw × 100dvh`, `1280×720` → `2560×1440+`).
  * - Observes resize & `devicePixelRatio` changes and caches static indoor floor art.
- * - Runs a clamped `requestAnimationFrame` loop obeying `prefers-reduced-motion` and Pause.
+ * - Runs a clamped `requestAnimationFrame` loop obeying the in-HUD motion Pause toggle.
  * - Hit-tests clicks on Pokémon, queued counter shoppers (`!`), empty pens, and stations
  *   (Wholesale PC, Egg Incubator, Healing Corner, Upgrades Board).
  */
@@ -145,8 +145,8 @@ export function ShopCanvas({
     if (!el) return;
     const measure = () => {
       setSize({
-        w: Math.max(320, Math.floor(el.clientWidth || window.innerWidth)),
-        h: Math.max(460, Math.floor(el.clientHeight || window.innerHeight)),
+        w: Math.max(960, Math.floor(el.clientWidth || window.innerWidth)),
+        h: Math.max(600, Math.floor(el.clientHeight || window.innerHeight)),
       });
     };
     measure();
@@ -248,7 +248,7 @@ export function ShopCanvas({
         role="img"
         aria-label={ariaLabel}
         data-testid="shop-floor-canvas"
-        className="pixel-art block h-full w-full touch-manipulation"
+        className="pixel-art block h-full w-full"
         onClick={handleClick}
         onPointerMove={handlePointerMove}
         onPointerLeave={() => {

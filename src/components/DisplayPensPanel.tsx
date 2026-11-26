@@ -114,7 +114,7 @@ export function DisplayPensPanel({
         <h3 className="mb-2 text-base font-semibold text-[#ffd84d]">
           Display Pens ({penMons.length}/{penCapacity})
         </h3>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-3 gap-3">
           {Array.from({ length: penCapacity }, (_, penIndex) => {
             const mon = penMons.find((p) => p.penIndex === penIndex);
             const penOverride = penMarkups[penIndex] ?? null;
@@ -124,7 +124,7 @@ export function DisplayPensPanel({
               return (
                 <div
                   key={penIndex}
-                  className="pmd-inset flex min-h-[140px] flex-col items-center justify-center border-dashed border-[#4e78bd] p-3 text-center text-sm text-[#b5d4ff]"
+                  className="pmd-inset flex min-h-[156px] flex-col items-center justify-center border-dashed border-[#4e78bd] p-3.5 text-center text-sm text-[#b5d4ff]"
                 >
                   <div className="font-semibold text-white">Display Pen #{penIndex + 1}</div>
                   <div className="mt-1 text-xs">Empty — move a companion from Reserve or Wholesale!</div>
@@ -143,18 +143,19 @@ export function DisplayPensPanel({
             const trendMatch = valuation.breakdown.trendMatched;
 
             return (
-              <article key={mon.uid} className="pmd-inset flex flex-col justify-between p-3">
+              <article key={mon.uid} className="pmd-inset flex min-w-0 flex-col justify-between p-3.5">
                 <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2">
+                  <div className="flex min-w-0 items-center gap-2.5">
                     <PokemonSprite
                       speciesId={mon.speciesId}
                       name={species.name}
                       isShiny={mon.isShiny}
                       size={56}
+                      className="shrink-0"
                     />
-                    <div>
+                    <div className="min-w-0">
                       <div className="pmd-num text-xs font-semibold text-[#b5d4ff]">Pen #{penIndex + 1}</div>
-                      <h4 className="text-base font-semibold text-white">
+                      <h4 className="truncate text-base font-semibold text-white">
                         {mon.isShiny ? '✨ ' : ''}
                         {species.name}
                       </h4>
@@ -166,7 +167,7 @@ export function DisplayPensPanel({
                       )}
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="shrink-0 text-right">
                     <div className="pmd-num text-base text-[#ffd84d]">
                       ~₽{valuation.askingPrice.toLocaleString()}
                     </div>
@@ -174,9 +175,10 @@ export function DisplayPensPanel({
                   </div>
                 </div>
 
-                <div className="mt-2 flex items-center justify-between gap-2 border-t border-[#3b60a0] pt-2 text-xs">
-                  <label className="flex items-center gap-1 font-semibold text-[#b5d4ff]">
-                    <span>Tag:</span>
+                {/* Stacked Tag Selector + Crisp 2-Column Action Row (Zero Right-Edge Overflow) */}
+                <div className="mt-3 flex flex-col gap-2 border-t border-[#3b60a0] pt-2.5 text-xs">
+                  <label className="flex min-w-0 items-center justify-between gap-2 font-semibold text-[#b5d4ff]">
+                    <span className="shrink-0">Tag:</span>
                     <select
                       aria-label={`Pen ${penIndex + 1} markup`}
                       value={penOverride === null ? 'global' : String(penOverride)}
@@ -186,7 +188,7 @@ export function DisplayPensPanel({
                           e.target.value === 'global' ? null : Number(e.target.value),
                         )
                       }
-                      className="border border-[#78a8f0] bg-[#0a1430] px-1.5 py-0.5 text-xs font-semibold text-white"
+                      className="min-w-0 flex-1 border border-[#78a8f0] bg-[#0a1430] px-2 py-1 text-xs font-semibold text-white"
                     >
                       <option value="global">Global ({globalMarkup}%)</option>
                       <option value="90">90% Quick</option>
@@ -196,18 +198,18 @@ export function DisplayPensPanel({
                     </select>
                   </label>
 
-                  <div className="flex gap-1.5">
+                  <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
                       onClick={() => onMovePokemon(mon.uid, 'reserve')}
-                      className="pmd-btn px-2 py-0.5 font-semibold"
+                      className="pmd-btn whitespace-nowrap px-2.5 py-1 text-center font-semibold"
                     >
                       Rest
                     </button>
                     <button
                       type="button"
                       onClick={() => onInspectPokemon(mon.uid)}
-                      className="pmd-btn-emerald px-2.5 py-0.5 font-semibold"
+                      className="pmd-btn-emerald whitespace-nowrap px-2.5 py-1 text-center font-semibold"
                     >
                       Inspect
                     </button>
@@ -229,23 +231,24 @@ export function DisplayPensPanel({
             No Pokémon waiting in the back kennel. Extra hatches or rested strays wait here.
           </p>
         ) : (
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-3 gap-2.5">
             {reserveMons.map((mon) => {
               const species = getSpecies(mon.speciesId);
               return (
                 <div
                   key={mon.uid}
-                  className="pmd-inset flex items-center justify-between gap-2 p-2.5"
+                  className="pmd-inset flex min-w-0 items-center justify-between gap-2 p-2.5"
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex min-w-0 flex-1 items-center gap-2">
                     <PokemonSprite
                       speciesId={mon.speciesId}
                       name={species.name}
                       isShiny={mon.isShiny}
                       size={44}
+                      className="shrink-0"
                     />
-                    <div>
-                      <div className="text-sm font-semibold text-white">
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-semibold text-white">
                         {mon.isShiny ? '✨ ' : ''}
                         {species.name}
                       </div>
@@ -254,18 +257,18 @@ export function DisplayPensPanel({
                       </div>
                     </div>
                   </div>
-                  <div className="flex gap-1.5">
+                  <div className="flex shrink-0 items-center gap-1.5">
                     <button
                       type="button"
                       onClick={() => onMovePokemon(mon.uid, 'pen')}
-                      className="pmd-btn-emerald px-2 py-1 text-xs font-semibold"
+                      className="pmd-btn-emerald whitespace-nowrap px-2.5 py-1 text-xs font-semibold"
                     >
                       To Pen
                     </button>
                     <button
                       type="button"
                       onClick={() => onInspectPokemon(mon.uid)}
-                      className="pmd-btn px-2 py-1 text-xs font-semibold"
+                      className="pmd-btn whitespace-nowrap px-2.5 py-1 text-xs font-semibold"
                     >
                       Inspect
                     </button>

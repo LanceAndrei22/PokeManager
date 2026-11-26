@@ -4,7 +4,7 @@
  */
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { renderIndoorScene } from '../../src/canvas/indoorRenderer';
+import { getHumanHeadTopY, renderIndoorScene } from '../../src/canvas/indoorRenderer';
 import { computeIndoorLayout, computeShopLayout } from '../../src/canvas/layout';
 import { spawnCoin, spawnSweatDrop } from '../../src/canvas/particles';
 import { renderScene } from '../../src/canvas/renderer';
@@ -226,11 +226,14 @@ describe('Shop World State Machine', () => {
     stepWorld(world, 5.0, layout, rng);
     expect(ent.state).toBe('idle');
 
-    const mobileLayout = computeIndoorLayout(390, 844, 3, 2, 2);
-    relayoutWorld(world, mobileLayout, rng);
-    expect(hitTestPokemon(world, mobileLayout, ent.x, ent.y - mobileLayout.spriteSize * 0.3)).toBe(
+    const fhdLayout = computeIndoorLayout(1920, 1080, 3, 2, 1);
+    relayoutWorld(world, fhdLayout, rng);
+    expect(hitTestPokemon(world, fhdLayout, ent.x, ent.y - fhdLayout.spriteSize * 0.3)).toBe(
       'shinx',
     );
+    // Visible head anchor clears ~10px transparent top cell padding in 16x32 Human Trainer sprites
+    const headTop = getHumanHeadTopY(fhdLayout.counterQueueSpots[0].y, fhdLayout);
+    expect(fhdLayout.counterQueueSpots[0].y - headTop).toBe(20 * fhdLayout.unit);
   });
 
   it('cycles store Pokémon across walk/hop/idle and eases sliding doors on entry', () => {

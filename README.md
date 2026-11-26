@@ -4,17 +4,17 @@
 > **Simple, Completely Free Fan Project (Entertainment Only):**
 > **PokéMart: Low Cortisol Shift** is a simple, completely free, non-commercial fan-made web game built purely for entertainment purposes only. Pokémon and all related character names, designs, and sprites belong to **Nintendo, Creatures Inc., and Game Freak**.
 
-A full-screen, click-to-manage 2D pixel-art Gen 4 Pokémon pet shop, healing center, breeding, and counter-haggling tycoon web game powered by **PMDCollab / SpriteCollab** multi-frame animations for all **493 Gen 1–4 Pokémon (`#001 Bulbasaur` → `#493 Arceus`)**, authentic **pret/pokeemerald** indoor/outdoor pixel tilesets, and **Human Trainer** clerk & shoppers—prepared for free static hosting on GitHub Pages.
+A full-screen, **PC desktop web browser** click-to-manage 2D pixel-art Gen 4 Pokémon pet shop, healing center, breeding, and counter-haggling tycoon web game powered by **PMDCollab / SpriteCollab** multi-frame animations for all **493 Gen 1–4 Pokémon (`#001 Bulbasaur` → `#493 Arceus`)**, authentic **pret/pokeemerald** indoor/outdoor pixel tilesets, and **Human Trainer** clerk & shoppers—prepared for free static hosting on GitHub Pages.
 
-> *(Note: "Low Cortisol Shift" is the game's title aesthetic—under the hood v2.1 is an active Click-to-Manage tycoon simulator with timed shifts, live-clock counter haggling, daily rent, 3 difficulty modes, emergency liquidation, and bankruptcy.)*
+> *(Note: "Low Cortisol Shift" is the game's title aesthetic—under the hood this is an active Click-to-Manage tycoon simulator with timed shifts, live-clock counter haggling, daily rent, 3 difficulty modes, emergency liquidation, and bankruptcy. Designed for **PC desktop browsers only**: `1280×720` minimum, optimized for `1920×1080` and `2560×1440+` widescreen monitors with mouse & keyboard.)*
 
 ---
 
-## Gameplay Highlights (v2.1)
+## Gameplay Highlights (v2.2 — Desktop Edition)
 
-- **Living Outdoor Main Menu & Authentic Tiled Indoor PokéMart:**
-  - **Main Menu & Title Screen:** Animated outdoor PokéMart storefront surrounded by decoded `pret/pokeemerald` meadow grass, flowers, trees, sparkling water pond, strolling Human Trainers, and 8 multi-frame PMD Pokémon wandering, hopping (`Hop-Anim.png`), and napping (`Sleep-Anim.png` + `Zzz`), alongside Profile Switcher, New Trainer Creator (**6 starters + 3-Tier Difficulty Box**), **Your Mascot** card, Save Transfer, Audio Mixer, and Credits.
-  - **Click-to-Manage Indoor Store (`1280×800` & `390×844`):** Tiled GBA PokéMart floor/wall/merchandise shelves/plants, animated sliding glass doors (`OPEN` / `CLOSED`), Store **Clerk Leo** behind the counter, lively 8-directional wandering/hopping PMD companions inside pens, glowing **Egg Incubator** (`wobbling eggs`), blinking **Wholesale PC** (`VIP!` indicator), **Nap Corner**, and **Upgrades Board**.
+- **Rolling Nature Main Menu & High-Res Tiled Indoor PokéMart (`1280×800` → `2560×1440+`):**
+  - **Main Menu & Title Screen:** Continuously rolling pixel-art nature meadow (`pret/pokeemerald` grass, wildflowers, winding country dirt path, layered oak/pine tree groves, drifting clouds, and falling blossom petals) populated by 12 actively roaming, walking, and hopping multi-frame PMD SpriteCollab Pokémon alongside the Profile Switcher, New Trainer Creator (**6 starters + 3-Tier Difficulty Box**), **Your Mascot** card, Save Transfer, Audio Mixer, and Credits.
+  - **Click-to-Manage Indoor Store (`1280×720` min; crisp integer scaling for `1920×1080` & `2560×1440+`):** Tiled GBA PokéMart floor/wall/merchandise shelves/plants, animated sliding glass doors (`OPEN` / `CLOSED`), Store **Clerk Leo** behind the counter, lively 8-directional wandering/hopping PMD companions inside pens, glowing **Egg Incubator** (`wobbling eggs`), blinking **Wholesale PC** (`VIP!` indicator), **Nap Corner**, and **Upgrades Board**.
 - **Human Trainer Shoppers & `Normal Shopper` Archetype:**
   - **Clerk Leo** (`mart_employee`) greets visitors while **15 Gen 3/4 Human Trainer shoppers** across **6 archetypes** browse pens and queue at the counter with pixel trainer portraits: **Normal Shopper** (~40% spawn weight, cheerfully adopts regular non-Legendary Pokémon at fair tags without needing trait/trend matches, never offering on Legendaries/Mythicals), **Bargain Browser**, **Cozy Collector**, **Trend Fan**, **Shiny Seeker**, and **VIP Collector**.
 - **Active Timed Shifts & Live Counter Haggling:** Prep stock while closed, open doors (`1×` / `2×`), and negotiate at the non-blocking **PokéMart Counter** (**Accept**, **Haggle +15%**, **Haggle +30%**, **Decline**, + Gift-Wrap Balls) before shopper Patience expires.
@@ -31,7 +31,7 @@ A full-screen, click-to-manage 2D pixel-art Gen 4 Pokémon pet shop, healing cen
 - **Rendering:** Plain HTML5 2D Canvas (`imageSmoothingEnabled = false`), `AnimData.xml` 60 fps slicing + 4-dir Human Trainer walking animation, decoded GBA metatile sheets, and Cache API hybrid PMD sprite loading
 - **Assets & Data:** [PMDCollab / SpriteCollab](https://github.com/PMDCollab/SpriteCollab) (`CC BY-NC 4.0`), [pret/pokeemerald](https://github.com/pret/pokeemerald) tilesets & overworld trainers, [Pokémon Showdown](https://play.pokemonshowdown.com/sprites/trainers/) trainer portraits, and [PokeAPI](https://github.com/PokeAPI/pokeapi)
 - **Audio:** Cross-browser Web Audio API chiptune SFX + dual BGM sequencer (`src/engine/sfx.ts`, `src/engine/bgm.ts`)
-- **Testing:** Vitest + React Testing Library (`jsdom`) — 15 suites, 55 tests
+- **Testing:** Vitest + React Testing Library (`jsdom`) — 15 suites, 56 tests
 
 ---
 
@@ -58,7 +58,7 @@ D:\PokeManager\
 │   ├── engine/                # Tycoon sim, haggling, rent, debt, breeding, storage, SFX & dual BGM
 │   ├── canvas/                # Tiled indoor store, living nature backdrop, PMD & Human animators
 │   └── components/            # Main Menu, HUD, AudioControls, DS Dock, Counter Panel & modals
-└── tests/                     # Engine, audio, canvas/PMD/Human animator & React UI tests (55 tests)
+└── tests/                     # Engine, audio, canvas/PMD/Human animator & React UI tests (56 tests)
 ```
 
 ---

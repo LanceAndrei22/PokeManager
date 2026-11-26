@@ -60,9 +60,9 @@ export function CounterOfferPanel({
   return (
     <aside
       aria-label="Live Counter Negotiation"
-      className="pointer-events-auto fixed inset-x-2 bottom-[4.75rem] z-30 mx-auto max-w-2xl"
+      className="pointer-events-auto fixed inset-x-4 bottom-[5.25rem] z-30 mx-auto max-w-3xl"
     >
-      <div className="pmd-panel space-y-2.5 p-3.5">
+      <div className="pmd-panel space-y-3 p-4">
         {/* Header + Queue Switcher (1/N, 2/N...) */}
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#4e78bd] pb-2">
           <div className="flex flex-wrap items-center gap-2">
@@ -104,18 +104,18 @@ export function CounterOfferPanel({
         </div>
 
         {/* Human Trainer Portrait vs Desired Pokémon + Live Patience Bar */}
-        <div className="grid gap-2.5 sm:grid-cols-[1.25fr_1fr]">
-          <div className="pmd-inset flex items-center gap-3 p-2.5">
+        <div className="grid grid-cols-[1.45fr_1fr] gap-3">
+          <div className="pmd-inset flex items-start gap-3 p-3">
             <img
               src={portraitSrc}
               alt={activeOffer.customerName}
-              width={60}
-              height={60}
-              className="pixel-art h-15 w-15 shrink-0 border border-[#4e78bd] bg-[#0a1430] object-contain"
+              width={64}
+              height={64}
+              className="pixel-art h-16 w-16 shrink-0 border border-[#4e78bd] bg-[#0a1430] object-contain"
             />
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-1.5">
-                <span className="truncate text-sm font-semibold text-white">
+                <span className="text-sm font-semibold text-white">
                   {activeOffer.customerName}
                 </span>
                 {activeOffer.isVip && (
@@ -126,7 +126,7 @@ export function CounterOfferPanel({
               </div>
               <div className="text-xs font-medium text-[#b5d4ff]">{arch.badgeLabel}</div>
               {npcProfile && (
-                <p className="mt-0.5 line-clamp-1 text-xs italic text-[#9ec4ff]">
+                <p className="mt-1 whitespace-normal break-words text-xs leading-snug italic text-[#b5d4ff]">
                   &ldquo;{npcProfile.flavorLine}&rdquo;
                 </p>
               )}

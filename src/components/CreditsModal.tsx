@@ -46,7 +46,7 @@ export function CreditsModal({ open, onClose }: CreditsModalProps) {
             </li>
             <li>Human Trainer counter negotiation portraits: <strong>Pokémon Showdown</strong> sprites.</li>
             <li>National Dex species metadata, evolutions, and item icons: PokeAPI (MIT / BSD).</li>
-            <li>Self-hosted pixel typography: Pixelify Sans &amp; Silkscreen (SIL Open Font License 1.1).</li>
+            <li>Self-hosted pixel typography: Chakra Petch &amp; Silkscreen (SIL Open Font License 1.1).</li>
             <li>Original dual BGM tracks &amp; Web Audio API SFX synthesizer built cleanly in-browser.</li>
           </ul>
         </section>

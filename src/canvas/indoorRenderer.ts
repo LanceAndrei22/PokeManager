@@ -287,7 +287,7 @@ function drawStaticCounter(ctx: CanvasRenderingContext2D, layout: ShopLayout): v
   ctx.font = `600 ${Math.max(10, Math.round(u * 4.2))}px "Chakra Petch", sans-serif`;
   const plateW = Math.min(c.w - u * 6, Math.ceil(ctx.measureText(label).width) + u * 5);
   const plateX = c.x + Math.round((c.w - plateW) / 2);
-  const plateY = c.y + Math.max(u * 2, Math.round(c.h * 0.28));
+  const plateY = c.y + Math.max(u * 2, Math.round(c.h * 0.22));
   const plateH = Math.min(c.h - u * 3, u * 7);
   ctx.fillStyle = '#13244b';
   ctx.fillRect(plateX, plateY, plateW, plateH);
@@ -593,7 +593,7 @@ function drawDynamicStations(
     const drawW = Math.round((drawH * 32) / 36);
     ctx.drawImage(incImg, Math.round(inc.x + (inc.w - drawW) / 2), Math.round(inc.y + u * 2), drawW, drawH);
   }
-  const eggScale = Math.max(1, Math.round(u * (layout.isPortrait ? 0.9 : 1.15)));
+  const eggScale = Math.max(1, Math.round(u * 1.1));
   const eggCountDraw = Math.min(3, Math.max(1, world.eggCount));
   for (let i = 0; i < eggCountDraw; i += 1) {
     const wobble = !still && world.eggCount > 0 ? Math.round(Math.sin(world.eggWobblePhase + i) * u * 0.9) : 0;
@@ -635,7 +635,7 @@ function drawDynamicStations(
       Math.round(drawH * 0.25),
     );
   } else {
-    const pcScale = Math.max(1, Math.round(u * (layout.isPortrait ? 0.9 : 1.35)));
+    const pcScale = Math.max(1, Math.round(u * 1.3));
     drawBitmap(
       ctx,
       PC_ICON,
@@ -701,6 +701,26 @@ function drawHumanFallback(
   ctx.restore();
 }
 
+/**
+ * Exact 1:1 integer scale matching Human Trainer overworld pixels (`16×32` cells)
+ * to the GBA floor tile art-pixel `unit`.
+ */
+function getHumanSpriteScale(layout: ShopLayout): number {
+  return Math.max(2, layout.unit);
+}
+
+/**
+ * Returns the exact backing-store Y coordinate of the top of a Human Trainer's visible
+ * head/hat. Normalized `pret/pokeemerald` `16×32` frames contain ~10 transparent source
+ * rows at the top (visible body spans rows `10..30`, i.e. 21px tall), so anchoring
+ * indicators here places Patience Bars, `!` badges, and browsing icons snugly right
+ * above each trainer's head instead of floating high above transparent frame padding.
+ */
+export function getHumanHeadTopY(feetY: number, layout: ShopLayout): number {
+  const scale = getHumanSpriteScale(layout);
+  return Math.round(feetY - 22 * scale + layout.unit * 2);
+}
+
 function drawHumanSprite(
   ctx: CanvasRenderingContext2D,
   npcId: string,
@@ -713,7 +733,7 @@ function drawHumanSprite(
 ): number | null {
   const frame = getHumanNpcFrame(npcId, direction, isWalking, distancePx);
   if (!frame) return null;
-  const scale = Math.max(2, Math.round(layout.unit * (layout.isPortrait ? 1.0 : 1.15)));
+  const scale = getHumanSpriteScale(layout);
   const drawW = frame.sw * scale;
   const drawH = frame.sh * scale;
   ctx.drawImage(
@@ -727,7 +747,7 @@ function drawHumanSprite(
     drawW,
     drawH,
   );
-  return drawH;
+  return getHumanHeadTopY(y, layout);
 }
 
 function drawClerk(
@@ -865,9 +885,18 @@ function drawQueuedShopper(
   const walking = q.state === 'walking-to-counter' && !still;
   drawPixelShadow(ctx, q.x, q.y, u * 7, u, 0.25);
 
-  const drawnH = drawHumanSprite(ctx, q.npcId, q.cardinalDir, walking, q.distance, q.x, q.y, layout);
-  let topY = q.y - (drawnH ?? u * 16);
-  if (drawnH === null) {
+  const spriteHeadTop = drawHumanSprite(
+    ctx,
+    q.npcId,
+    q.cardinalDir,
+    walking,
+    q.distance,
+    q.x,
+    q.y,
+    layout,
+  );
+  let headTopY = spriteHeadTop ?? Math.round(q.y - u * 15);
+  if (spriteHeadTop === null) {
     drawHumanFallback(
       ctx,
       q.x,
@@ -879,15 +908,15 @@ function drawQueuedShopper(
       q.distance,
       q.cardinalDir === 'left',
     );
-    topY = q.y - u * 16;
+    headTopY = Math.round(q.y - u * 15);
   }
 
-  // Live Patience Bar above shopper head
+  // Live Patience Bar anchored snugly just a few pixels above the trainer's hat
   const ratio = q.maxPatience > 0 ? Math.min(1, Math.max(0, q.patience / q.maxPatience)) : 1;
   const barW = Math.max(u * 11, 22);
   const barH = Math.max(u * 2, 4);
   const bx = Math.round(q.x - barW / 2);
-  const by = Math.round(topY - barH - u * 2);
+  const by = Math.round(headTopY - barH - u * 1.5);
   ctx.fillStyle = '#070d1f';
   ctx.fillRect(bx - seam(u), by - seam(u), barW + seam(u) * 2, barH + seam(u) * 2);
   ctx.fillStyle = '#1b2b4d';
@@ -895,21 +924,29 @@ function drawQueuedShopper(
   ctx.fillStyle = ratio > 0.6 ? '#2ecc71' : ratio > 0.35 ? '#ffd84d' : '#e74c3c';
   ctx.fillRect(bx, by, Math.round(barW * ratio), barH);
 
-  // Bouncing clickable `!` offer bubble
-  const bob = still ? 0 : Math.round(Math.sin(q.time * 5) * u * 1.3);
-  const bubW = u * 8;
-  const bubH = u * 8;
+  // Compact bouncing clickable `!` offer bubble sitting right above the Patience Bar
+  const bob = still ? 0 : Math.round(Math.sin(q.time * 5) * u * 0.75);
+  const { w: ew, h: eh } = bitmapSize(EXCLAMATION_MARK);
+  const bubW = (ew + 5) * u;
+  const bubH = (eh + 2) * u;
   const bubX = Math.round(q.x - bubW / 2);
-  const bubY = Math.round(by - bubH - u * 3 + bob);
+  const bubY = Math.round(by - bubH - u * 1.5 + bob);
   ctx.fillStyle = hovered || q.isVip ? '#ffd84d' : '#1a3160';
   ctx.fillRect(bubX, bubY, bubW, bubH);
   ctx.strokeStyle = hovered ? '#ffffff' : '#78a8f0';
   ctx.lineWidth = Math.max(1, seam(u));
   ctx.strokeRect(bubX, bubY, bubW, bubH);
-  drawBitmap(ctx, EXCLAMATION_MARK, bubX + u * 3, bubY + u * 1.5, u, {
-    kk: hovered || q.isVip ? '#261600' : '#ffd84d',
-    k: hovered || q.isVip ? '#261600' : '#ffd84d',
-  });
+  drawBitmap(
+    ctx,
+    EXCLAMATION_MARK,
+    Math.round(bubX + (bubW - ew * u) / 2),
+    Math.round(bubY + (bubH - eh * u) / 2),
+    u,
+    {
+      kk: hovered || q.isVip ? '#261600' : '#ffd84d',
+      k: hovered || q.isVip ? '#261600' : '#ffd84d',
+    },
+  );
 }
 
 function drawWalkerBubble(
@@ -926,9 +963,10 @@ function drawWalkerBubble(
   const bw = (iw + 4) * u;
   const bh = (ih + 4) * u;
   const still = world.reducedMotion || world.motionPaused;
-  const float = still ? 0 : Math.round(Math.sin(walker.time * 3) * 0.8) * u;
+  const float = still ? 0 : Math.round(Math.sin(walker.time * 3) * 0.6 * u);
+  const headTopY = getHumanHeadTopY(walker.y, layout);
   const x = Math.round(walker.x - bw / 2);
-  const y = Math.round(walker.y - Math.max(u * 26, layout.spriteSize * 0.55) - bh + float);
+  const y = Math.round(headTopY - bh - u * 1.5 + float);
 
   ctx.fillStyle = '#0c1733';
   ctx.fillRect(x - seam(u), y - seam(u), bw + seam(u) * 2, bh + seam(u) * 2);
