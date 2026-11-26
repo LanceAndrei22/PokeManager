@@ -1,44 +1,74 @@
 /**
- * Static shop item definitions and mechanical effects for PokéMart: Low Cortisol Shift.
+ * Static shop item definitions and mechanical effects for PokéMart v2.
+ * Includes all 9 Gen 1–4 Evolution Stones, Rare Candy level-up evolution/boosts,
+ * Care Drinks/Berries, and 5 checkout Gift-Wrap Poké Balls.
  */
 import type { ItemDefinition, ItemSlug } from './types';
 
 export const ITEMS_CATALOG: ItemDefinition[] = [
-  // Evolution Stones
+  // All 9 Gen 1–4 Evolution Stones
   {
     slug: 'water-stone',
     name: 'Water Stone',
     category: 'stone',
     cost: 420,
-    description: 'Evolves Eevee into Vaporeon and boosts Comfort.',
+    description: 'Evolves Water-stone Pokémon (Eevee → Vaporeon, Staryu, Poliwhirl, Lombre).',
   },
   {
     slug: 'fire-stone',
     name: 'Fire Stone',
     category: 'stone',
     cost: 420,
-    description: 'Evolves Eevee, Vulpix, or Growlithe into cozy warmth.',
+    description: 'Evolves Fire-stone Pokémon (Eevee → Flareon, Vulpix, Growlithe).',
   },
   {
     slug: 'thunder-stone',
     name: 'Thunder Stone',
     category: 'stone',
     cost: 420,
-    description: 'Evolves Eevee or Pikachu into an electric icon.',
+    description: 'Evolves Electric-stone Pokémon (Eevee → Jolteon, Pikachu → Raichu).',
   },
   {
     slug: 'leaf-stone',
     name: 'Leaf Stone',
     category: 'stone',
     cost: 420,
-    description: 'Evolves Eevee into forest-scented Leafeon.',
+    description: 'Evolves Grass-stone Pokémon (Eevee → Leafeon, Gloom, Exeggcute, Nuzleaf).',
   },
   {
     slug: 'moon-stone',
     name: 'Moon Stone',
     category: 'stone',
     cost: 440,
-    description: 'Evolves Jigglypuff into Wigglytuff or Eevee into Umbreon.',
+    description: 'Evolves Moon-stone Pokémon (Clefairy, Jigglypuff, Skitty, Eevee → Umbreon).',
+  },
+  {
+    slug: 'sun-stone',
+    name: 'Sun Stone',
+    category: 'stone',
+    cost: 450,
+    description: 'Evolves Sun-stone Pokémon (Gloom → Bellossom, Sunkern → Sunflora).',
+  },
+  {
+    slug: 'shiny-stone',
+    name: 'Shiny Stone',
+    category: 'stone',
+    cost: 520,
+    description: 'Evolves Sinnoh light-stone lines (Togetic → Togekiss, Roselia → Roserade).',
+  },
+  {
+    slug: 'dusk-stone',
+    name: 'Dusk Stone',
+    category: 'stone',
+    cost: 520,
+    description: 'Evolves Sinnoh shadow-stone lines (Murkrow → Honchkrow, Misdreavus → Mismagius).',
+  },
+  {
+    slug: 'dawn-stone',
+    name: 'Dawn Stone',
+    category: 'stone',
+    cost: 520,
+    description: 'Evolves Sinnoh dawn-stone lines (Kirlia → Gallade, Snorunt → Froslass).',
   },
 
   // Care Drinks & Berries
@@ -75,7 +105,7 @@ export const ITEMS_CATALOG: ItemDefinition[] = [
     name: 'Moomoo Milk',
     category: 'care',
     cost: 170,
-    description: 'Full cozy nourishment: +75% nap recovery or +8 Comfort & +5 Cute.',
+    description: 'Full nourishment: +75% nap recovery or +8 Comfort & +5 Cute.',
     healBoost: 75,
     comfortBoost: 8,
     cuteBoost: 5,
@@ -90,13 +120,13 @@ export const ITEMS_CATALOG: ItemDefinition[] = [
     comfortBoost: 5,
   },
 
-  // Specialty Rarity Boost
+  // Level-up Evolution / Rarity Boost
   {
     slug: 'rare-candy',
     name: 'Rare Candy',
     category: 'candy',
     cost: 340,
-    description: 'Boosts Rarity (+10) and Cute (+4), raising shop appraisal value.',
+    description: 'Triggers standard next-stage evolution (e.g. Bulbasaur → Ivysaur) or +10 Rarity & +4 Cute.',
     rarityBoost: 10,
     cuteBoost: 4,
   },
@@ -116,7 +146,7 @@ export const ITEMS_CATALOG: ItemDefinition[] = [
     name: 'Heal Ball Wrap',
     category: 'ball',
     cost: 65,
-    description: 'Pink pastel gift wrap: +₽60 tip & +8 Cozy XP per adoption.',
+    description: 'Pink pastel gift wrap: +₽60 tip & +8 Shop XP per adoption.',
     tipBonus: 60,
     xpBonus: 8,
   },
@@ -125,7 +155,7 @@ export const ITEMS_CATALOG: ItemDefinition[] = [
     name: 'Friend Ball Wrap',
     category: 'ball',
     cost: 85,
-    description: 'Sage friendship ribbon: +₽85 tip & +12 Cozy XP per adoption.',
+    description: 'Sage friendship ribbon: +₽85 tip & +12 Shop XP per adoption.',
     tipBonus: 85,
     xpBonus: 12,
   },
@@ -134,9 +164,18 @@ export const ITEMS_CATALOG: ItemDefinition[] = [
     name: 'Luxury Ball Wrap',
     category: 'ball',
     cost: 130,
-    description: 'Gold velvet ribbon: +₽150 tip & +16 Cozy XP per adoption.',
+    description: 'Gold velvet ribbon: +₽150 tip & +16 Shop XP per adoption.',
     tipBonus: 150,
     xpBonus: 16,
+  },
+  {
+    slug: 'cherish-ball',
+    name: 'Cherish Ball Wrap',
+    category: 'ball',
+    cost: 220,
+    description: 'Royal crimson ribbon: +₽260 tip & +25 Shop XP (ideal for VIP Legendaries).',
+    tipBonus: 260,
+    xpBonus: 25,
   },
 ];
 

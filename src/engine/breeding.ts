@@ -1,5 +1,6 @@
 /**
- * Breeding compatibility, genetic stat inheritance, egg incubation, and shiny rolls.
+ * Breeding compatibility across all 493 Gen 1–4 species, genetic stat inheritance,
+ * Ditto & Manaphy -> Phione special rules, egg incubation, and shiny rolls.
  */
 import { getSpecies } from '../data/species';
 import type { ChillTrait, EggInstance, PokemonInstance, PokemonStats } from '../data/types';
@@ -9,22 +10,31 @@ const CHILL_TRAITS: readonly ChillTrait[] = ['Docile', 'Sleepy', 'Unbothered', '
 
 /**
  * Checks whether two owned Pokémon can share a warm incubator.
- * Both must be rested, not currently incubating, and share a species or Egg Group.
+ * Blocks Legendaries/Mythicals (except Manaphy #490 -> Phione #489),
+ * Undiscovered egg groups, recovering strays, and already incubating Pokémon.
+ * Allows Ditto (#132) to breed with any other breedable non-Ditto Pokémon.
  */
 export function areCompatibleParents(parentA: PokemonInstance, parentB: PokemonInstance): boolean {
   if (parentA.uid === parentB.uid) return false;
   if (parentA.needsRecovery || parentB.needsRecovery) return false;
   if (parentA.location === 'breeding' || parentB.location === 'breeding') return false;
-  if (parentA.speciesId === parentB.speciesId) return true;
 
   const speciesA = getSpecies(parentA.speciesId);
   const speciesB = getSpecies(parentB.speciesId);
-  return speciesA.eggGroups.some((group) => speciesB.eggGroups.includes(group));
+  if (!speciesA.canBreed || !speciesB.canBreed) return false;
+
+  const aIsDitto = speciesA.eggGroups.includes('Ditto');
+  const bIsDitto = speciesB.eggGroups.includes('Ditto');
+  if (aIsDitto && bIsDitto) return false;
+  if (aIsDitto || bIsDitto) return true;
+
+  if (parentA.speciesId === parentB.speciesId) return true;
+  return speciesA.eggGroups.some(
+    (group) => group !== 'Undiscovered' && speciesB.eggGroups.includes(group),
+  );
 }
 
-/**
- * Computes bounded genetic stat inheritance from two parents (`[35, 100]`).
- */
+/** Computes bounded genetic stat inheritance from two parents (`[35, 100]`). */
 export function inheritStatsFromParents(
   statsA: PokemonStats,
   statsB: PokemonStats,
@@ -40,16 +50,14 @@ export function inheritStatsFromParents(
   };
 }
 
-/**
- * Creates a new EggInstance from two compatible parents.
- * Shiny chance = 5% base + 2% per Lucky Egg Delivery upgrade + 5% if either parent is Shiny (cap 25%).
- */
+/** Creates a new EggInstance inheriting baby species (non-Ditto partner, or Manaphy -> Phione). */
 export function createEggFromParents(
   parentA: PokemonInstance,
   parentB: PokemonInstance,
   mysteryShipmentLevel: number,
   rng: RngFn,
   uid: string,
+  difficultyShinyBonus = 0,
 ): EggInstance {
   if (!areCompatibleParents(parentA, parentB)) {
     throw new Error('Selected Pokémon are not compatible for cozy breeding.');
@@ -57,7 +65,10 @@ export function createEggFromParents(
 
   const spA = getSpecies(parentA.speciesId);
   const spB = getSpecies(parentB.speciesId);
-  const chosenSpecies = rng() < 0.5 ? spA : spB;
+  let chosenSpecies = rng() < 0.5 ? spA : spB;
+  if (spA.eggGroups.includes('Ditto')) chosenSpecies = spB;
+  else if (spB.eggGroups.includes('Ditto')) chosenSpecies = spA;
+
   const babySpeciesId = chosenSpecies.babySpeciesId;
 
   const traitRoll = rng();
@@ -69,7 +80,11 @@ export function createEggFromParents(
         : pickRandom(CHILL_TRAITS, rng);
 
   const parentShinyBonus = parentA.isShiny || parentB.isShiny ? 0.05 : 0;
-  const shinyChance = clamp(0.05 + mysteryShipmentLevel * 0.02 + parentShinyBonus, 0.05, 0.25);
+  const shinyChance = clamp(
+    0.05 + mysteryShipmentLevel * 0.02 + parentShinyBonus + difficultyShinyBonus,
+    0.05,
+    0.28,
+  );
   const isShiny = rng() < shinyChance;
 
   return {
@@ -96,14 +111,8 @@ export function advanceEggsTick(
     if (egg.readyToHatch) return egg;
     const nextProgress = clamp(Math.round((egg.progress + step) * 10) / 10, 0, 100);
     const readyToHatch = nextProgress >= 100;
-    if (readyToHatch) {
-      newlyReadyCount += 1;
-    }
-    return {
-      ...egg,
-      progress: nextProgress,
-      readyToHatch,
-    };
+    if (readyToHatch) newlyReadyCount += 1;
+    return { ...egg, progress: nextProgress, readyToHatch };
   });
 
   return { updatedEggs, newlyReadyCount };

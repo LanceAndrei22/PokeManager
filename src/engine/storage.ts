@@ -1,15 +1,21 @@
 /**
- * Per-user local storage profile manager and Base64 Save Export/Import serializer.
+ * Per-user v2 local storage profile manager and Base64 Save Export/Import serializer.
  *
- * Isolates multiple named Shift Manager profiles under `pokemart-low-cortisol:v1:index`
- * and `pokemart-low-cortisol:v1:save:<profileId>` inside browser `localStorage`,
- * and wraps exported save codes with an FNV-1a checksum to catch corruption.
+ * Uses isolated v2 keys (`pokemart-low-cortisol:v2:index` & `pokemart-low-cortisol:v2:save:<profileId>`)
+ * so v1 data stays untouched, stores Difficulty per profile, and validates exported saves
+ * with an FNV-1a checksum.
  */
-import type { GameState, ProfileIndex, ProfileMeta, SaveEnvelope } from '../data/types';
+import type {
+  DifficultyId,
+  GameState,
+  ProfileIndex,
+  ProfileMeta,
+  SaveEnvelope,
+} from '../data/types';
 import { createInitialGameState } from './simulation';
 
-export const PROFILE_INDEX_KEY = 'pokemart-low-cortisol:v1:index';
-export const PROFILE_SAVE_PREFIX = 'pokemart-low-cortisol:v1:save:';
+export const PROFILE_INDEX_KEY = 'pokemart-low-cortisol:v2:index';
+export const PROFILE_SAVE_PREFIX = 'pokemart-low-cortisol:v2:save:';
 
 /** Minimal Storage interface so unit tests can pass mock or real window.localStorage. */
 export type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
@@ -34,18 +40,14 @@ export function computeSaveChecksum(payload: string): string {
 function encodeUtf8Base64(text: string): string {
   const bytes = new TextEncoder().encode(text);
   let binary = '';
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
+  for (const byte of bytes) binary += String.fromCharCode(byte);
   return btoa(binary);
 }
 
 function decodeUtf8Base64(encoded: string): string {
   const binary = atob(encoded.trim());
   const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i += 1) {
-    bytes[i] = binary.charCodeAt(i);
-  }
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
   return new TextDecoder().decode(bytes);
 }
 
@@ -68,7 +70,12 @@ export function loadProfileIndex(storage: StorageLike = getDefaultStorage()): Pr
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw) as ProfileIndex;
-    if (parsed && parsed.version === 1 && Array.isArray(parsed.profiles) && parsed.profiles.length > 0) {
+    if (
+      parsed &&
+      parsed.version === 2 &&
+      Array.isArray(parsed.profiles) &&
+      parsed.profiles.length > 0
+    ) {
       return parsed;
     }
   } catch {
@@ -92,7 +99,7 @@ export function loadProfileGameState(
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw) as GameState;
-    if (parsed && parsed.version === 1 && typeof parsed.cash === 'number') {
+    if (parsed && parsed.version === 2 && typeof parsed.cash === 'number') {
       return parsed;
     }
   } catch {
@@ -111,17 +118,19 @@ export function saveProfileGameState(
   if (index) {
     const nextProfiles = index.profiles.map((meta) =>
       meta.id === state.profileId
-        ? { ...meta, name: state.profileName, updatedAt: Date.now() }
+        ? {
+            ...meta,
+            name: state.profileName,
+            difficulty: state.difficulty,
+            updatedAt: Date.now(),
+          }
         : meta,
     );
     saveProfileIndex({ ...index, profiles: nextProfiles }, storage);
   }
 }
 
-/**
- * Ensures at least one Shift Manager profile exists in local storage and returns
- * the active ProfileIndex + loaded GameState.
- */
+/** Ensures at least one v2 Shift Manager profile exists in local storage. */
 export function ensureInitialProfileStore(storage: StorageLike = getDefaultStorage()): {
   index: ProfileIndex;
   activeState: GameState;
@@ -144,15 +153,16 @@ export function ensureInitialProfileStore(storage: StorageLike = getDefaultStora
   const now = Date.now();
   const defaultId = 'cozy-host-1';
   const defaultName = 'Cozy Host';
-  const initialState = createInitialGameState(defaultId, defaultName);
+  const initialState = createInitialGameState(defaultId, defaultName, 'standard');
   const initialMeta: ProfileMeta = {
     id: defaultId,
     name: defaultName,
+    difficulty: 'standard',
     createdAt: now,
     updatedAt: now,
   };
   const index: ProfileIndex = {
-    version: 1,
+    version: 2,
     activeProfileId: defaultId,
     profiles: [initialMeta],
   };
@@ -162,23 +172,30 @@ export function ensureInitialProfileStore(storage: StorageLike = getDefaultStora
   return { index, activeState: initialState };
 }
 
-/** Creates a brand-new isolated Shift Manager profile and switches to it. */
+/** Creates a brand-new isolated v2 Shift Manager profile with chosen Difficulty mode. */
 export function createProfile(
   rawName: string,
+  difficulty: DifficultyId = 'standard',
   storage: StorageLike = getDefaultStorage(),
 ): { index: ProfileIndex; activeState: GameState } {
   const trimmed = rawName.trim().slice(0, 24) || 'Trainer';
   const current = ensureInitialProfileStore(storage).index;
   const now = Date.now();
   const newId = createProfileId(trimmed);
-  const newState = createInitialGameState(newId, trimmed, false, (now ^ trimmed.length * 131) >>> 0);
+  const newState = createInitialGameState(
+    newId,
+    trimmed,
+    difficulty,
+    false,
+    (now ^ (trimmed.length * 131)) >>> 0,
+  );
 
   const nextIndex: ProfileIndex = {
-    version: 1,
+    version: 2,
     activeProfileId: newId,
     profiles: [
       ...current.profiles,
-      { id: newId, name: trimmed, createdAt: now, updatedAt: now },
+      { id: newId, name: trimmed, difficulty, createdAt: now, updatedAt: now },
     ],
   };
 
@@ -187,43 +204,41 @@ export function createProfile(
   return { index: nextIndex, activeState: newState };
 }
 
-/** Switches the active profile and loads its isolated GameState. */
+/** Switches active profile and loads its isolated v2 GameState. */
 export function switchActiveProfile(
   profileId: string,
   storage: StorageLike = getDefaultStorage(),
 ): { index: ProfileIndex; activeState: GameState } {
   const current = ensureInitialProfileStore(storage).index;
   const targetMeta = current.profiles.find((p) => p.id === profileId);
-  if (!targetMeta) {
-    throw new Error(`Profile ${profileId} not found.`);
-  }
-  const nextIndex: ProfileIndex = {
-    ...current,
-    activeProfileId: profileId,
-  };
+  if (!targetMeta) throw new Error(`Profile ${profileId} not found.`);
+
+  const nextIndex: ProfileIndex = { ...current, activeProfileId: profileId };
   saveProfileIndex(nextIndex, storage);
 
   const loaded =
     loadProfileGameState(profileId, storage) ??
-    createInitialGameState(targetMeta.id, targetMeta.name);
+    createInitialGameState(targetMeta.id, targetMeta.name, targetMeta.difficulty ?? 'standard');
   saveProfileGameState(loaded, storage);
   return { index: nextIndex, activeState: loaded };
 }
 
-/** Resets a single profile back to Shift 1 without touching any other profile. */
+/** Resets a single profile back to Shift 1 on its difficulty (or an explicit new difficulty). */
 export function resetProfile(
   profileId: string,
   storage: StorageLike = getDefaultStorage(),
+  difficultyOverride?: DifficultyId,
 ): GameState {
   const current = ensureInitialProfileStore(storage).index;
   const targetMeta = current.profiles.find((p) => p.id === profileId);
-  if (!targetMeta) {
-    throw new Error(`Profile ${profileId} not found.`);
-  }
+  if (!targetMeta) throw new Error(`Profile ${profileId} not found.`);
+
   const prevState = loadProfileGameState(profileId, storage);
+  const diff = difficultyOverride ?? prevState?.difficulty ?? targetMeta.difficulty ?? 'standard';
   const freshState = createInitialGameState(
     targetMeta.id,
     targetMeta.name,
+    diff,
     prevState?.muted ?? false,
   );
   saveProfileGameState(freshState, storage);
@@ -245,7 +260,7 @@ export function deleteProfile(
   const nextActiveId =
     current.activeProfileId === profileId ? nextProfiles[0].id : current.activeProfileId;
   const nextIndex: ProfileIndex = {
-    version: 1,
+    version: 2,
     activeProfileId: nextActiveId,
     profiles: nextProfiles,
   };
@@ -254,16 +269,16 @@ export function deleteProfile(
   const activeMeta = nextProfiles.find((p) => p.id === nextActiveId) ?? nextProfiles[0];
   const activeState =
     loadProfileGameState(activeMeta.id, storage) ??
-    createInitialGameState(activeMeta.id, activeMeta.name);
+    createInitialGameState(activeMeta.id, activeMeta.name, activeMeta.difficulty ?? 'standard');
   return { index: nextIndex, activeState };
 }
 
-/** Encodes a profile's GameState into a checksum-verified UTF-8 Base64 save string. */
+/** Encodes a v2 GameState into a checksum-verified UTF-8 Base64 save string. */
 export function exportSaveCode(state: GameState): string {
   const stateJson = JSON.stringify(state);
   const envelope: SaveEnvelope = {
     format: 'pokemart-low-cortisol-save',
-    version: 1,
+    version: 2,
     checksum: computeSaveChecksum(stateJson),
     exportedAt: new Date().toISOString(),
     state,
@@ -271,10 +286,7 @@ export function exportSaveCode(state: GameState): string {
   return encodeUtf8Base64(JSON.stringify(envelope));
 }
 
-/**
- * Validates and decodes an exported Base64 save code, verifying format, version,
- * and FNV-1a checksum integrity before binding cleanly to `targetProfileId`.
- */
+/** Validates and decodes an exported v2 Base64 save code. */
 export function importSaveCode(
   code: string,
   targetProfileId: string,
@@ -286,8 +298,7 @@ export function importSaveCode(
 
   let envelope: SaveEnvelope;
   try {
-    const jsonText = decodeUtf8Base64(code);
-    envelope = JSON.parse(jsonText) as SaveEnvelope;
+    envelope = JSON.parse(decodeUtf8Base64(code)) as SaveEnvelope;
   } catch {
     throw new Error('Invalid save code format (could not decode Base64 JSON).');
   }
@@ -295,11 +306,11 @@ export function importSaveCode(
   if (
     !envelope ||
     envelope.format !== 'pokemart-low-cortisol-save' ||
-    envelope.version !== 1 ||
+    envelope.version !== 2 ||
     !envelope.state ||
     typeof envelope.checksum !== 'string'
   ) {
-    throw new Error('Unrecognized or unsupported save file version.');
+    throw new Error('Unrecognized or unsupported save file version (requires v2).');
   }
 
   const recomputed = computeSaveChecksum(JSON.stringify(envelope.state));
@@ -322,6 +333,7 @@ export function importSaveCode(
     profileId: targetProfileId,
     profileName: targetProfileName ?? imported.profileName,
     shiftRunning: false,
+    shiftPhase: imported.isBankrupt ? 'bankrupt' : imported.pendingSettlement ? 'settlement-debt' : 'prep',
     customers: [],
     updatedAt: Date.now(),
   };

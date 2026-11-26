@@ -1,5 +1,9 @@
 /**
- * Active item application logic: Evolution Stones, Care Berries/Drinks, and Rare Candy.
+ * Active item application logic across all 493 Gen 1–4 species:
+ * - All 9 Evolution Stones (`fire`, `water`, `thunder`, `leaf`, `moon`, `sun`, `shiny`, `dusk`, `dawn`)
+ * - `Rare Candy` triggers standard level-up/friendship/trade next-stage evolutions when available,
+ *   or boosts Rarity (+10) & Cute (+4) when fully evolved
+ * - Care Drinks & Berries speed stray nap recovery and boost Comfort/Cute stats.
  */
 import { getItemDefinition } from '../data/items';
 import { getSpecies } from '../data/species';
@@ -12,7 +16,7 @@ export interface ItemEligibility {
   targetSpeciesId?: number;
 }
 
-/** Returns the target evolved species ID if a stone is valid for `speciesId`, else `null`. */
+/** Returns the target evolved species ID if a stone evolves `speciesId`, else `null`. */
 export function getEvolutionTarget(
   speciesId: number,
   stoneSlug: EvolutionStoneSlug,
@@ -21,17 +25,17 @@ export function getEvolutionTarget(
   return species.evolutions?.[stoneSlug] ?? null;
 }
 
-/** Checks whether an item can currently be used on a given Pokémon instance. */
+/** Checks whether an item can currently be used on a Pokémon instance. */
 export function canUseItemOnPokemon(
   pokemon: PokemonInstance,
   itemSlug: ItemSlug,
 ): ItemEligibility {
   const item = getItemDefinition(itemSlug);
+  const species = getSpecies(pokemon.speciesId);
 
   if (item.category === 'ball' || item.category === 'egg') {
     return { ok: false, reason: 'Equipped at checkout rather than fed directly.' };
   }
-
   if (pokemon.location === 'breeding') {
     return { ok: false, reason: 'Finish egg incubation before using items on parents.' };
   }
@@ -42,7 +46,7 @@ export function canUseItemOnPokemon(
     }
     const targetId = getEvolutionTarget(pokemon.speciesId, itemSlug as EvolutionStoneSlug);
     if (!targetId) {
-      return { ok: false, reason: `${getSpecies(pokemon.speciesId).name} cannot evolve with ${item.name}.` };
+      return { ok: false, reason: `${species.name} cannot evolve with ${item.name}.` };
     }
     return { ok: true, targetSpeciesId: targetId };
   }
@@ -57,6 +61,9 @@ export function canUseItemOnPokemon(
   }
 
   if (item.category === 'candy') {
+    if (!pokemon.needsRecovery && species.levelEvolutionId) {
+      return { ok: true, targetSpeciesId: species.levelEvolutionId };
+    }
     if (pokemon.stats.rarity >= 100 && pokemon.stats.cute >= 100) {
       return { ok: false, reason: 'Rarity and Cute are already maxed at 100!' };
     }
@@ -75,10 +82,7 @@ export interface AppliedItemOutcome {
   message: string;
 }
 
-/**
- * Purely applies an eligible item to a Pokémon instance and returns the updated
- * state snapshot plus descriptive cozy log text.
- */
+/** Purely applies an eligible item to a Pokémon instance. */
 export function applyItemToPokemon(
   pokemon: PokemonInstance,
   itemSlug: ItemSlug,
@@ -91,7 +95,7 @@ export function applyItemToPokemon(
   const item = getItemDefinition(itemSlug);
   const currentSpecies = getSpecies(pokemon.speciesId);
 
-  if (item.category === 'stone' && check.targetSpeciesId) {
+  if (check.targetSpeciesId && (item.category === 'stone' || item.category === 'candy')) {
     const evolvedSpecies = getSpecies(check.targetSpeciesId);
     const updatedPokemon: PokemonInstance = {
       ...pokemon,
@@ -109,7 +113,7 @@ export function applyItemToPokemon(
       evolvedToId: evolvedSpecies.id,
       fullyHealed: false,
       xpBonus: 24,
-      message: `${currentSpecies.name} glowed gently and evolved into ${evolvedSpecies.name}!`,
+      message: `${currentSpecies.name} glowed gently with ${item.name} and evolved into ${evolvedSpecies.name}!`,
     };
   }
 
@@ -138,7 +142,7 @@ export function applyItemToPokemon(
     };
   }
 
-  // Rare Candy boosts Rarity & Cute
+  // Rare Candy on fully evolved / recovering Pokémon boosts Rarity & Cute
   const updatedPokemon: PokemonInstance = {
     ...pokemon,
     stats: {

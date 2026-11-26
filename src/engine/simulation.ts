@@ -1,20 +1,27 @@
 /**
- * Pure simulation reducer & relaxed live-tick engine for PokéMart: Low Cortisol Shift.
- * All shop actions and tick transitions are pure functions returning updated GameState
- * plus optional Web Audio cue tags for React UI integration and deterministic testing.
+ * Pure v2 tycoon simulation engine for PokéMart: Low Cortisol Shift.
+ * Implements timed shifts (`prep -> open -> settlement-debt -> summary / bankrupt`),
+ * live-clock counter haggling with patience decay (zero automatic sales), 3 difficulty
+ * modes, daily rent & upkeep, Emergency Liquidation, Debt Grace, Bankruptcy,
+ * 493-species evolution/breeding, and VIP Legendary Contracts.
  */
 import { CUSTOMER_ARCHETYPES, CUSTOMER_FIRST_NAMES } from '../data/customers';
+import { getDifficultyConfig } from '../data/difficulties';
 import { getItemDefinition } from '../data/items';
+import { pickShopperNpc } from '../data/npcs';
 import { getSpecies } from '../data/species';
 import { MARKET_TRENDS, getMarketTrend } from '../data/trends';
 import { UPGRADES_BY_ID, getUpgradeCost } from '../data/upgrades';
 import type {
   ActivityEntry,
+  CounterOffer,
   CustomerArchetypeId,
+  DifficultyId,
   GameState,
   GiftBallSlug,
   ItemSlug,
   PokemonInstance,
+  ShiftSettlement,
   ShopCustomer,
   ShopUpgradeId,
 } from '../data/types';
@@ -26,11 +33,14 @@ import {
   hatchEggToPokemon,
 } from './breeding';
 import { generateWholesaleCatalog } from './catalog';
-import { getCozyRankInfo, recordDexDiscovery } from './dex';
+import { getDexSummary, getShopRankInfo, recordDexDiscovery } from './dex';
 import {
   calculateBuyProbability,
   calculatePokemonValuation,
+  calculateShiftDues,
+  evaluateHaggleAttempt,
   getEffectiveMarkup,
+  getLiquidationValue,
   resolveCheckoutGiftBall,
 } from './economy';
 import {
@@ -42,7 +52,15 @@ import {
 import { applyItemToPokemon, canUseItemOnPokemon } from './items';
 import { clamp, createSeededRng, pickRandom, randomInt, type RngFn } from './rng';
 
-export type SfxCue = 'bell' | 'sale' | 'evolve' | 'hatch' | 'heal' | 'click' | 'shiny';
+export type SfxCue =
+  | 'bell'
+  | 'sale'
+  | 'evolve'
+  | 'hatch'
+  | 'heal'
+  | 'click'
+  | 'shiny'
+  | 'walkout';
 
 export interface ActionResult {
   state: GameState;
@@ -69,7 +87,7 @@ function appendLog(
     text,
     tone,
   };
-  return [entry, ...log].slice(0, 28);
+  return [entry, ...log].slice(0, 32);
 }
 
 function nextRng(state: GameState, providedRng?: RngFn): { rng: RngFn; nextSeed: number } {
@@ -81,24 +99,27 @@ function nextRng(state: GameState, providedRng?: RngFn): { rng: RngFn; nextSeed:
 }
 
 /**
- * Creates a fresh starting state for a new local Shift Manager profile.
- * Starts with Eevee & Slowpoke on display, a napping Psyduck stray, starter supplies
- * (including a Water Stone), and active Shift 1 Market Trend + Wholesale Catalog.
+ * Creates a fresh v2 starting state for a local Shift Manager profile on the chosen
+ * difficulty (`relaxed`, `standard`, or `high-stakes`).
+ * Starts with bundled core mascots Eevee (`133`), Slowpoke (`79`), and napping Psyduck (`54`).
  */
 export function createInitialGameState(
   profileId: string,
   profileName: string,
+  difficulty: DifficultyId = 'standard',
   muted = false,
   seed = 1042,
 ): GameState {
+  const diff = getDifficultyConfig(difficulty);
   const rng = createSeededRng(seed);
+
   const starterPokemon: PokemonInstance[] = [
     {
       uid: 'mon-starter-eevee',
       speciesId: 133,
       isShiny: false,
       trait: 'Cozy',
-      stats: { cute: 91, comfort: 84, rarity: 64 },
+      stats: { cute: 88, comfort: 82, rarity: 58 },
       location: 'pen',
       penIndex: 0,
       healingProgress: 100,
@@ -111,7 +132,7 @@ export function createInitialGameState(
       speciesId: 79,
       isShiny: false,
       trait: 'Sleepy',
-      stats: { cute: 82, comfort: 96, rarity: 48 },
+      stats: { cute: 80, comfort: 92, rarity: 46 },
       location: 'pen',
       penIndex: 1,
       healingProgress: 100,
@@ -124,7 +145,7 @@ export function createInitialGameState(
       speciesId: 54,
       isShiny: false,
       trait: 'Docile',
-      stats: { cute: 80, comfort: 78, rarity: 44 },
+      stats: { cute: 78, comfort: 76, rarity: 44 },
       location: 'healing',
       penIndex: null,
       healingProgress: 45,
@@ -140,17 +161,22 @@ export function createInitialGameState(
   }
 
   return {
-    version: 1,
+    version: 2,
     profileId,
     profileName,
+    difficulty,
     muted,
-    cash: 1800,
+    cash: diff.startingCash,
     shiftNumber: 1,
     shiftTick: 0,
     shiftDurationTicks: 100,
+    shiftPhase: 'prep',
     shiftRunning: false,
     shiftSpeed: 1,
     cozyXp: 0,
+    debtGraceDaysRemaining: diff.debtGraceShifts,
+    isBankrupt: false,
+    bankruptcySummary: null,
     activeTrendId: MARKET_TRENDS[0].id,
     globalMarkup: 100,
     penMarkups: {},
@@ -164,8 +190,9 @@ export function createInitialGameState(
       'moomoo-milk': 1,
       'friend-ball': 2,
     },
-    wholesaleCatalog: generateWholesaleCatalog(1, 0, 1, rng),
+    wholesaleCatalog: generateWholesaleCatalog(1, 0, 1, rng, difficulty),
     customers: [],
+    counterQueue: [],
     upgrades: {
       'extra-pen': 0,
       'extra-incubator': 0,
@@ -180,16 +207,23 @@ export function createInitialGameState(
       expenses: 0,
       tipsEarned: 0,
       adoptionsCount: 0,
+      walkoutsCount: 0,
       eggsHatched: 0,
       straysHealed: 0,
       cozyXpEarned: 0,
     },
+    lifetimeStats: {
+      totalRevenue: 0,
+      totalAdoptions: 0,
+      highestSale: 0,
+    },
+    pendingSettlement: null,
     lastShiftSummary: null,
     activityLog: [
       {
         id: 'log-1-welcome',
         shift: 1,
-        text: `Welcome to ${profileName}'s PokéMart! Open Shop whenever you feel ready.`,
+        text: `Welcome to ${profileName}'s PokéMart (${diff.name} Mode)! Prep your pens and open when ready.`,
         tone: 'info',
       },
     ],
@@ -198,13 +232,16 @@ export function createInitialGameState(
   };
 }
 
-/** Toggles between Open Shop (running) and Paused. */
+/** Toggles between Open Shop (`open`) and Paused (`prep`), blocked during settlement or bankruptcy. */
 export function toggleShiftRunning(state: GameState): ActionResult {
-  if (state.lastShiftSummary) {
+  if (state.isBankrupt || state.shiftPhase === 'bankrupt') {
+    return { state, ok: false, message: 'This shop is bankrupt. Reset or start a new profile.' };
+  }
+  if (state.shiftPhase === 'settlement-debt' || state.shiftPhase === 'summary') {
     return {
       state,
       ok: false,
-      message: 'Review the Shift Summary and start the next shift first.',
+      message: 'Finish shift settlement before reopening the shop.',
     };
   }
   const nextRunning = !state.shiftRunning;
@@ -212,33 +249,28 @@ export function toggleShiftRunning(state: GameState): ActionResult {
     state: {
       ...state,
       shiftRunning: nextRunning,
+      shiftPhase: nextRunning ? 'open' : 'prep',
       updatedAt: Date.now(),
     },
     ok: true,
-    message: nextRunning ? 'Shop doors opened! Customers are strolling in.' : 'Shop paused for a calm breather.',
+    message: nextRunning
+      ? 'Shop doors opened! Customers will browse pens and queue at Kecleon’s counter.'
+      : 'Shop paused cleanly.',
     sfx: nextRunning ? 'bell' : 'click',
   };
 }
 
 /** Switches live-tick speed between 1× and 2×. */
 export function setShiftSpeed(state: GameState, speed: 1 | 2): GameState {
-  return {
-    ...state,
-    shiftSpeed: speed,
-    updatedAt: Date.now(),
-  };
+  return { ...state, shiftSpeed: speed, updatedAt: Date.now() };
 }
 
-/** Updates global shop markup percentage (clamped cleanly to 80%–160%). */
+/** Updates global shop markup percentage (80%–160%). */
 export function setGlobalMarkup(state: GameState, markup: number): GameState {
-  return {
-    ...state,
-    globalMarkup: clamp(Math.round(markup), 80, 160),
-    updatedAt: Date.now(),
-  };
+  return { ...state, globalMarkup: clamp(Math.round(markup), 80, 160), updatedAt: Date.now() };
 }
 
-/** Sets or clears a pen-specific markup override (80%–160%, or `null` to inherit global). */
+/** Sets or clears a pen-specific markup override. */
 export function setPenMarkup(
   state: GameState,
   penIndex: number,
@@ -254,21 +286,13 @@ export function setPenMarkup(
   };
 }
 
-/** Selects the active gift-wrap Poké Ball used at checkout. */
+/** Selects the active gift-wrap Poké Ball used when accepting offers at Kecleon's counter. */
 export function setActiveGiftBall(state: GameState, ball: GiftBallSlug): ActionResult {
   if (ball !== 'poke-ball' && (state.inventory[ball] ?? 0) <= 0) {
-    return {
-      state,
-      ok: false,
-      message: `No ${getItemDefinition(ball).name}s in your bag yet.`,
-    };
+    return { state, ok: false, message: `No ${getItemDefinition(ball).name}s in your bag yet.` };
   }
   return {
-    state: {
-      ...state,
-      activeGiftBall: ball,
-      updatedAt: Date.now(),
-    },
+    state: { ...state, activeGiftBall: ball, updatedAt: Date.now() },
     ok: true,
     message: `Checkout ribbon set to ${getItemDefinition(ball).name}.`,
     sfx: 'click',
@@ -277,23 +301,17 @@ export function setActiveGiftBall(state: GameState, ball: GiftBallSlug): ActionR
 
 /** Toggles per-profile Web Audio SFX mute preference. */
 export function toggleMuteAction(state: GameState): GameState {
-  return {
-    ...state,
-    muted: !state.muted,
-    updatedAt: Date.now(),
-  };
+  return { ...state, muted: !state.muted, updatedAt: Date.now() };
 }
 
-/** Purchases an offer from the daily Wholesale & Rescue Catalog. */
+/** Purchases an offer from Wholesale, Rescue, Mystery Eggs, or VIP Legendary Contracts. */
 export function buyWholesaleOffer(state: GameState, offerUid: string): ActionResult {
-  const offerIndex = state.wholesaleCatalog.findIndex((o) => o.uid === offerUid);
-  if (offerIndex === -1) {
-    return { state, ok: false, message: 'Wholesale offer no longer exists.' };
+  if (state.isBankrupt) {
+    return { state, ok: false, message: 'Cannot purchase stock while bankrupt.' };
   }
-  const offer = state.wholesaleCatalog[offerIndex];
-  if (offer.purchased) {
-    return { state, ok: false, message: 'Already adopted from today’s shipment.' };
-  }
+  const offer = state.wholesaleCatalog.find((o) => o.uid === offerUid);
+  if (!offer) return { state, ok: false, message: 'Wholesale offer no longer exists.' };
+  if (offer.purchased) return { state, ok: false, message: 'Already adopted from today’s shipment.' };
   if (state.cash < offer.cost) {
     return { state, ok: false, message: `Need ₽${offer.cost.toLocaleString()} for this offer.` };
   }
@@ -309,35 +327,30 @@ export function buyWholesaleOffer(state: GameState, offerUid: string): ActionRes
         message: `All ${cap} egg incubator(s) are occupied. Hatch or upgrade first!`,
       };
     }
-
     const updatedCatalog = state.wholesaleCatalog.map((item) =>
       item.uid === offerUid ? { ...item, purchased: true } : item,
     );
     const nextEgg = {
       uid: `egg-${state.shiftNumber}-${state.seedCounter + 1}`,
       speciesId: offer.speciesId,
-      parentNames: ['Mystery Courier', 'Sinnoh Daycare'] as [string, string],
+      parentNames: ['Mystery Courier', 'Wigglytuff Guild'] as [string, string],
       isShiny: offer.isShiny,
       trait: offer.trait,
       inheritedStats: { ...offer.stats },
       progress: 0,
       readyToHatch: false,
     };
-
     return {
       state: {
         ...state,
         cash: state.cash - offer.cost,
         eggs: [...state.eggs, nextEgg],
         wholesaleCatalog: updatedCatalog,
-        shiftStats: {
-          ...state.shiftStats,
-          expenses: state.shiftStats.expenses + offer.cost,
-        },
+        shiftStats: { ...state.shiftStats, expenses: state.shiftStats.expenses + offer.cost },
         activityLog: appendLog(
           state.activityLog,
           state.shiftNumber,
-          `Adopted a Mystery Egg into the warm incubator (₽${offer.cost}).`,
+          `Adopted a Mystery Egg into the warm incubator (₽${offer.cost.toLocaleString()}).`,
           'breed',
           `buy-${state.seedCounter + 1}`,
         ),
@@ -350,22 +363,16 @@ export function buyWholesaleOffer(state: GameState, offerUid: string): ActionRes
     };
   }
 
-  // Healthy or Stray Pokémon placement
   const penCap = getPenCapacity(state.upgrades);
   const bedCap = getNapBedCapacity(state.upgrades);
   const currentHealingCount = state.pokemon.filter((p) => p.location === 'healing').length;
+  const needsRecovery = offer.kind === 'stray';
 
   let location: PokemonInstance['location'] = 'reserve';
   let penIndex: number | null = null;
-  const needsRecovery = offer.kind === 'stray';
-
   if (needsRecovery) {
     if (currentHealingCount >= bedCap) {
-      return {
-        state,
-        ok: false,
-        message: `All ${bedCap} plush nap bed(s) are occupied right now.`,
-      };
+      return { state, ok: false, message: `All ${bedCap} plush nap bed(s) are occupied right now.` };
     }
     location = 'healing';
   } else {
@@ -375,6 +382,9 @@ export function buyWholesaleOffer(state: GameState, offerUid: string): ActionRes
       penIndex = openPen;
     }
   }
+
+  const origin: PokemonInstance['origin'] =
+    offer.kind === 'vip-contract' ? 'vip-contract' : needsRecovery ? 'rescue' : 'wholesale';
 
   const newMon: PokemonInstance = {
     uid: `mon-${state.shiftNumber}-${state.seedCounter + 1}`,
@@ -387,7 +397,7 @@ export function buyWholesaleOffer(state: GameState, offerUid: string): ActionRes
     healingProgress: needsRecovery ? offer.initialHealingProgress : 100,
     needsRecovery,
     acquiredAtShift: state.shiftNumber,
-    origin: needsRecovery ? 'rescue' : 'wholesale',
+    origin,
   };
 
   const updatedCatalog = state.wholesaleCatalog.map((item) =>
@@ -397,7 +407,6 @@ export function buyWholesaleOffer(state: GameState, offerUid: string): ActionRes
     isShiny: newMon.isShiny,
     event: 'seen',
   });
-
   const placementNote = needsRecovery
     ? 'into a plush nap bed'
     : penIndex !== null
@@ -411,15 +420,12 @@ export function buyWholesaleOffer(state: GameState, offerUid: string): ActionRes
       pokemon: [...state.pokemon, newMon],
       wholesaleCatalog: updatedCatalog,
       dex: updatedDex,
-      shiftStats: {
-        ...state.shiftStats,
-        expenses: state.shiftStats.expenses + offer.cost,
-      },
+      shiftStats: { ...state.shiftStats, expenses: state.shiftStats.expenses + offer.cost },
       activityLog: appendLog(
         state.activityLog,
         state.shiftNumber,
-        `${newMon.isShiny ? '✨ Shiny ' : ''}${species.name} welcomed ${placementNote} (₽${offer.cost}).`,
-        newMon.isShiny ? 'shiny' : needsRecovery ? 'heal' : 'info',
+        `${offer.kind === 'vip-contract' ? '👑 VIP Contract: ' : ''}${newMon.isShiny ? '✨ Shiny ' : ''}${species.name} placed ${placementNote} (₽${offer.cost.toLocaleString()}).`,
+        newMon.isShiny || offer.kind === 'vip-contract' ? 'shiny' : needsRecovery ? 'heal' : 'info',
         `buy-${state.seedCounter + 1}`,
       ),
       seedCounter: state.seedCounter + 1,
@@ -427,7 +433,7 @@ export function buyWholesaleOffer(state: GameState, offerUid: string): ActionRes
     },
     ok: true,
     message: `${species.name} welcomed ${placementNote}!`,
-    sfx: newMon.isShiny ? 'shiny' : 'click',
+    sfx: newMon.isShiny || offer.kind === 'vip-contract' ? 'shiny' : 'click',
   };
 }
 
@@ -435,9 +441,7 @@ export function buyWholesaleOffer(state: GameState, offerUid: string): ActionRes
 export function buySupplyItem(state: GameState, itemSlug: ItemSlug, quantity = 1): ActionResult {
   const item = getItemDefinition(itemSlug);
   const totalCost = item.cost * quantity;
-  if (totalCost <= 0) {
-    return { state, ok: false, message: `${item.name} is always complimentary.` };
-  }
+  if (totalCost <= 0) return { state, ok: false, message: `${item.name} is always complimentary.` };
   if (state.cash < totalCost) {
     return { state, ok: false, message: `Need ₽${totalCost.toLocaleString()} for ${item.name}.` };
   }
@@ -450,14 +454,11 @@ export function buySupplyItem(state: GameState, itemSlug: ItemSlug, quantity = 1
         ...state.inventory,
         [itemSlug]: (state.inventory[itemSlug] ?? 0) + quantity,
       },
-      shiftStats: {
-        ...state.shiftStats,
-        expenses: state.shiftStats.expenses + totalCost,
-      },
+      shiftStats: { ...state.shiftStats, expenses: state.shiftStats.expenses + totalCost },
       activityLog: appendLog(
         state.activityLog,
         state.shiftNumber,
-        `Stocked ${quantity}× ${item.name} (₽${totalCost}).`,
+        `Stocked ${quantity}× ${item.name} (₽${totalCost.toLocaleString()}).`,
         'info',
         `supply-${state.seedCounter + 1}`,
       ),
@@ -478,9 +479,7 @@ export function movePokemonLocation(
   targetPenIndex?: number,
 ): ActionResult {
   const mon = state.pokemon.find((p) => p.uid === pokemonUid);
-  if (!mon) {
-    return { state, ok: false, message: 'Pokémon not found.' };
-  }
+  if (!mon) return { state, ok: false, message: 'Pokémon not found.' };
   if (mon.location === 'breeding') {
     return { state, ok: false, message: 'Cannot move while paired in the breeding incubator.' };
   }
@@ -493,9 +492,7 @@ export function movePokemonLocation(
       return { state, ok: false, message: 'Strays must finish resting before entering display pens.' };
     }
     const desiredIndex =
-      targetPenIndex !== undefined
-        ? targetPenIndex
-        : findOpenPenIndex(state.pokemon, penCap);
+      targetPenIndex !== undefined ? targetPenIndex : findOpenPenIndex(state.pokemon, penCap);
     if (desiredIndex === null || desiredIndex < 0 || desiredIndex >= penCap) {
       return { state, ok: false, message: 'All display pens are currently full.' };
     }
@@ -505,7 +502,6 @@ export function movePokemonLocation(
     if (occupied) {
       return { state, ok: false, message: `Display Pen #${desiredIndex + 1} is already occupied.` };
     }
-
     return {
       state: {
         ...state,
@@ -539,7 +535,6 @@ export function movePokemonLocation(
     };
   }
 
-  // Reserve kennel
   if (mon.needsRecovery) {
     return { state, ok: false, message: 'Keep tired strays resting in a nap bed until recovered.' };
   }
@@ -557,7 +552,7 @@ export function movePokemonLocation(
   };
 }
 
-/** Consumes one item from the bag to evolve, heal, or boost a Pokémon. */
+/** Consumes one item from the bag to evolve (Stone or Rare Candy), heal, or boost a Pokémon. */
 export function useItemAction(
   state: GameState,
   pokemonUid: string,
@@ -569,9 +564,7 @@ export function useItemAction(
   }
 
   const targetMon = state.pokemon.find((p) => p.uid === pokemonUid);
-  if (!targetMon) {
-    return { state, ok: false, message: 'Pokémon not found.' };
-  }
+  if (!targetMon) return { state, ok: false, message: 'Pokémon not found.' };
 
   const check = canUseItemOnPokemon(targetMon, itemSlug);
   if (!check.ok) {
@@ -584,16 +577,11 @@ export function useItemAction(
     p.uid === pokemonUid ? outcome.updatedPokemon : p,
   );
 
-  // Automatically move a fully healed stray out of the nap bed into an open pen (or reserve).
   if (outcome.fullyHealed) {
     const openPen = findOpenPenIndex(nextPokemonList, penCap);
     nextPokemonList = nextPokemonList.map((p) =>
       p.uid === pokemonUid
-        ? {
-            ...p,
-            location: openPen !== null ? 'pen' : 'reserve',
-            penIndex: openPen,
-          }
+        ? { ...p, location: openPen !== null ? 'pen' : 'reserve', penIndex: openPen }
         : p,
     );
   }
@@ -608,11 +596,8 @@ export function useItemAction(
 
   const nextBagCount = count - 1;
   const nextInventory = { ...state.inventory };
-  if (nextBagCount <= 0) {
-    delete nextInventory[itemSlug];
-  } else {
-    nextInventory[itemSlug] = nextBagCount;
-  }
+  if (nextBagCount <= 0) delete nextInventory[itemSlug];
+  else nextInventory[itemSlug] = nextBagCount;
 
   const tone: ActivityEntry['tone'] = outcome.evolvedToId
     ? 'shiny'
@@ -648,7 +633,7 @@ export function useItemAction(
   };
 }
 
-/** Pairs two compatible Pokémon in a warm incubator to produce an Egg. */
+/** Pairs two compatible Pokémon in a warm incubator. */
 export function startBreedingAction(
   state: GameState,
   parentAUid: string,
@@ -666,17 +651,16 @@ export function startBreedingAction(
 
   const parentA = state.pokemon.find((p) => p.uid === parentAUid);
   const parentB = state.pokemon.find((p) => p.uid === parentBUid);
-  if (!parentA || !parentB) {
-    return { state, ok: false, message: 'Select two valid parents.' };
-  }
+  if (!parentA || !parentB) return { state, ok: false, message: 'Select two valid parents.' };
   if (!areCompatibleParents(parentA, parentB)) {
     return {
       state,
       ok: false,
-      message: 'Parents must be rested and share a species or Egg Group.',
+      message: 'Parents must be breedable, rested, and share an Egg Group (or Ditto).',
     };
   }
 
+  const diff = getDifficultyConfig(state.difficulty);
   const { rng, nextSeed } = nextRng(state, providedRng);
   const egg = createEggFromParents(
     parentA,
@@ -684,6 +668,7 @@ export function startBreedingAction(
     state.upgrades['mystery-shipment'],
     rng,
     `egg-${state.shiftNumber}-${nextSeed}`,
+    diff.shinyBonus,
   );
   const babyName = getSpecies(egg.speciesId).name;
 
@@ -694,7 +679,7 @@ export function startBreedingAction(
       activityLog: appendLog(
         state.activityLog,
         state.shiftNumber,
-        `${getSpecies(parentA.speciesId).name} & ${getSpecies(parentB.speciesId).name} tucked a cozy ${babyName} Egg into the incubator!`,
+        `${getSpecies(parentA.speciesId).name} & ${getSpecies(parentB.speciesId).name} tucked a ${babyName} Egg into the incubator!`,
         'breed',
         `breed-${nextSeed}`,
       ),
@@ -710,12 +695,8 @@ export function startBreedingAction(
 /** Hatches a matured Egg (`readyToHatch === true`) into the shop and updates the Dex. */
 export function claimHatchedEggAction(state: GameState, eggUid: string): ActionResult {
   const egg = state.eggs.find((e) => e.uid === eggUid);
-  if (!egg) {
-    return { state, ok: false, message: 'Egg not found.' };
-  }
-  if (!egg.readyToHatch) {
-    return { state, ok: false, message: 'Egg is still warming up!' };
-  }
+  if (!egg) return { state, ok: false, message: 'Egg not found.' };
+  if (!egg.readyToHatch) return { state, ok: false, message: 'Egg is still warming up!' };
 
   const penCap = getPenCapacity(state.upgrades);
   const newMon = hatchEggToPokemon(
@@ -776,10 +757,7 @@ export function purchaseUpgradeAction(state: GameState, upgradeId: ShopUpgradeId
     state: {
       ...state,
       cash: state.cash - cost,
-      upgrades: {
-        ...state.upgrades,
-        [upgradeId]: level + 1,
-      },
+      upgrades: { ...state.upgrades, [upgradeId]: level + 1 },
       cozyXp: state.cozyXp + 20,
       shiftStats: {
         ...state.shiftStats,
@@ -802,46 +780,409 @@ export function purchaseUpgradeAction(state: GameState, upgradeId: ShopUpgradeId
   };
 }
 
-function buildShiftSummary(state: GameState, closedEarly: boolean) {
+/**
+ * Accepts a queued customer's offer at Kecleon's counter, completes checkout with
+ * optional Gift-Wrap Ball tips, awards Shop XP, and updates lifetime tycoon stats.
+ */
+export function acceptCounterOfferAction(state: GameState, offerUid: string): ActionResult {
+  const offer = state.counterQueue.find((q) => q.uid === offerUid);
+  if (!offer) return { state, ok: false, message: 'Customer is no longer at the counter.' };
+
+  const targetMon = state.pokemon.find((mon) => mon.uid === offer.pokemonUid);
+  if (!targetMon) {
+    return {
+      state: { ...state, counterQueue: state.counterQueue.filter((q) => q.uid !== offerUid) },
+      ok: false,
+      message: 'That Pokémon is no longer available.',
+    };
+  }
+
+  const ballBonus = resolveCheckoutGiftBall(state.activeGiftBall, state.inventory);
+  const decorTip = state.upgrades['cafe-decor'] * 35;
+  const totalTip = ballBonus.tipBonus + decorTip;
+  const totalEarned = offer.currentOffer + totalTip;
+  const xpGain =
+    (targetMon.isShiny ? 45 : offer.isVip ? 55 : 20) + ballBonus.xpBonus;
+
+  const nextInv = { ...state.inventory };
+  let nextActiveBall = state.activeGiftBall;
+  if (ballBonus.consumed) {
+    const remainingBalls = (nextInv[ballBonus.ballUsed] ?? 1) - 1;
+    if (remainingBalls <= 0) {
+      delete nextInv[ballBonus.ballUsed];
+      nextActiveBall = 'poke-ball';
+    } else {
+      nextInv[ballBonus.ballUsed] = remainingBalls;
+    }
+  }
+
+  const spName = getSpecies(targetMon.speciesId).name;
+  const recentSales = state.recentSpeciesSales[targetMon.speciesId] ?? 0;
+
+  return {
+    state: {
+      ...state,
+      cash: state.cash + totalEarned,
+      cozyXp: state.cozyXp + xpGain,
+      inventory: nextInv,
+      activeGiftBall: nextActiveBall,
+      pokemon: state.pokemon.filter((mon) => mon.uid !== targetMon.uid),
+      counterQueue: state.counterQueue.filter(
+        (q) => q.uid !== offerUid && q.pokemonUid !== targetMon.uid,
+      ),
+      recentSpeciesSales: { ...state.recentSpeciesSales, [targetMon.speciesId]: recentSales + 1 },
+      dex: recordDexDiscovery(state.dex, targetMon.speciesId, {
+        isShiny: targetMon.isShiny,
+        event: 'adopted',
+      }),
+      shiftStats: {
+        ...state.shiftStats,
+        revenue: state.shiftStats.revenue + offer.currentOffer,
+        tipsEarned: state.shiftStats.tipsEarned + totalTip,
+        adoptionsCount: state.shiftStats.adoptionsCount + 1,
+        cozyXpEarned: state.shiftStats.cozyXpEarned + xpGain,
+      },
+      lifetimeStats: {
+        totalRevenue: state.lifetimeStats.totalRevenue + totalEarned,
+        totalAdoptions: state.lifetimeStats.totalAdoptions + 1,
+        highestSale: Math.max(state.lifetimeStats.highestSale, totalEarned),
+      },
+      activityLog: appendLog(
+        state.activityLog,
+        state.shiftNumber,
+        `${offer.customerName} (${CUSTOMER_ARCHETYPES[offer.archetypeId].badgeLabel}) adopted ${targetMon.isShiny ? '✨ Shiny ' : ''}${spName} for ₽${offer.currentOffer.toLocaleString()}${totalTip > 0 ? ` (+₽${totalTip} tip)` : ''}!`,
+        targetMon.isShiny || offer.isVip ? 'shiny' : 'sale',
+        `sale-${state.seedCounter + 1}`,
+      ),
+      seedCounter: state.seedCounter + 1,
+      updatedAt: Date.now(),
+    },
+    ok: true,
+    message: `Sold ${spName} for ₽${totalEarned.toLocaleString()}!`,
+    sfx: targetMon.isShiny || offer.isVip ? 'shiny' : 'sale',
+  };
+}
+
+/**
+ * Push-your-luck counter negotiation (`+15%` or `+30%`, max 2 attempts per shopper).
+ * On success, raises `currentOffer`; on critical fail or 0 patience, triggers walk-out!
+ */
+export function haggleCounterOfferAction(
+  state: GameState,
+  offerUid: string,
+  boostPct: 15 | 30,
+  providedRng?: RngFn,
+): ActionResult {
+  const offer = state.counterQueue.find((q) => q.uid === offerUid);
+  if (!offer) return { state, ok: false, message: 'Customer is no longer at the counter.' };
+  if (offer.haggleAttempts >= offer.maxHaggleAttempts) {
+    return {
+      state,
+      ok: false,
+      message: `${offer.customerName} already reached max counter haggles (2/2).`,
+    };
+  }
+
+  const diff = getDifficultyConfig(state.difficulty);
+  const { rng, nextSeed } = nextRng(state, providedRng);
+  const outcome = evaluateHaggleAttempt(offer, boostPct, state.difficulty, rng);
+
+  if (outcome.walkedOut) {
+    const nextXp = Math.max(0, state.cozyXp - diff.walkoutXpPenalty);
+    return {
+      state: {
+        ...state,
+        cozyXp: nextXp,
+        counterQueue: state.counterQueue.filter((q) => q.uid !== offerUid),
+        shiftStats: {
+          ...state.shiftStats,
+          walkoutsCount: state.shiftStats.walkoutsCount + 1,
+          cozyXpEarned: state.shiftStats.cozyXpEarned - diff.walkoutXpPenalty,
+        },
+        activityLog: appendLog(
+          state.activityLog,
+          state.shiftNumber,
+          `${outcome.note}${diff.walkoutXpPenalty > 0 ? ` (-${diff.walkoutXpPenalty} XP)` : ''}`,
+          'warning',
+          `haggle-fail-${nextSeed}`,
+        ),
+        seedCounter: nextSeed,
+        updatedAt: Date.now(),
+      },
+      ok: false,
+      message: outcome.note,
+      sfx: 'walkout',
+    };
+  }
+
+  const updatedQueue = state.counterQueue.map((q) =>
+    q.uid === offerUid
+      ? {
+          ...q,
+          currentOffer: outcome.newOffer,
+          patience: outcome.newPatience,
+          haggleAttempts: q.haggleAttempts + 1,
+          lastActionNote: outcome.note,
+        }
+      : q,
+  );
+
+  return {
+    state: {
+      ...state,
+      counterQueue: updatedQueue,
+      activityLog: appendLog(
+        state.activityLog,
+        state.shiftNumber,
+        outcome.note,
+        outcome.accepted ? 'sale' : 'warning',
+        `haggle-${nextSeed}`,
+      ),
+      seedCounter: nextSeed,
+      updatedAt: Date.now(),
+    },
+    ok: outcome.accepted,
+    message: outcome.note,
+    sfx: outcome.accepted ? 'click' : 'walkout',
+  };
+}
+
+/** Politely declines a queued shopper at Kecleon's counter without XP penalty. */
+export function declineCounterOfferAction(state: GameState, offerUid: string): ActionResult {
+  const offer = state.counterQueue.find((q) => q.uid === offerUid);
+  if (!offer) return { state, ok: false, message: 'Customer already left.' };
+  return {
+    state: {
+      ...state,
+      counterQueue: state.counterQueue.filter((q) => q.uid !== offerUid),
+      activityLog: appendLog(
+        state.activityLog,
+        state.shiftNumber,
+        `Politely declined ${offer.customerName}'s offer at the register.`,
+        'info',
+        `decline-${state.seedCounter + 1}`,
+      ),
+      seedCounter: state.seedCounter + 1,
+      updatedAt: Date.now(),
+    },
+    ok: true,
+    message: `Declined ${offer.customerName}'s offer.`,
+    sfx: 'click',
+  };
+}
+
+/**
+ * Emergency Liquidation: sells an owned Reserve/Display Pen Pokémon back to Wholesale
+ * for 50% of base market value—usable anytime including during `settlement-debt`.
+ */
+export function liquidatePokemonAction(state: GameState, pokemonUid: string): ActionResult {
+  if (state.isBankrupt) {
+    return { state, ok: false, message: 'Cannot liquidate after bankruptcy.' };
+  }
+  const target = state.pokemon.find((mon) => mon.uid === pokemonUid);
+  if (!target) return { state, ok: false, message: 'Pokémon not found.' };
+  if (target.location === 'breeding') {
+    return { state, ok: false, message: 'Finish breeding incubation before liquidating.' };
+  }
+
+  const payout = getLiquidationValue(target);
+  const spName = getSpecies(target.speciesId).name;
+  const nextCash = state.cash + payout;
+
+  const updatedPending: ShiftSettlement | null = state.pendingSettlement
+    ? {
+        ...state.pendingSettlement,
+        revenue: state.pendingSettlement.revenue + payout,
+        netBeforeDues: state.pendingSettlement.netBeforeDues + payout,
+        cashAfterDues: nextCash - state.pendingSettlement.totalDues,
+      }
+    : null;
+
+  return {
+    state: {
+      ...state,
+      cash: nextCash,
+      pokemon: state.pokemon.filter((p) => p.uid !== pokemonUid),
+      counterQueue: state.counterQueue.filter((q) => q.pokemonUid !== pokemonUid),
+      pendingSettlement: updatedPending,
+      shiftStats: {
+        ...state.shiftStats,
+        revenue: state.shiftStats.revenue + payout,
+      },
+      activityLog: appendLog(
+        state.activityLog,
+        state.shiftNumber,
+        `Emergency liquidation: returned ${spName} to Wholesale for ₽${payout.toLocaleString()}.`,
+        'warning',
+        `liq-${state.seedCounter + 1}`,
+      ),
+      seedCounter: state.seedCounter + 1,
+      updatedAt: Date.now(),
+    },
+    ok: true,
+    message: `Liquidated ${spName} for ₽${payout.toLocaleString()}!`,
+    sfx: 'sale',
+  };
+}
+
+function buildPendingSettlement(state: GameState, closedEarly: boolean): ShiftSettlement {
   const trend = getMarketTrend(state.activeTrendId);
+  const dues = calculateShiftDues(state);
+  const netBeforeDues =
+    state.shiftStats.revenue + state.shiftStats.tipsEarned - state.shiftStats.expenses;
+  const cashAfterDues = state.cash - dues.totalDues;
+
   return {
     shiftNumber: state.shiftNumber,
     revenue: state.shiftStats.revenue,
     expenses: state.shiftStats.expenses,
     tipsEarned: state.shiftStats.tipsEarned,
+    dailyRent: dues.dailyRent,
+    penUpkeep: dues.penUpkeep,
+    bedUpkeep: dues.bedUpkeep,
+    totalDues: dues.totalDues,
+    netBeforeDues,
+    cashAfterDues,
     adoptionsCount: state.shiftStats.adoptionsCount,
+    walkoutsCount: state.shiftStats.walkoutsCount,
     eggsHatched: state.shiftStats.eggsHatched,
     straysHealed: state.shiftStats.straysHealed,
     cozyXpEarned: state.shiftStats.cozyXpEarned,
     trendTitle: trend.title,
     closedEarly,
+    usedDebtGrace: false,
+    debtGraceRemaining: state.debtGraceDaysRemaining,
   };
 }
 
-/** Gently closes the current shift early so the player can rest & start the next shift. */
-export function closeShiftEarly(state: GameState): GameState {
-  if (state.lastShiftSummary) return state;
+function resolveShiftEnd(state: GameState, closedEarly: boolean): GameState {
+  if (state.isBankrupt || state.shiftPhase === 'summary' || state.shiftPhase === 'settlement-debt') {
+    return state;
+  }
+
+  const settlement = buildPendingSettlement(state, closedEarly);
+  if (settlement.cashAfterDues < 0) {
+    // Pause in `settlement-debt` so player can liquidate stock before rent hits!
+    return {
+      ...state,
+      shiftRunning: false,
+      shiftPhase: 'settlement-debt',
+      customers: [],
+      counterQueue: [],
+      pendingSettlement: settlement,
+      updatedAt: Date.now(),
+    };
+  }
+
   return {
     ...state,
+    cash: settlement.cashAfterDues,
     shiftRunning: false,
+    shiftPhase: 'summary',
     customers: [],
-    lastShiftSummary: buildShiftSummary(state, true),
+    counterQueue: [],
+    pendingSettlement: null,
+    lastShiftSummary: settlement,
     updatedAt: Date.now(),
   };
 }
 
-/** Transitions from the Shift Summary modal into the next cozy shift with fresh trends & stock. */
+/** Gently closes the current shift early for Shift Settlement & Rent. */
+export function closeShiftEarly(state: GameState): GameState {
+  return resolveShiftEnd(state, true);
+}
+
+/**
+ * Confirms shift-end rent payment from `settlement-debt` (after any Emergency Liquidation):
+ * - Covered (`cashAfterDues >= 0`): transitions cleanly to `summary`.
+ * - Short (`cashAfterDues < 0`) with `debtGraceDaysRemaining > 0`: uses 1 Debt Grace shift.
+ * - Short (`cashAfterDues < 0`) with 0 Debt Grace: triggers **Bankruptcy** (`isBankrupt = true`).
+ */
+export function finalizeDebtSettlement(state: GameState): GameState {
+  if (state.shiftPhase !== 'settlement-debt' || !state.pendingSettlement) {
+    return state;
+  }
+
+  const settlement = state.pendingSettlement;
+  const cashAfterDues = state.cash - settlement.totalDues;
+
+  if (cashAfterDues >= 0) {
+    const finalized: ShiftSettlement = {
+      ...settlement,
+      cashAfterDues,
+      usedDebtGrace: false,
+      debtGraceRemaining: state.debtGraceDaysRemaining,
+    };
+    return {
+      ...state,
+      cash: cashAfterDues,
+      shiftPhase: 'summary',
+      pendingSettlement: null,
+      lastShiftSummary: finalized,
+      updatedAt: Date.now(),
+    };
+  }
+
+  if (state.debtGraceDaysRemaining > 0) {
+    const remainingGrace = state.debtGraceDaysRemaining - 1;
+    const graceSummary: ShiftSettlement = {
+      ...settlement,
+      cashAfterDues,
+      usedDebtGrace: true,
+      debtGraceRemaining: remainingGrace,
+    };
+    return {
+      ...state,
+      cash: cashAfterDues,
+      debtGraceDaysRemaining: remainingGrace,
+      shiftPhase: 'summary',
+      pendingSettlement: null,
+      lastShiftSummary: graceSummary,
+      activityLog: appendLog(
+        state.activityLog,
+        state.shiftNumber,
+        `Debt Grace invoked! End next shift ≥ ₽0 to avoid foreclosure.`,
+        'warning',
+        `grace-${state.shiftNumber}`,
+      ),
+      updatedAt: Date.now(),
+    };
+  }
+
+  // Foreclosure / Bankruptcy!
+  const dexSummary = getDexSummary(state.dex);
+  return {
+    ...state,
+    cash: cashAfterDues,
+    isBankrupt: true,
+    shiftPhase: 'bankrupt',
+    shiftRunning: false,
+    pendingSettlement: null,
+    lastShiftSummary: null,
+    bankruptcySummary: {
+      shiftNumber: state.shiftNumber,
+      totalRevenue: state.lifetimeStats.totalRevenue,
+      totalAdoptions: state.lifetimeStats.totalAdoptions,
+      highestSale: state.lifetimeStats.highestSale,
+      dexDiscovered: dexSummary.discoveredSpecies,
+      difficulty: state.difficulty,
+    },
+    updatedAt: Date.now(),
+  };
+}
+
+/** Transitions from Shift Summary into the next shift's Prep phase. */
 export function startNextShift(state: GameState, providedRng?: RngFn): GameState {
+  if (state.isBankrupt || state.shiftPhase === 'settlement-debt') {
+    return state;
+  }
   const { rng, nextSeed } = nextRng(state, providedRng);
   const nextShiftNumber = state.shiftNumber + 1;
-  const rankInfo = getCozyRankInfo(state.cozyXp);
+  const rankInfo = getShopRankInfo(state.cozyXp);
 
-  // Decay recent species sales by 1 each shift so oversupply saturation gently clears.
   const decayedSales: Record<number, number> = {};
   for (const [spId, count] of Object.entries(state.recentSpeciesSales)) {
-    if (count > 1) {
-      decayedSales[Number(spId)] = count - 1;
-    }
+    if (count > 1) decayedSales[Number(spId)] = count - 1;
   }
 
   const nextTrend = pickRandom(MARKET_TRENDS, rng);
@@ -850,27 +1191,32 @@ export function startNextShift(state: GameState, providedRng?: RngFn): GameState
     state.upgrades['mystery-shipment'],
     nextShiftNumber,
     rng,
+    state.difficulty,
   );
 
   return {
     ...state,
     shiftNumber: nextShiftNumber,
     shiftTick: 0,
+    shiftPhase: 'prep',
     shiftRunning: false,
     activeTrendId: nextTrend.id,
     wholesaleCatalog: nextCatalog,
     customers: [],
+    counterQueue: [],
+    pendingSettlement: null,
+    lastShiftSummary: null,
     recentSpeciesSales: decayedSales,
     shiftStats: {
       revenue: 0,
       expenses: 0,
       tipsEarned: 0,
       adoptionsCount: 0,
+      walkoutsCount: 0,
       eggsHatched: 0,
       straysHealed: 0,
       cozyXpEarned: 0,
     },
-    lastShiftSummary: null,
     activityLog: appendLog(
       state.activityLog,
       nextShiftNumber,
@@ -884,17 +1230,19 @@ export function startNextShift(state: GameState, providedRng?: RngFn): GameState
 }
 
 /**
- * Advances the relaxed 1-second live-tick simulation by one tick:
- * - Advances napping strays and incubating eggs
- * - Resolves browsing customers & completes cozy adoptions (zero harsh penalties)
- * - Spawns new strolling shoppers when display pens have companions
- * - Closes shift cleanly when `shiftTick` reaches `shiftDurationTicks`
+ * Advances the live-tick tycoon simulation by one tick (`open` phase):
+ * 1. Advances napping strays and incubating eggs
+ * 2. Ticks down live Patience meters for every customer queued at Kecleon's counter
+ * 3. Moves finished browsers from display pens into `counterQueue` (NO auto-selling!)
+ * 4. Spawns new PMD Pokémon shoppers with archetype-matched species
+ * 5. Triggers `resolveShiftEnd` on closing time
  */
 export function advanceShiftTick(state: GameState, providedRng?: RngFn): TickResult {
-  if (!state.shiftRunning || state.lastShiftSummary) {
+  if (!state.shiftRunning || state.isBankrupt || state.shiftPhase !== 'open') {
     return { state, sfxCues: [] };
   }
 
+  const diff = getDifficultyConfig(state.difficulty);
   const { rng, nextSeed } = nextRng(state, providedRng);
   const sfxCues: SfxCue[] = [];
   let nextState: GameState = {
@@ -945,7 +1293,36 @@ export function advanceShiftTick(state: GameState, providedRng?: RngFn): TickRes
     );
   }
 
-  // 3. Resolve existing browsing customers
+  // 3. Live-clock Patience countdown for shoppers queued at Kecleon's counter
+  const activeQueue: CounterOffer[] = [];
+  for (const offer of nextState.counterQueue) {
+    // Only keep queue offers whose Pokémon is still on display
+    const stillOwned = nextState.pokemon.some((m) => m.uid === offer.pokemonUid);
+    if (!stillOwned) continue;
+
+    const nextPatience = offer.patience - 1;
+    if (nextPatience <= 0) {
+      sfxCues.push('walkout');
+      nextState.cozyXp = Math.max(0, nextState.cozyXp - diff.walkoutXpPenalty);
+      nextState.shiftStats = {
+        ...nextState.shiftStats,
+        walkoutsCount: nextState.shiftStats.walkoutsCount + 1,
+        cozyXpEarned: nextState.shiftStats.cozyXpEarned - diff.walkoutXpPenalty,
+      };
+      nextState.activityLog = appendLog(
+        nextState.activityLog,
+        nextState.shiftNumber,
+        `${offer.customerName} ran out of patience at the register and walked out!${diff.walkoutXpPenalty > 0 ? ` (-${diff.walkoutXpPenalty} XP)` : ''}`,
+        'warning',
+        `walkout-${nextState.shiftTick}-${offer.uid}`,
+      );
+    } else {
+      activeQueue.push({ ...offer, patience: nextPatience });
+    }
+  }
+  nextState.counterQueue = activeQueue;
+
+  // 4. Resolve pen browsers -> queue at Kecleon's counter (ZERO auto-sales!)
   const remainingCustomers: ShopCustomer[] = [];
   for (const customer of nextState.customers) {
     const nextTimer = customer.ticksRemaining - 1;
@@ -957,9 +1334,11 @@ export function advanceShiftTick(state: GameState, providedRng?: RngFn): TickRes
     const penMon = nextState.pokemon.find(
       (mon) => mon.location === 'pen' && mon.penIndex === customer.targetPenIndex,
     );
-    if (!penMon) {
-      continue;
-    }
+    if (!penMon) continue;
+
+    // Avoid queuing two offers simultaneously for the same Pokémon
+    const alreadyQueued = nextState.counterQueue.some((q) => q.pokemonUid === penMon.uid);
+    if (alreadyQueued) continue;
 
     const markup = getEffectiveMarkup(nextState, customer.targetPenIndex);
     const recentSales = nextState.recentSpeciesSales[penMon.speciesId] ?? 0;
@@ -977,61 +1356,53 @@ export function advanceShiftTick(state: GameState, providedRng?: RngFn): TickRes
       valuation.breakdown.trendMatched,
     );
 
-    if (rng() <= buyChance) {
-      const ballBonus = resolveCheckoutGiftBall(nextState.activeGiftBall, nextState.inventory);
-      const decorTip = nextState.upgrades['cafe-decor'] * 35;
-      const totalTip = ballBonus.tipBonus + decorTip;
-      const totalEarned = valuation.askingPrice + totalTip;
-      const xpGain = (penMon.isShiny ? 45 : 18) + ballBonus.xpBonus;
+    const species = getSpecies(penMon.speciesId);
+    const isVip = species.isLegendary || species.isMythical || customer.archetypeId === 'vip-seeker';
 
-      // Consume specialty gift-wrap ball if used
-      if (ballBonus.consumed) {
-        const remainingBalls = (nextState.inventory[ballBonus.ballUsed] ?? 1) - 1;
-        const nextInv = { ...nextState.inventory };
-        if (remainingBalls <= 0) {
-          delete nextInv[ballBonus.ballUsed];
-          nextState.activeGiftBall = 'poke-ball';
-        } else {
-          nextInv[ballBonus.ballUsed] = remainingBalls;
-        }
-        nextState.inventory = nextInv;
-      }
+    if (rng() <= buyChance && nextState.counterQueue.length < 4) {
+      const offerAmount = Math.round(
+        valuation.askingPrice * (isVip ? diff.vipPayoutMultiplier : 1),
+      );
+      const arch = CUSTOMER_ARCHETYPES[customer.archetypeId];
+      const maxPatience = Math.max(6, Math.round(arch.basePatience * diff.patienceMultiplier));
 
-      const spName = getSpecies(penMon.speciesId).name;
-      nextState.pokemon = nextState.pokemon.filter((mon) => mon.uid !== penMon.uid);
-      nextState.cash += totalEarned;
-      nextState.cozyXp += xpGain;
-      nextState.recentSpeciesSales = {
-        ...nextState.recentSpeciesSales,
-        [penMon.speciesId]: recentSales + 1,
-      };
-      nextState.dex = recordDexDiscovery(nextState.dex, penMon.speciesId, {
+      const counterOffer: CounterOffer = {
+        uid: `offer-${nextState.shiftNumber}-${nextState.shiftTick}-${customer.uid}`,
+        customerUid: customer.uid,
+        archetypeId: customer.archetypeId,
+        npcSpeciesId: customer.npcSpeciesId,
+        npcPaddedId: customer.npcPaddedId,
+        customerName: customer.name,
+        pokemonUid: penMon.uid,
+        speciesId: penMon.speciesId,
         isShiny: penMon.isShiny,
-        event: 'adopted',
-      });
-      nextState.shiftStats = {
-        ...nextState.shiftStats,
-        revenue: nextState.shiftStats.revenue + valuation.askingPrice,
-        tipsEarned: nextState.shiftStats.tipsEarned + totalTip,
-        adoptionsCount: nextState.shiftStats.adoptionsCount + 1,
-        cozyXpEarned: nextState.shiftStats.cozyXpEarned + xpGain,
+        penIndex: customer.targetPenIndex,
+        fairValue: valuation.fairValue,
+        initialOffer: offerAmount,
+        currentOffer: offerAmount,
+        haggleAttempts: 0,
+        maxHaggleAttempts: 2,
+        patience: maxPatience,
+        maxPatience,
+        trendMatched: valuation.breakdown.trendMatched,
+        archetypeMatched: valuation.breakdown.archetypeMatched,
+        isVip,
       };
 
-      const cue: SfxCue = penMon.isShiny ? 'shiny' : 'sale';
-      sfxCues.push(cue);
+      nextState.counterQueue = [...nextState.counterQueue, counterOffer];
+      sfxCues.push('bell');
       nextState.activityLog = appendLog(
         nextState.activityLog,
         nextState.shiftNumber,
-        `${customer.name} (${CUSTOMER_ARCHETYPES[customer.archetypeId].badgeLabel}) adopted ${penMon.isShiny ? '✨ Shiny ' : ''}${spName} for ₽${valuation.askingPrice.toLocaleString()}${totalTip > 0 ? ` (+₽${totalTip} tip)` : ''}!`,
-        penMon.isShiny ? 'shiny' : 'sale',
-        `sale-${nextState.shiftTick}-${customer.uid}`,
+        `${customer.name} brought ${penMon.isShiny ? '✨ Shiny ' : ''}${species.name} to Kecleon's counter (Offering ₽${offerAmount.toLocaleString()}).`,
+        isVip ? 'shiny' : 'info',
+        `queue-${nextState.shiftTick}-${customer.uid}`,
       );
     } else {
-      // Polite, stress-free browse exit without any penalty.
       nextState.activityLog = appendLog(
         nextState.activityLog,
         nextState.shiftNumber,
-        `${customer.name} smiled at ${getSpecies(penMon.speciesId).name} and waved goodbye.`,
+        `${customer.name} smiled at ${species.name} and continued browsing.`,
         'info',
         `browse-${nextState.shiftTick}-${customer.uid}`,
       );
@@ -1039,7 +1410,7 @@ export function advanceShiftTick(state: GameState, providedRng?: RngFn): TickRes
   }
   nextState.customers = remainingCustomers;
 
-  // 4. Spawn a gentle new shopper if pens have adoptables and room exists
+  // 5. Spawn new PMD Pokémon shoppers when display pens are stocked
   const maxShoppers = 2 + Math.min(2, nextState.upgrades['cafe-decor']);
   const spawnInterval = Math.max(2, 4 - Math.floor(nextState.upgrades['cafe-decor'] / 2));
   const stockedPens = nextState.pokemon.filter((p) => p.location === 'pen' && p.penIndex !== null);
@@ -1050,34 +1421,44 @@ export function advanceShiftTick(state: GameState, providedRng?: RngFn): TickRes
     nextState.shiftTick % spawnInterval === 1
   ) {
     const targetMon = pickRandom(stockedPens, rng);
-    const archetypeRoll = rng();
-    const archetypeId: CustomerArchetypeId =
-      archetypeRoll < 0.34
-        ? 'cozy-collector'
-        : archetypeRoll < 0.66
-          ? 'bargain-browser'
-          : archetypeRoll < 0.9
-            ? 'trend-fan'
-            : 'shiny-seeker';
+    const targetSpecies = getSpecies(targetMon.speciesId);
+    const hasVipOnFloor = targetSpecies.isLegendary || targetSpecies.isMythical;
 
+    const roll = rng();
+    let archetypeId: CustomerArchetypeId;
+    if (hasVipOnFloor && roll < 0.48) {
+      archetypeId = 'vip-seeker';
+    } else if (roll < 0.3) {
+      archetypeId = 'cozy-collector';
+    } else if (roll < 0.6) {
+      archetypeId = 'bargain-browser';
+    } else if (roll < 0.84) {
+      archetypeId = 'trend-fan';
+    } else if (roll < 0.94) {
+      archetypeId = 'shiny-seeker';
+    } else {
+      archetypeId = 'vip-seeker';
+    }
+
+    const npc = pickShopperNpc(archetypeId, rng);
     const firstName = pickRandom(CUSTOMER_FIRST_NAMES[archetypeId], rng);
-    const spName = getSpecies(targetMon.speciesId).name;
+
     const newCustomer: ShopCustomer = {
       uid: `cust-${nextState.shiftNumber}-${nextState.shiftTick}-${randomInt(10, 99, rng)}`,
       archetypeId,
-      name: firstName,
+      npcSpeciesId: npc.speciesId,
+      npcPaddedId: npc.paddedId,
+      name: `${firstName} (${npc.name})`,
       targetPenIndex: targetMon.penIndex as number,
-      statusText: `Admiring ${spName}...`,
-      ticksRemaining: randomInt(3, 5, rng),
+      statusText: `Admiring ${targetSpecies.name}...`,
+      ticksRemaining: randomInt(2, 4, rng),
     };
     nextState.customers = [...nextState.customers, newCustomer];
   }
 
-  // 5. Auto-close shift peacefully at closing time
+  // 6. Shift closing time -> Settlement & Rent
   if (nextState.shiftTick >= nextState.shiftDurationTicks) {
-    nextState.shiftRunning = false;
-    nextState.customers = [];
-    nextState.lastShiftSummary = buildShiftSummary(nextState, false);
+    nextState = resolveShiftEnd(nextState, false);
   }
 
   return { state: nextState, sfxCues };

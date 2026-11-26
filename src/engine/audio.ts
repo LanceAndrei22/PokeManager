@@ -1,7 +1,7 @@
 /**
- * Zero-KB Web Audio API cozy chiptune synthesizer for PokéMart: Low Cortisol Shift.
- * Uses soft sine and triangle oscillators with gentle gain envelopes, never throwing
- * when running in headless test environments or when the active profile is muted.
+ * Zero-KB Web Audio API chiptune synthesizer for PokéMart v2.
+ * Uses soft sine and triangle oscillators with gentle envelopes, safely guarding
+ * missing AudioContext in headless test runners and honoring per-profile mute state.
  */
 import type { SfxCue } from './simulation';
 
@@ -24,7 +24,13 @@ function getAudioContext(): AudioContext | null {
 }
 
 function playToneSequence(
-  notes: Array<{ freq: number; duration: number; delay: number; type?: OscillatorType; gain?: number }>,
+  notes: Array<{
+    freq: number;
+    duration: number;
+    delay: number;
+    type?: OscillatorType;
+    gain?: number;
+  }>,
 ): void {
   const ctx = getAudioContext();
   if (!ctx) return;
@@ -48,21 +54,19 @@ function playToneSequence(
   }
 }
 
-/** Plays a soft low-cortisol sound cue unless `muted` is true. */
+/** Plays a soft Web Audio sound cue unless `muted` is true. */
 export function playSfx(cue: SfxCue, muted: boolean): void {
   if (muted) return;
 
   try {
     switch (cue) {
       case 'bell':
-        // Gentle convenience-store entry bell
         playToneSequence([
           { freq: 784, duration: 0.14, delay: 0, type: 'sine', gain: 0.05 },
           { freq: 1046.5, duration: 0.25, delay: 0.09, type: 'sine', gain: 0.05 },
         ]);
         break;
       case 'sale':
-        // Warm cash chime
         playToneSequence([
           { freq: 659.25, duration: 0.1, delay: 0, type: 'triangle', gain: 0.05 },
           { freq: 880, duration: 0.12, delay: 0.08, type: 'triangle', gain: 0.05 },
@@ -70,7 +74,6 @@ export function playSfx(cue: SfxCue, muted: boolean): void {
         ]);
         break;
       case 'evolve':
-        // Ascending gentle sparkle arpeggio
         playToneSequence([
           { freq: 523.25, duration: 0.12, delay: 0, type: 'sine', gain: 0.05 },
           { freq: 659.25, duration: 0.12, delay: 0.09, type: 'sine', gain: 0.05 },
@@ -79,7 +82,6 @@ export function playSfx(cue: SfxCue, muted: boolean): void {
         ]);
         break;
       case 'hatch':
-        // Cozy egg hatch melody
         playToneSequence([
           { freq: 587.33, duration: 0.11, delay: 0, type: 'triangle', gain: 0.05 },
           { freq: 739.99, duration: 0.11, delay: 0.1, type: 'triangle', gain: 0.05 },
@@ -87,7 +89,6 @@ export function playSfx(cue: SfxCue, muted: boolean): void {
         ]);
         break;
       case 'heal':
-        // Soft recovery lullaby chord
         playToneSequence([
           { freq: 523.25, duration: 0.15, delay: 0, type: 'sine', gain: 0.045 },
           { freq: 659.25, duration: 0.15, delay: 0.12, type: 'sine', gain: 0.045 },
@@ -95,12 +96,17 @@ export function playSfx(cue: SfxCue, muted: boolean): void {
         ]);
         break;
       case 'shiny':
-        // Bright starlight fanfare
         playToneSequence([
           { freq: 783.99, duration: 0.1, delay: 0, type: 'triangle', gain: 0.06 },
           { freq: 987.77, duration: 0.1, delay: 0.08, type: 'triangle', gain: 0.06 },
           { freq: 1174.66, duration: 0.1, delay: 0.16, type: 'triangle', gain: 0.06 },
           { freq: 1567.98, duration: 0.3, delay: 0.24, type: 'sine', gain: 0.065 },
+        ]);
+        break;
+      case 'walkout':
+        playToneSequence([
+          { freq: 440, duration: 0.12, delay: 0, type: 'triangle', gain: 0.04 },
+          { freq: 349.23, duration: 0.18, delay: 0.1, type: 'triangle', gain: 0.04 },
         ]);
         break;
       case 'click':
@@ -109,6 +115,6 @@ export function playSfx(cue: SfxCue, muted: boolean): void {
         break;
     }
   } catch {
-    // Ignore audio context issues gracefully
+    // Ignore headless or blocked AudioContext gracefully
   }
 }

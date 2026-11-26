@@ -1,24 +1,29 @@
 /**
- * Adoption Dex discovery tracking and Cozy Rank progression logic.
+ * Adoption Dex discovery tracking and 10-tier Shop Rank progression across 493 species.
  */
 import { SPECIES_CATALOG } from '../data/species';
 import type { AdoptionDexEntry } from '../data/types';
 
-export interface CozyRankTier {
+export interface ShopRankTier {
   rank: number;
   title: string;
   minXp: number;
 }
 
-export const COZY_RANK_TIERS: CozyRankTier[] = [
+export const SHOP_RANK_TIERS: ShopRankTier[] = [
   { rank: 1, title: 'Tea Kettle Trainee', minXp: 0 },
-  { rank: 2, title: 'Matcha Mart Host', minXp: 120 },
-  { rank: 3, title: 'Sinnoh Nap Warden', minXp: 320 },
-  { rank: 4, title: 'Platinum Cozy Curator', minXp: 620 },
-  { rank: 5, title: 'Grand Low-Cortisol Master', minXp: 1050 },
+  { rank: 2, title: 'Matcha Mart Clerk', minXp: 90 },
+  { rank: 3, title: 'Kecleon Apprentice', minXp: 220 },
+  { rank: 4, title: 'Sinnoh Nap Warden', minXp: 400 },
+  { rank: 5, title: 'Counter Negotiator', minXp: 640 },
+  { rank: 6, title: 'VIP Contract Broker', minXp: 950 },
+  { rank: 7, title: 'Guild Provisioner', minXp: 1350 },
+  { rank: 8, title: 'Pseudo-Legend Curator', minXp: 1850 },
+  { rank: 9, title: 'Legendary Liaison', minXp: 2500 },
+  { rank: 10, title: 'Grand Kecleon Guildmaster', minXp: 3400 },
 ];
 
-export interface CozyRankInfo {
+export interface ShopRankInfo {
   rank: number;
   title: string;
   xp: number;
@@ -28,33 +33,34 @@ export interface CozyRankInfo {
   unlockedSpeciesCount: number;
 }
 
-/** Computes current Cozy Rank, title, progress bar %, and unlocked catalog count. */
-export function getCozyRankInfo(cozyXp: number): CozyRankInfo {
-  let current = COZY_RANK_TIERS[0];
-  for (const tier of COZY_RANK_TIERS) {
-    if (cozyXp >= tier.minXp) {
+/** Computes current Shop Rank (1–10), title, progress %, and unlocked species count. */
+export function getCozyRankInfo(cozyXp: number): ShopRankInfo {
+  const safeXp = Math.max(0, cozyXp);
+  let current = SHOP_RANK_TIERS[0];
+  for (const tier of SHOP_RANK_TIERS) {
+    if (safeXp >= tier.minXp) {
       current = tier;
     }
   }
-  const nextTier = COZY_RANK_TIERS.find((tier) => tier.rank === current.rank + 1) ?? null;
+  const nextTier = SHOP_RANK_TIERS.find((tier) => tier.rank === current.rank + 1) ?? null;
   const progressPct = nextTier
     ? Math.min(
         100,
         Math.max(
           0,
-          Math.round(((cozyXp - current.minXp) / (nextTier.minXp - current.minXp)) * 100),
+          Math.round(((safeXp - current.minXp) / (nextTier.minXp - current.minXp)) * 100),
         ),
       )
     : 100;
 
   const unlockedSpeciesCount = SPECIES_CATALOG.filter(
-    (species) => species.minCozyRank <= current.rank,
+    (species) => species.unlockRank <= current.rank,
   ).length;
 
   return {
     rank: current.rank,
     title: current.title,
-    xp: cozyXp,
+    xp: safeXp,
     currentTierXp: current.minXp,
     nextRankXp: nextTier ? nextTier.minXp : null,
     progressPct,
@@ -62,10 +68,10 @@ export function getCozyRankInfo(cozyXp: number): CozyRankInfo {
   };
 }
 
-/**
- * Records a Normal/Shiny sighting and increments adopted/hatched/evolved counters
- * inside the player's Adoption Dex.
- */
+/** Alias matching v2 Shop Rank terminology. */
+export const getShopRankInfo = getCozyRankInfo;
+
+/** Records a Normal/Shiny sighting and adoption/hatch/evolution counts in the Dex. */
 export function recordDexDiscovery(
   dex: Record<number, AdoptionDexEntry>,
   speciesId: number,
@@ -107,7 +113,7 @@ export interface DexSummary {
   totalEvolved: number;
 }
 
-/** Aggregates summary counters displayed at the top of the Adoption Dex modal. */
+/** Aggregates summary counters across all 493 Gen 1–4 species. */
 export function getDexSummary(dex: Record<number, AdoptionDexEntry>): DexSummary {
   const entries = Object.values(dex);
   return {
