@@ -27,6 +27,10 @@
   --font-mono: "Consolas", "Courier New", ui-monospace, SFMono-Regular, monospace;
 }
 
+:root {
+  accent-color: var(--color-sage-600);
+}
+
 /* Crisp pixel-art scaling for Pokémon Platinum 80×80 PNGs and Gen 4 item icons */
 .pixel-art {
   image-rendering: pixelated;
@@ -45,10 +49,10 @@
   border: 2px solid var(--color-wood-300);
 }
 
-/* Native <dialog> backdrop and gentle entrance styling */
+/* Native <dialog> modal styling & scroll-chaining containment per modern-web-guidance */
 dialog.cozy-dialog {
   margin: auto;
-  max-width: min(94vw, 48rem);
+  width: min(94vw, 48rem);
   max-height: 90dvh;
   border: 2px solid var(--color-wood-700);
   border-radius: 0.75rem;
@@ -58,7 +62,99 @@ dialog.cozy-dialog {
   padding: 0;
 }
 
+dialog.cozy-dialog:modal {
+  overscroll-behavior: contain;
+}
+
 dialog.cozy-dialog::backdrop {
   background-color: rgba(45, 31, 18, 0.55);
   backdrop-filter: blur(2px);
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+/* Accessible single-row tab underline using border (not color alone) */
+.cozy-tab {
+  position: relative;
+  flex: none;
+}
+
+.cozy-tab[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  border-block-end: 3px solid var(--color-sage-600);
+}
+
+/* Native range slider styled cleanly across WebKit/Blink and Firefox */
+input[type="range"].cozy-slider {
+  --slider-track-size: 0.5rem;
+  --slider-thumb-size: 1.25rem;
+  --slider-track-radius: 999px;
+  --slider-thumb-radius: 999px;
+  --slider-track-color: var(--color-cream-200);
+  --slider-fill-color: var(--color-sage-600);
+  --slider-thumb-color: var(--color-wood-700);
+  --attr-min: 80;
+  --attr-max: 160;
+  --control-value: 100;
+  --slider-progress: calc(
+    (var(--control-value) - var(--attr-min)) / (var(--attr-max) - var(--attr-min)) * 100%
+  );
+  appearance: none;
+  inline-size: 100%;
+  block-size: 2.25rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+input[type="range"].cozy-slider::-webkit-slider-runnable-track {
+  block-size: var(--slider-track-size);
+  border: 1px solid var(--color-wood-500);
+  border-radius: var(--slider-track-radius);
+  background: linear-gradient(
+    to right,
+    var(--slider-fill-color) var(--slider-progress),
+    var(--slider-track-color) var(--slider-progress)
+  );
+}
+
+input[type="range"].cozy-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  inline-size: var(--slider-thumb-size);
+  block-size: var(--slider-thumb-size);
+  margin-block-start: calc((var(--slider-track-size) - var(--slider-thumb-size)) / 2 - 1px);
+  border: 2px solid var(--color-cream-50);
+  border-radius: var(--slider-thumb-radius);
+  background: var(--slider-thumb-color);
+}
+
+input[type="range"].cozy-slider::-moz-range-track {
+  block-size: var(--slider-track-size);
+  border: 1px solid var(--color-wood-500);
+  border-radius: var(--slider-track-radius);
+  background: var(--slider-track-color);
+}
+
+input[type="range"].cozy-slider::-moz-range-progress {
+  block-size: var(--slider-track-size);
+  border-radius: var(--slider-track-radius);
+  background: var(--slider-fill-color);
+}
+
+input[type="range"].cozy-slider::-moz-range-thumb {
+  inline-size: var(--slider-thumb-size);
+  block-size: var(--slider-thumb-size);
+  border: 2px solid var(--color-cream-50);
+  border-radius: var(--slider-thumb-radius);
+  background: var(--slider-thumb-color);
+}
+
+input[type="range"].cozy-slider:focus-visible {
+  outline: 2px solid var(--color-sage-600);
+  outline-offset: 2px;
 }
