@@ -172,29 +172,29 @@ export function computeIndoorLayout(
     h: pcH,
   };
 
-  // Sunlit center-left store window cleanly clear of the PC kiosk.
-  const windowW = Math.min(spx(148), Math.round(width * 0.14));
+  // Sunlit center-left store window seated cleanly in the upper wall above the shelf band.
+  const windowW = Math.min(spx(156), Math.round(width * 0.14));
   const windowX = Math.max(
     pcStation.x + pcStation.w + spx(24),
     Math.round(width * 0.50 - windowW / 2),
   );
   const windowRect: Rect = {
     x: windowX,
-    y: topBand + spx(12),
+    y: topBand + spx(6),
     w: windowW,
     h: spx(34),
   };
 
   // Physical oak Upgrades Notice Board mounted directly on the upper-right back wall.
   const upgradesW = Math.min(spx(124), Math.max(spx(96), door.x - (windowRect.x + windowRect.w) - spx(68)));
-  const upgradesH = spx(54);
+  const upgradesH = spx(50);
   const upgradesX = Math.min(
     door.x - upgradesW - spx(32),
     windowRect.x + windowRect.w + spx(30),
   );
   const upgradesStation: Rect = {
     x: upgradesX,
-    y: topBand + spx(10),
+    y: topBand + spx(8),
     w: upgradesW,
     h: upgradesH,
   };

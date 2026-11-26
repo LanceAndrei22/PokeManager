@@ -83,6 +83,32 @@ const POKE_BALL: PixelBitmap = ['.rrrr.', 'rrrrrr', 'kkwwkk', 'wwwwww', '.wwww.'
 const BALL_COLORS = { r: '#e04848', k: '#1c2436', w: '#f7fafc' };
 const HOVER_CARET: PixelBitmap = ['yyyyy', '.yyy.', '..y..'];
 
+/** Crisp 13×13 round Gen 4 PokéMart wall clock (transparent corners, navy/gold rim, cream dial). */
+const WALL_CLOCK_BITMAP: PixelBitmap = [
+  '....bbbbb....',
+  '..bbgggggbb..',
+  '.bgwwwwwwwgb.',
+  '.bgwwwtwwwgb.',
+  'bgwwwwhwwwwgb',
+  'bgwwwwhwwwwgb',
+  'bgwtwwcmwwtgb',
+  'bgwwwwwwmwggb',
+  'bgwwwwwwwwwgb',
+  '.bgwwwtwwwgb.',
+  '.bgwwwwwwwgb.',
+  '..bbgggggbb..',
+  '....bbbbb....',
+];
+const WALL_CLOCK_COLORS: Record<string, string> = {
+  b: '#142447',
+  g: '#e6b83a',
+  w: '#fdf9f0',
+  t: '#6e82a8',
+  h: '#1b2b4d',
+  m: '#d94638',
+  c: '#142447',
+};
+
 function seam(unit: number): number {
   return Math.max(1, Math.round(unit / 2));
 }
@@ -249,23 +275,23 @@ function drawMartWall(ctx: CanvasRenderingContext2D, layout: ShopLayout): void {
   const { wall, unit: u, width } = layout;
   const wallImg = getTileImage('indoor', 'wall-tile');
   const plantImg = getTileImage('indoor', 'plant-pot');
-  const clockImg = getTileImage('indoor', 'clock-wall');
+  const shelfBandH = Math.min(Math.max(u * 14, wall.h - u * 22), u * 21);
 
   if (wallImg) {
-    // Upper Gen 4 PokéMart royal-blue ceiling cornice + crisp light paneling + GBA wall band
+    // Upper Gen 4 PokéMart royal-blue ceiling cornice + clean light paneled upper wall
     ctx.fillStyle = '#1b3d7a';
-    ctx.fillRect(wall.x, wall.y, wall.w, Math.max(u * 4, Math.round(wall.h * 0.18)));
-    ctx.fillStyle = '#e2eaf3';
+    ctx.fillRect(wall.x, wall.y, wall.w, Math.max(u * 4, Math.round(wall.h * 0.16)));
+    ctx.fillStyle = '#e5edf6';
     ctx.fillRect(wall.x, wall.y + u * 4, wall.w, Math.max(0, wall.h - u * 4));
-    ctx.fillStyle = '#cad7e8';
+    ctx.fillStyle = '#cfdceb';
     for (let x = 0; x < width; x += u * 16) {
       ctx.fillRect(x, wall.y + u * 4, seam(u), wall.h - u * 4);
     }
+    // Lower PokéMart glass merchandise shelf band seated cleanly below the upper wall fixtures
     const tileW = u * 16;
-    const bandH = Math.min(wall.h - u * 4, u * 30);
-    const bandY = wall.h - bandH;
+    const bandY = wall.h - shelfBandH;
     for (let x = 0; x < width; x += tileW) {
-      ctx.drawImage(wallImg, x, bandY, tileW, bandH);
+      ctx.drawImage(wallImg, x, bandY, tileW, shelfBandH);
     }
   } else {
     ctx.fillStyle = '#e8dfc9';
@@ -281,29 +307,64 @@ function drawMartWall(ctx: CanvasRenderingContext2D, layout: ShopLayout): void {
   ctx.fillStyle = '#13244b';
   ctx.fillRect(0, wall.h - u * 2, width, u * 2);
 
-  // Sunlit store window with sky pane & warm highlight
+  // Recessed sunlit store window with outdoor sky, pixel cloud, distant meadow trees & sill
   const wRect = layout.window;
-  ctx.fillStyle = 'rgba(10, 20, 38, 0.2)';
-  ctx.fillRect(wRect.x + u, wRect.y + u, wRect.w, wRect.h + u);
-  ctx.fillStyle = '#1b3d7a';
+  const sillH = u * 2;
+  // Soft drop shadow beneath the window sill
+  ctx.fillStyle = 'rgba(10, 20, 38, 0.22)';
+  ctx.fillRect(wRect.x, wRect.y + wRect.h + sillH, wRect.w + u, u * 1.5);
+  // Outer navy window casing
+  ctx.fillStyle = '#162f61';
   ctx.fillRect(wRect.x, wRect.y, wRect.w, wRect.h);
-  ctx.fillStyle = '#a5dcff';
-  ctx.fillRect(wRect.x + u, wRect.y + u, wRect.w - u * 2, wRect.h - u * 2);
-  ctx.fillStyle = '#ccecff';
-  ctx.fillRect(wRect.x + u, wRect.y + u, wRect.w - u * 2, Math.round((wRect.h - u * 2) * 0.45));
+  // Sky interior (upper sunlit sky + softer horizon haze)
+  const gx = wRect.x + u * 1.5;
+  const gy = wRect.y + u * 1.5;
+  const gw = Math.max(u * 4, wRect.w - u * 3);
+  const gh = Math.max(u * 4, wRect.h - u * 3);
+  ctx.fillStyle = '#7ec8f7';
+  ctx.fillRect(gx, gy, gw, gh);
+  ctx.fillStyle = '#bfe8ff';
+  ctx.fillRect(gx, gy + Math.round(gh * 0.42), gw, Math.round(gh * 0.58));
+  // Soft drifting white pixel clouds seen outside
+  ctx.fillStyle = '#f5fbff';
+  ctx.fillRect(gx + u * 5, gy + u * 2, u * 10, u * 2);
+  ctx.fillRect(gx + u * 7, gy + u, u * 6, u);
+  ctx.fillRect(gx + Math.round(gw * 0.62), gy + u * 3, u * 9, u * 2);
+  ctx.fillRect(gx + Math.round(gw * 0.65), gy + u * 2, u * 5, u);
+  // Distant sunlit green meadow treetop horizon along bottom of window panes
+  const treeLineY = gy + gh - u * 3;
+  ctx.fillStyle = '#4e9648';
+  ctx.fillRect(gx, treeLineY, gw, u * 3);
+  ctx.fillStyle = '#3b7a37';
+  for (let tx = gx + u * 2; tx < gx + gw - u * 4; tx += u * 7) {
+    ctx.fillRect(tx, treeLineY - u, u * 4, u * 2);
+  }
+  // Subtle diagonal glass specular reflection stripes
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.42)';
+  ctx.fillRect(gx + u * 2, gy + u, u * 2, u * 4);
+  ctx.fillRect(gx + u * 4, gy + u * 3, u, u * 2);
+  ctx.fillRect(gx + Math.round(gw * 0.55), gy + u, u * 2, u * 4);
+  // Crisp window center mullion & horizontal sash bar
   ctx.fillStyle = '#1b3d7a';
   ctx.fillRect(wRect.x + Math.round(wRect.w / 2) - seam(u), wRect.y, u, wRect.h);
-  ctx.fillRect(wRect.x, wRect.y + Math.round(wRect.h / 2) - seam(u), wRect.w, u);
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(wRect.x + u * 2, wRect.y + u * 2, u * 3, u);
+  ctx.fillRect(wRect.x, wRect.y + Math.round(wRect.h * 0.56), wRect.w, u);
+  // Projecting warm cream/oak window sill ledge
+  ctx.fillStyle = '#2d1c0f';
+  ctx.fillRect(wRect.x - u, wRect.y + wRect.h - seam(u), wRect.w + u * 2, sillH + seam(u));
+  ctx.fillStyle = '#d9c29c';
+  ctx.fillRect(wRect.x - seam(u), wRect.y + wRect.h, wRect.w + u, sillH - seam(u));
 
-  // Wall clock positioned cleanly on the wall above the counter bay
-  if (clockImg) {
-    const cs = u * 11;
-    const cx = Math.round(layout.counter.x + layout.counter.w * 0.72);
-    const cy = Math.round(layout.wall.h - u * 27);
-    ctx.drawImage(clockImg, cx, cy, cs, cs);
-  }
+  // Crisp round Gen 4 PokéMart Wall Clock mounted cleanly on the upper wall above the counter
+  const clockU = Math.max(1, Math.round(u * 0.9));
+  const { w: cw, h: ch } = bitmapSize(WALL_CLOCK_BITMAP);
+  const clockDrawW = cw * clockU;
+  const clockDrawH = ch * clockU;
+  const clockX = Math.round(layout.counter.x + layout.counter.w * 0.72 - clockDrawW / 2);
+  const clockY = Math.round(wall.h - shelfBandH - clockDrawH - u * 2);
+  // Subtle wall shadow directly behind the round clock frame
+  ctx.fillStyle = 'rgba(12, 24, 48, 0.24)';
+  ctx.fillRect(clockX + u * 2, clockY + clockDrawH - u, clockDrawW - u * 3, u * 2);
+  drawBitmap(ctx, WALL_CLOCK_BITMAP, clockX, clockY, clockU, WALL_CLOCK_COLORS);
 
   // Framed oak Upgrades Notice Board mounted directly on the upper-right wall
   drawWallUpgradesBoard(ctx, layout);
