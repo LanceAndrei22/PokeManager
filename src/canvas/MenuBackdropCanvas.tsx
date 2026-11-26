@@ -46,25 +46,25 @@ interface PetalParticle {
 
 /** 12 locally bundled PMD SpriteCollab species (zero network latency, 0 404s). */
 const INITIAL_ROAMERS: Omit<RollingMeadowPokemon, 'dir' | 'state' | 'stateTimer'>[] = [
-  { speciesId: 133, x: 0.44, y: 0.34, vx: 0.020, vy: 0.005, phase: 0.2 }, // Eevee
-  { speciesId: 25, x: 0.62, y: 0.56, vx: 0.023, vy: -0.006, phase: 0.9 }, // Pikachu
-  { speciesId: 1, x: 0.24, y: 0.28, vx: 0.015, vy: 0.005, phase: 1.6 }, // Bulbasaur
-  { speciesId: 4, x: 0.74, y: 0.38, vx: -0.016, vy: 0.006, phase: 2.3 }, // Charmander
-  { speciesId: 7, x: 0.52, y: 0.78, vx: 0.018, vy: -0.004, phase: 3.1 }, // Squirtle
-  { speciesId: 393, x: 0.85, y: 0.66, vx: -0.015, vy: -0.006, phase: 3.8 }, // Piplup
-  { speciesId: 54, x: 0.34, y: 0.74, vx: 0.014, vy: 0.004, phase: 4.4 }, // Psyduck
-  { speciesId: 79, x: 0.69, y: 0.82, vx: 0.011, vy: -0.003, phase: 5.0 }, // Slowpoke
-  { speciesId: 40, x: 0.14, y: 0.48, vx: 0.017, vy: 0.005, phase: 0.6 }, // Wigglytuff
-  { speciesId: 263, x: 0.88, y: 0.32, vx: -0.021, vy: 0.007, phase: 1.9 }, // Zigzagoon
-  { speciesId: 399, x: 0.56, y: 0.26, vx: 0.014, vy: 0.006, phase: 2.7 }, // Bidoof
-  { speciesId: 417, x: 0.79, y: 0.52, vx: 0.022, vy: -0.004, phase: 4.1 }, // Pachirisu
+  { speciesId: 133, x: 0.44, y: 0.34, vx: 0.028, vy: 0.006, phase: 0.2 }, // Eevee
+  { speciesId: 25, x: 0.62, y: 0.56, vx: 0.032, vy: -0.007, phase: 0.9 }, // Pikachu
+  { speciesId: 1, x: 0.24, y: 0.28, vx: 0.022, vy: 0.006, phase: 1.6 }, // Bulbasaur
+  { speciesId: 4, x: 0.74, y: 0.38, vx: -0.022, vy: 0.007, phase: 2.3 }, // Charmander
+  { speciesId: 7, x: 0.52, y: 0.78, vx: 0.025, vy: -0.005, phase: 3.1 }, // Squirtle
+  { speciesId: 393, x: 0.85, y: 0.66, vx: -0.020, vy: -0.007, phase: 3.8 }, // Piplup
+  { speciesId: 54, x: 0.34, y: 0.74, vx: 0.020, vy: 0.005, phase: 4.4 }, // Psyduck
+  { speciesId: 79, x: 0.69, y: 0.82, vx: 0.016, vy: -0.004, phase: 5.0 }, // Slowpoke
+  { speciesId: 40, x: 0.14, y: 0.48, vx: 0.024, vy: 0.006, phase: 0.6 }, // Wigglytuff
+  { speciesId: 263, x: 0.88, y: 0.32, vx: -0.028, vy: 0.008, phase: 1.9 }, // Zigzagoon
+  { speciesId: 399, x: 0.56, y: 0.26, vx: 0.020, vy: 0.007, phase: 2.7 }, // Bidoof
+  { speciesId: 417, x: 0.79, y: 0.52, vx: 0.030, vy: -0.005, phase: 4.1 }, // Pachirisu
 ];
 
 const INITIAL_PETALS: PetalParticle[] = Array.from({ length: 18 }, (_, idx) => ({
   x: ((idx * 37) % 100) / 100,
   y: ((idx * 53) % 100) / 100,
-  vx: -(0.012 + (idx % 4) * 0.003),
-  vy: 0.010 + (idx % 3) * 0.003,
+  vx: -(0.024 + (idx % 4) * 0.005),
+  vy: 0.013 + (idx % 3) * 0.004,
   color: idx % 3 === 0 ? '#ffd84d' : idx % 2 === 0 ? '#f0a8c2' : '#fff5c4',
 }));
 
@@ -83,13 +83,24 @@ export function MenuBackdropCanvas() {
   );
   const petalsRef = useRef<PetalParticle[]>(INITIAL_PETALS.map((p) => ({ ...p })));
   const stripRef = useRef<OrganicMeadowStrip | null>(null);
-  const sizeRef = useRef<{ w: number; h: number; cssW: number; cssH: number; dpr: number; u: number }>({
+  const scaledStripRef = useRef<HTMLCanvasElement | null>(null);
+  const scrimRef = useRef<CanvasGradient | null>(null);
+  const sizeRef = useRef<{
+    w: number;
+    h: number;
+    cssW: number;
+    cssH: number;
+    dpr: number;
+    u: number;
+    resScale: number;
+  }>({
     w: 0,
     h: 0,
     cssW: 1280,
     cssH: 800,
     dpr: 1,
     u: 2,
+    resScale: 1,
   });
 
   useEffect(() => {
@@ -121,12 +132,31 @@ export function MenuBackdropCanvas() {
       }
       canvas.width = w;
       canvas.height = h;
-      sizeRef.current = { w, h, cssW, cssH, dpr, u };
+      sizeRef.current = { w, h, cssW, cssH, dpr, u, resScale };
 
-      // Build seamless periodic art-pixel strip wide enough to exceed 16:9 screens cleanly
+      // Build seamless periodic art-pixel strip and pre-scale once for fast 1:1 60/144 FPS blits
       const stripW = Math.max(640, Math.ceil(w / u) + 32);
       const stripH = Math.max(200, Math.ceil(h / u) + 2);
-      stripRef.current = buildOrganicMeadowStrip(stripW, stripH);
+      const built = buildOrganicMeadowStrip(stripW, stripH);
+      stripRef.current = built;
+
+      if (built && typeof document !== 'undefined') {
+        const scaled = document.createElement('canvas');
+        scaled.width = built.stripW * u;
+        scaled.height = built.stripH * u;
+        const sctx = scaled.getContext('2d');
+        if (sctx) {
+          sctx.imageSmoothingEnabled = false;
+          sctx.drawImage(built.canvas, 0, 0, scaled.width, scaled.height);
+          scaledStripRef.current = scaled;
+        }
+      }
+
+      const scrim = ctx.createLinearGradient(0, 0, w, 0);
+      scrim.addColorStop(0, 'rgba(8, 16, 40, 0.30)');
+      scrim.addColorStop(0.52, 'rgba(8, 16, 40, 0.12)');
+      scrim.addColorStop(1, 'rgba(8, 16, 40, 0.04)');
+      scrimRef.current = scrim;
     };
 
     resize();
@@ -135,38 +165,46 @@ export function MenuBackdropCanvas() {
     let rafId = 0;
     let last = 0;
     let elapsed = 0;
-    let scrollArtPx = 0;
+    let scrollPx = 0;
 
     const frame = (now: number) => {
       const dt = last === 0 ? 0 : Math.min(Math.max(0, (now - last) / 1000), 0.05);
       last = now;
       elapsed += dt;
 
-      const { w, h, u } = sizeRef.current;
+      const { w, h, u, resScale, dpr } = sizeRef.current;
       const strip = stripRef.current;
+      const scaledStrip = scaledStripRef.current;
 
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.imageSmoothingEnabled = false;
 
-      // Gentle pixel-snapped horizontal camera pan (~11 art-px/sec)
-      scrollArtPx += 11 * dt;
+      // Smooth 60/144 FPS pan in backing pixels (~52 px/s @ 1280x800, ~74 px/s @ 1920x1080)
+      // Steps cleanly by 1 physical pixel per frame instead of coarse multi-pixel art jumps.
+      const scrollSpeedPx = 52 * resScale * dpr;
+      scrollPx += scrollSpeedPx * dt;
 
       if (strip) {
         const drawW = strip.stripW * u;
         const drawH = strip.stripH * u;
-        const offsetArt = Math.floor(scrollArtPx) % strip.stripW;
-        const offsetPx = -offsetArt * u;
+        const scrollMod = ((Math.round(scrollPx) % drawW) + drawW) % drawW;
+        const offsetPx = -scrollMod;
 
-        // Blit two wrapping copies side-by-side: guaranteed zero seam line
-        ctx.drawImage(strip.canvas, offsetPx, 0, drawW, drawH);
-        ctx.drawImage(strip.canvas, offsetPx + drawW, 0, drawW, drawH);
+        // Blit two pre-scaled wrapping copies side-by-side at 1:1 pixel ratio (zero seam, max FPS)
+        if (scaledStrip) {
+          ctx.drawImage(scaledStrip, offsetPx, 0);
+          ctx.drawImage(scaledStrip, offsetPx + drawW, 0);
+        } else {
+          ctx.drawImage(strip.canvas, offsetPx, 0, drawW, drawH);
+          ctx.drawImage(strip.canvas, offsetPx + drawW, 0, drawW, drawH);
+        }
 
         // Queue Y-sorted organic props (tall grass clusters, boulders, edge trees) + grounded Pokémon
         const drawQueue: Array<{ y: number; draw: () => void }> = [];
         const treeImg = getTileImage('outdoor', 'tree');
 
         for (const prop of strip.props) {
-          let sx = (prop.x - offsetArt) * u;
+          let sx = Math.round(prop.x * u - scrollMod);
           if (sx < -u * 36) sx += drawW;
           if (sx > w + u * 36) continue;
           const sy = prop.y * u;
@@ -177,18 +215,18 @@ export function MenuBackdropCanvas() {
         }
 
         // Step & queue 12 grounded PMD Pokémon (Walk & Idle only — zero jumping)
-        const worldDriftNorm = (11 * u * dt) / Math.max(1, w);
+        const worldDriftNorm = (scrollSpeedPx * dt) / Math.max(1, w);
         for (const mon of pokemonRef.current) {
           mon.stateTimer -= dt;
           if (mon.stateTimer <= 0) {
             if (mon.state === 'walk') {
               mon.state = 'idle';
-              mon.stateTimer = 0.85 + (mon.phase % 0.85);
+              mon.stateTimer = 0.8 + (mon.phase % 0.75);
             } else {
               mon.state = 'walk';
               mon.stateTimer = 2.6 + (mon.phase % 1.8);
               const turnAngle = Math.sin(elapsed * 0.65 + mon.phase * 3.1) * 0.35;
-              const speed = Math.hypot(mon.vx, mon.vy) || 0.017;
+              const speed = Math.hypot(mon.vx, mon.vy) || 0.024;
               const baseAngle = Math.atan2(mon.vy, mon.vx) + turnAngle;
               mon.vx = Math.cos(baseAngle) * speed;
               mon.vy = Math.sin(baseAngle) * speed * 0.55;
@@ -200,7 +238,7 @@ export function MenuBackdropCanvas() {
             mon.y += mon.vy * dt;
             mon.dir = vectorToPmdDirection(mon.vx, mon.vy, mon.dir, 0.001);
           } else {
-            // Stay anchored naturally to the rolling ground during calm idle pauses
+            // Stay locked to the exact rolling ground spot during calm idle pauses
             mon.x -= worldDriftNorm;
           }
 
@@ -265,7 +303,7 @@ export function MenuBackdropCanvas() {
       ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
       const cloudSpan = w + u * 56;
       for (let i = 0; i < 4; i += 1) {
-        const rawX = (i * (cloudSpan / 4) - elapsed * u * 16) % cloudSpan;
+        const rawX = (i * (cloudSpan / 4) - elapsed * scrollSpeedPx * 1.35) % cloudSpan;
         const cx = Math.round(rawX < 0 ? rawX + cloudSpan : rawX) - u * 28;
         const cy = Math.round(h * (0.08 + (i % 3) * 0.15));
         ctx.fillRect(cx, cy, u * 18, u * 4);
@@ -279,13 +317,11 @@ export function MenuBackdropCanvas() {
         ctx.fillRect(Math.round(p.x * w), Math.round(p.y * h), u * 2, u);
       }
 
-      // Soft left-side contrast veil so the Royal Navy Menu Hub & gold logo stay ultra-crisp
-      const scrim = ctx.createLinearGradient(0, 0, w, 0);
-      scrim.addColorStop(0, 'rgba(8, 16, 40, 0.30)');
-      scrim.addColorStop(0.52, 'rgba(8, 16, 40, 0.12)');
-      scrim.addColorStop(1, 'rgba(8, 16, 40, 0.04)');
-      ctx.fillStyle = scrim;
-      ctx.fillRect(0, 0, w, h);
+      // Soft left-side contrast veil (cached once on resize)
+      if (scrimRef.current) {
+        ctx.fillStyle = scrimRef.current;
+        ctx.fillRect(0, 0, w, h);
+      }
 
       rafId = requestAnimationFrame(frame);
     };
