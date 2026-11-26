@@ -60,7 +60,6 @@ export function TopHudBar({
   onToggleMute,
   onReturnToMenu,
 }: TopHudBarProps) {
-  const shiftPct = Math.min(100, Math.round((shiftTick / shiftDurationTicks) * 100));
   const rentAlert = cash < totalDues;
 
   return (
@@ -71,7 +70,7 @@ export function TopHudBar({
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-1.5">
         {/* Left: Funds + Rent Due + Shift Timer & Controls */}
         <div className="pointer-events-auto flex flex-wrap items-center gap-1.5">
-          <div className="pmd-pill flex items-center gap-2 px-2.5 py-1 text-xs font-bold">
+          <div className="pmd-pill flex items-center gap-2 px-2 py-1 text-xs font-bold">
             <span className="text-[#ffd84d]" title={`${profileName} • ${difficulty.name}`}>
               ₽{cash.toLocaleString()}
             </span>
@@ -84,14 +83,14 @@ export function TopHudBar({
             </span>
           </div>
 
-          <div className="pmd-pill flex flex-wrap items-center gap-1.5 px-2.5 py-1 text-xs">
+          <div className="pmd-pill flex flex-wrap items-center gap-1.5 px-2 py-1 text-xs">
             <span className="font-bold text-[#ffd84d]">Shift #{shiftNumber}</span>
             <div className="hidden items-center gap-1.5 sm:flex">
               <progress
                 aria-label="Shift time progress"
                 max={shiftDurationTicks}
                 value={shiftTick}
-                className="h-2 w-16 accent-[#ffd84d]"
+                className="h-2 w-14 accent-[#ffd84d]"
               />
               <span className="font-mono text-[10px] text-[#cfe0ff]">
                 {shiftTick}/{shiftDurationTicks}s
@@ -147,7 +146,7 @@ export function TopHudBar({
             <button
               type="button"
               onClick={onOpenCounterQueue}
-              className="pmd-btn-gold flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold"
+              className="pmd-btn-gold flex items-center gap-1 px-2.5 py-1 text-xs font-bold"
             >
               <span>!</span>
               <span>Counter: {counterQueue.length} waiting</span>
@@ -155,7 +154,7 @@ export function TopHudBar({
           )}
 
           <div
-            className="pmd-pill hidden items-center gap-2 px-2.5 py-1 text-[11px] lg:flex"
+            className="pmd-pill hidden items-center gap-2 px-2 py-1 text-[11px] lg:flex"
             title={`${rankInfo.title} (${rankInfo.xp} XP)`}
           >
             <span className="font-bold text-[#ffd84d]">Rk.{rankInfo.rank}</span>
@@ -163,7 +162,7 @@ export function TopHudBar({
               aria-label="Shop rank progress"
               max={100}
               value={rankInfo.progressPct}
-              className="h-1.5 w-12 accent-[#6ee7a0]"
+              className="h-1.5 w-10 accent-[#6ee7a0]"
             />
             <span className="text-[#a8d0ff]">{trend.badge}</span>
           </div>
@@ -201,13 +200,6 @@ export function TopHudBar({
             </button>
           </div>
         </div>
-      </div>
-
-      {/* Ultra-slim live shift readout bar on narrow mobile widths */}
-      <div className="mt-1 flex items-center justify-center sm:hidden">
-        <span className="pmd-pill pointer-events-auto px-2 py-0.5 font-mono text-[10px] text-[#cfe0ff]">
-          {shiftPct}% • {trend.badge} • Rk.{rankInfo.rank}
-        </span>
       </div>
     </header>
   );

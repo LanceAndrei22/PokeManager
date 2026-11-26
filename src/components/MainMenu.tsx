@@ -76,8 +76,8 @@ export function MainMenu({
         <header className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
           <div className="relative">
             <h1 className="pmd-title">PokéMart: Low Cortisol Shift</h1>
-            <div className="mt-1 flex flex-wrap items-center gap-3">
-              <span className="font-[family-name:var(--font-display)] text-[11px] tracking-[0.22em] text-[#dbe8ff] uppercase">
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-6 gap-y-1.5">
+              <span className="font-[family-name:var(--font-display)] text-[11px] tracking-[0.18em] text-[#dbe8ff] uppercase">
                 GEN 4 PET SHOP &amp; COUNTER TYCOON
               </span>
               <span className="pmd-splash inline-block -rotate-2 text-xs font-bold sm:text-sm">

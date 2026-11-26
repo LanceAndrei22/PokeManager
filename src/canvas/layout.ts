@@ -70,11 +70,12 @@ export function computeIndoorLayout(
   const pad = px(isPortrait ? 10 : 18);
   const gap = px(isPortrait ? 8 : 12);
 
-  // Reserve clean top & bottom safe bands so floating HUD pills and Bottom Dock never hide stations.
-  const topBand = px(isPortrait ? 92 : 62);
-  const bottomBand = px(isPortrait ? 78 : 78);
+  // Reserve generous top & bottom bands so floating HUD pills and Bottom Dock never hide Kecleon,
+  // counter queue shoppers, or bottom stations on either Desktop (1280x800) or Mobile (390x844).
+  const topBand = px(isPortrait ? 152 : 94);
+  const bottomBand = px(isPortrait ? 80 : 78);
 
-  const wallH = topBand + px(isPortrait ? 58 : 74);
+  const wallH = topBand + px(isPortrait ? 54 : 72);
   const wall: Rect = { x: 0, y: 0, w: width, h: wallH };
 
   const doorW = px(isPortrait ? 44 : 56);

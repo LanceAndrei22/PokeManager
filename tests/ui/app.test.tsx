@@ -1,83 +1,102 @@
 /**
- * React Testing Library integration tests for PokéMart: Low Cortisol Shift UI flows:
- * profile creation, live-tick open/pause, Wholesale adoption, Inspect item usage (Berry & Stone),
- * Breeding incubator pairing, Shift Summary, Adoption Dex, and Save Export modal.
+ * React Testing Library integration tests for PokéMart: Low Cortisol Shift (v2) UI:
+ * Main Menu -> New Trainer Creator (Difficulty + Starter Mascot) -> Play Indoor Shop ->
+ * Open/Pause Shift -> Wholesale PC -> Healing -> Care Modal (Evolve & Set Mascot) ->
+ * Breeding Incubator -> Shift Settlement & Rent -> 493 Pokédex Search & Legendaries ->
+ * Save Transfer Modal.
  */
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { App } from '../../src/App';
 
-describe('PokéMart: Low Cortisol Shift UI Integration', () => {
+describe('PokéMart: Low Cortisol Shift Full-Screen PMD UI Integration', () => {
   beforeEach(() => {
     window.localStorage.clear();
   });
 
-  it('supports profile creation, wholesale purchase, open/pause, item use, breeding, summary, dex, and save export', async () => {
+  it('navigates Main Menu, trainer creation, indoor store dock, evolution/mascot, breeding, settlement, 493-Dex, and Save Transfer', async () => {
     const user = userEvent.setup();
     render(<App />);
 
-    // 1. Create a new Shift Manager profile
-    await user.click(screen.getByRole('button', { name: '+ New Profile' }));
-    await user.type(screen.getByLabelText('New profile name'), 'Dawn');
-    await user.click(screen.getByRole('button', { name: 'Save' }));
-    expect(screen.getByLabelText('Shift Manager Profile')).toHaveDisplayValue('Dawn');
+    // 1. Main Menu renders chunky title, mascot spotlight, fan notice, and New Trainer Creator
+    expect(screen.getByRole('heading', { name: /PokéMart: Low Cortisol Shift/i })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /\+ New Trainer/i }));
+    await user.type(screen.getByLabelText('Trainer Name'), 'Dawn');
+    await user.click(screen.getByRole('button', { name: /Eevee/i }));
+    await user.click(screen.getByRole('button', { name: /Relaxed/i }));
+    await user.click(screen.getByRole('button', { name: /Create Trainer & Save/i }));
 
-    // 2. Toggle Open Shop / Pause
+    expect(screen.getByLabelText('Shift Manager Profile')).toHaveDisplayValue(/Dawn/i);
+
+    // 2. Click PLAY tile to enter full-screen Indoor PokéMart canvas
+    await user.click(screen.getByRole('button', { name: /PLAY/i }));
+    expect(screen.getByTestId('shop-floor-canvas')).toBeInTheDocument();
+
+    // 3. Toggle Open Shop / Pause Shift in Floating Top HUD Bar
     await user.click(screen.getByRole('button', { name: 'Open Shop' }));
     expect(screen.getByRole('button', { name: 'Pause Shift' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Pause Shift' }));
     expect(screen.getByRole('button', { name: 'Open Shop' })).toBeInTheDocument();
 
-    // 3. Buy an item / adopt from Wholesale & Supplies
-    await user.click(screen.getByRole('tab', { name: 'Wholesale & Supplies' }));
-    const wholesaleButtons = screen.getAllByRole('button', { name: /^(Welcome|Rescue|Incubate)$/ });
-    expect(wholesaleButtons.length).toBeGreaterThan(0);
-    await user.click(wholesaleButtons[0]);
+    // 4. Open Wholesale PC from Bottom DS Action Dock & welcome first offer
+    await user.click(screen.getByRole('button', { name: /Wholesale/i }));
+    const wholesaleDialog = screen.getByRole('dialog');
+    const buyButtons = within(wholesaleDialog).getAllByRole('button', {
+      name: /^(Welcome|Rescue|Incubate)$/,
+    });
+    expect(buyButtons.length).toBeGreaterThan(0);
+    await user.click(buyButtons[0]);
+    await user.click(within(wholesaleDialog).getByRole('button', { name: 'Close' }));
 
-    // 4. Heal starter Psyduck in Nap Station using Moomoo Milk (auto-promotes Psyduck out of Nap Bed!)
-    await user.click(screen.getByRole('tab', { name: /Nap Station/ }));
-    const milkBtn = screen.getByRole('button', { name: /Moomoo Milk/i });
-    await user.click(milkBtn);
-    expect(screen.getByText(/All plush nap beds are empty/i)).toBeInTheDocument();
+    // 5. Open Healing Corner & heal napping Psyduck using Moomoo Milk
+    await user.click(screen.getByRole('button', { name: /Healing/i }));
+    const healDialog = screen.getByRole('dialog');
+    await user.click(within(healDialog).getByRole('button', { name: /Moomoo Milk/i }));
+    expect(within(healDialog).getByText(/All plush nap beds are empty/i)).toBeInTheDocument();
+    await user.click(within(healDialog).getByRole('button', { name: 'Close' }));
 
-    // 5. Evolve starter Eevee into Vaporeon using Water Stone in Inspect Modal
-    await user.click(screen.getByRole('tab', { name: /Display Pens/ }));
-    const eeveeInspectBtn = screen.getAllByRole('button', { name: 'Inspect' })[0];
-    await user.click(eeveeInspectBtn);
+    // 6. Open Pens -> Inspect Pen #1 Eevee -> Promote Slowpoke as Shop Mascot or Evolve Eevee -> Vaporeon
+    await user.click(screen.getByRole('button', { name: /^Pens/i }));
+    const pensDialog = screen.getByRole('dialog');
+    const inspectBtns = within(pensDialog).getAllByRole('button', { name: 'Inspect' });
+    await user.click(inspectBtns[0]);
 
-    const dialog = screen.getByRole('dialog');
-    expect(within(dialog).getByRole('heading', { name: /Eevee/i })).toBeInTheDocument();
-    await user.click(within(dialog).getByRole('button', { name: 'Evolve' }));
-    expect(within(dialog).getByRole('heading', { name: /Vaporeon/i })).toBeInTheDocument();
-    await user.click(within(dialog).getByRole('button', { name: 'Close' }));
+    const careDialog = screen.getByRole('dialog');
+    expect(within(careDialog).getByRole('heading', { name: /Eevee/i })).toBeInTheDocument();
+    await user.click(within(careDialog).getByRole('button', { name: 'Evolve' }));
+    expect(within(careDialog).getByRole('heading', { name: /Vaporeon/i })).toBeInTheDocument();
+    await user.click(within(careDialog).getByRole('button', { name: 'Close' }));
 
-    // 6. Pair rested Vaporeon (Field) & healed Psyduck (Water/Field) in Breeding Incubator
-    await user.click(screen.getByRole('tab', { name: /Incubator/ }));
-    const startBreedBtn = screen.getByRole('button', { name: /Start Incubation/i });
-    expect(startBreedBtn).toBeEnabled();
-    await user.click(startBreedBtn);
-    expect(screen.getByText(/Warming Egg/i)).toBeInTheDocument();
+    // 7. Open Breeding -> pair Vaporeon & healed Psyduck -> Start Incubation
+    await user.click(screen.getByRole('button', { name: /Breeding/i }));
+    const breedDialog = screen.getByRole('dialog');
+    await user.click(within(breedDialog).getByRole('button', { name: /Start Incubation/i }));
+    expect(within(breedDialog).getByText(/Warming Egg/i)).toBeInTheDocument();
+    await user.click(within(breedDialog).getByRole('button', { name: 'Close' }));
 
-    // 7. Close Shift & Rest -> review Shift Summary -> Start Next Shift
-    await user.click(screen.getByRole('button', { name: /Close Shift & Rest/i }));
+    // 8. Close Shift -> verify Rent & Upkeep Settlement modal -> advance to Shift #2
+    await user.click(screen.getByRole('button', { name: 'Close Shift' }));
     const summaryDialog = screen.getByRole('dialog');
     expect(within(summaryDialog).getByText(/Shift #1 Complete/i)).toBeInTheDocument();
+    expect(within(summaryDialog).getByText(/Daily Rent/i)).toBeInTheDocument();
     await user.click(within(summaryDialog).getByRole('button', { name: /Start Next Shift \(#2\)/i }));
     expect(screen.getByText('Shift #2')).toBeInTheDocument();
 
-    // 8. Open Adoption Dex Modal
-    await user.click(screen.getByRole('button', { name: /Dex \(/ }));
+    // 9. Open 493-Species Pokédex -> search for #493 Arceus & Legendaries filter
+    await user.click(screen.getByRole('button', { name: /Pokédex/i }));
     const dexDialog = screen.getByRole('dialog');
-    expect(within(dexDialog).getByText(/Adoption Dex/i)).toBeInTheDocument();
-    expect(within(dexDialog).getByText('Vaporeon')).toBeInTheDocument();
+    await user.click(within(dexDialog).getByRole('tab', { name: /Legendaries & Mythicals/i }));
+    await user.type(within(dexDialog).getByLabelText('Search Pokédex'), 'Arceus');
+    expect(within(dexDialog).getByText('Arceus')).toBeInTheDocument();
     await user.click(within(dexDialog).getByRole('button', { name: 'Close' }));
 
-    // 9. Open Save / Profiles Modal and confirm Base64 export code exists
-    await user.click(screen.getByRole('button', { name: 'Save / Profiles' }));
+    // 10. Return to Main Menu -> Verify Save / Profiles Base64 Export Code
+    await user.click(screen.getByRole('button', { name: 'Menu' }));
+    await user.click(screen.getByRole('button', { name: /Save \/ Profiles/i }));
     const saveDialog = screen.getByRole('dialog');
     const exportBox = within(saveDialog).getByLabelText('Export Save Code') as HTMLTextAreaElement;
     expect(exportBox.value.length).toBeGreaterThan(20);
     await user.click(within(saveDialog).getByRole('button', { name: 'Close' }));
-  });
+  }, 15000);
 });

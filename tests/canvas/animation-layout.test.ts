@@ -1,6 +1,6 @@
 /**
- * Unit tests for Phase 5 canvas layout geometry, sprite animation math,
- * and procedural pixel particle simulation.
+ * Unit tests for Checkpoint 2 indoor shop layout geometry (desktop landscape + mobile portrait),
+ * sprite animation math, and procedural pixel particle simulation (including sweat drops).
  */
 import { describe, expect, it } from 'vitest';
 import {
@@ -16,8 +16,10 @@ import {
   SPRITE_SOURCE_SIZE,
   buildEntryRoute,
   clampDpr,
+  computeIndoorLayout,
   computeShopLayout,
   getBedAnchor,
+  getCounterQueueSpot,
   getPenColumns,
   getPenWanderBounds,
   pathLength,
@@ -30,12 +32,13 @@ import {
   spawnCoin,
   spawnHearts,
   spawnSparkles,
+  spawnSweatDrop,
   spawnZzz,
   updateParticles,
 } from '../../src/canvas/particles';
 import { createSeededRng } from '../../src/engine/rng';
 
-describe('Canvas Shop Floor Layout & Geometry', () => {
+describe('Canvas Shop Floor & Full-Viewport Indoor Geometry', () => {
   it('clamps DPR to [1, 3] and switches pen columns at the mobile breakpoint', () => {
     expect(clampDpr(0)).toBe(1);
     expect(clampDpr(Number.NaN)).toBe(1);
@@ -47,7 +50,7 @@ describe('Canvas Shop Floor Layout & Geometry', () => {
     expect(getPenColumns(1000, 2)).toBe(2);
   });
 
-  it('computes integer Platinum sprite scaling and valid pen/bed/walkway bounds', () => {
+  it('computes integer sprite scaling and valid pen/bed/walkway/station bounds', () => {
     const desktopLayout = computeShopLayout(900, 4, 2, 2);
     expect(desktopLayout.dpr).toBe(2);
     expect(desktopLayout.width).toBe(1800);
@@ -72,6 +75,25 @@ describe('Canvas Shop Floor Layout & Geometry', () => {
     expect(len).toBeGreaterThan(0);
     expect(pointAlongPath(route, len, 0)).toEqual(desktopLayout.doorSpot);
     expect(pointAlongPath(route, len, 1)).toEqual({ x: 200, y: 260 });
+  });
+
+  it('builds full-viewport indoor layouts cleanly for desktop (1280x800) and mobile (390x844)', () => {
+    const desktop = computeIndoorLayout(1280, 800, 5, 2, 2);
+    expect(desktop.isPortrait).toBe(false);
+    expect(desktop.counterQueueSpots).toHaveLength(4);
+    expect(desktop.pens).toHaveLength(5);
+    expect(desktop.pcStation.x).toBeGreaterThan(desktop.incubatorStation.x);
+    expect(desktop.upgradesStation.x).toBeGreaterThan(desktop.pcStation.x);
+    expect(desktop.upgradesStation.x + desktop.upgradesStation.w).toBeLessThanOrEqual(desktop.width);
+    expect(getCounterQueueSpot(desktop, 1)).toEqual(desktop.counterQueueSpots[1]);
+
+    const mobile = computeIndoorLayout(390, 844, 6, 2, 2);
+    expect(mobile.isPortrait).toBe(true);
+    expect(mobile.pens).toHaveLength(6);
+    expect(mobile.pcStation.y).toBe(mobile.incubatorStation.y);
+    expect(mobile.incubatorStation.y).toBe(mobile.upgradesStation.y);
+    expect(mobile.pcStation.y + mobile.pcStation.h).toBeLessThan(mobile.height);
+    expect(mobile.pens[5].y + mobile.pens[5].h).toBeLessThanOrEqual(mobile.napArea.y);
   });
 });
 
@@ -101,11 +123,8 @@ describe('Sprite Animation Math', () => {
   });
 
   it('handles horizontal facing flips and 2-frame walk cadence', () => {
-    // Positive dx (moving right) flips left-facing Platinum art via -1
     expect(facingForDelta(8, 1)).toBe(-1);
-    // Negative dx (moving left) keeps native 1
     expect(facingForDelta(-8, -1)).toBe(1);
-    // Tiny delta within threshold preserves existing facing
     expect(facingForDelta(0.2, -1, 0.5)).toBe(-1);
 
     expect(walkFrame(0, 8)).toBe(0);
@@ -115,36 +134,35 @@ describe('Sprite Animation Math', () => {
 });
 
 describe('Procedural Pixel Particles', () => {
-  it('spawns, integrates, fades, prunes, and caps particle counts', () => {
+  it('spawns, integrates, fades, prunes, and caps particle counts including sweat drops', () => {
     const rng = createSeededRng(77);
     const hearts = spawnHearts(100, 120, 2, rng, 3);
     const sparkles = spawnSparkles(100, 120, 18, 2, rng, 4);
     const zzz = spawnZzz(100, 120, 2, rng);
+    const sweat = spawnSweatDrop(100, 120, 2, rng);
     const coin = spawnCoin(100, 120, 2, '+₽950');
 
     expect(hearts).toHaveLength(3);
     expect(sparkles).toHaveLength(4);
     expect(zzz.kind).toBe('zzz');
+    expect(sweat.kind).toBe('sweat');
     expect(coin.label).toBe('+₽950');
 
-    let pool = addParticles([], [...hearts, ...sparkles, zzz, coin]);
-    expect(pool).toHaveLength(9);
+    let pool = addParticles([], [...hearts, ...sparkles, zzz, sweat, coin]);
+    expect(pool).toHaveLength(10);
 
-    // Mid-life opacity is 1, near-zero age fades in, tail fades out
     const startAlpha = particleAlpha(coin);
     expect(startAlpha).toBe(0);
 
     pool = updateParticles(pool, 0.4);
     const updatedCoin = pool.find((p) => p.kind === 'coin')!;
     expect(updatedCoin.y).toBeLessThan(120);
-    expect(Math.abs(updatedCoin.vy)).toBeLessThan(2 * 26); // Decelerates exponentially
+    expect(Math.abs(updatedCoin.vy)).toBeLessThan(2 * 26);
     expect(particleAlpha(updatedCoin)).toBe(1);
 
-    // Advancing past max lifetime clears all particles
     pool = updateParticles(pool, 3.0);
     expect(pool).toHaveLength(0);
 
-    // Hard cap enforces MAX_PARTICLES
     const burst = Array.from({ length: MAX_PARTICLES + 30 }, (_, idx) =>
       spawnCoin(10, 10, 2, `+₽${idx}`),
     );

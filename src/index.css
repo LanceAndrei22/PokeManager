@@ -1,38 +1,5 @@
 @import "tailwindcss";
 
-/* Self-hosted SIL OFL pixel fonts for offline crisp DS / PMD typography */
-@font-face {
-  font-family: "Pixelify Sans";
-  src: url("./assets/fonts/pixelify-sans-400.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Pixelify Sans";
-  src: url("./assets/fonts/pixelify-sans-700.woff2") format("woff2");
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Silkscreen";
-  src: url("./assets/fonts/silkscreen-400.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Silkscreen";
-  src: url("./assets/fonts/silkscreen-700.woff2") format("woff2");
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-
 @theme {
   /* PMD Mystery Dungeon DS Royal Navy & Gold palette */
   --color-pmd-navy-950: #0c1733;
@@ -384,3 +351,22 @@ input[type="range"].pmd-slider:focus-visible {
 .pmd-float-bob {
   animation: pmdFloatBob 2.2s steps(4, end) infinite;
 }
+
+/* Slim dark-themed dock scroller on narrow phones */
+.pmd-scroll-strip {
+  scrollbar-width: thin;
+  scrollbar-color: #78a8f0 #0c1733;
+}
+
+.pmd-scroll-strip::-webkit-scrollbar {
+  height: 5px;
+}
+
+.pmd-scroll-strip::-webkit-scrollbar-track {
+  background: #0c1733;
+}
+
+.pmd-scroll-strip::-webkit-scrollbar-thumb {
+  background: #4e78bd;
+}
+

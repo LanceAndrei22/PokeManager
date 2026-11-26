@@ -75,7 +75,7 @@ export function BottomActionDock({
       aria-label="Shop Action Dock"
       className="safe-bottom-dock pointer-events-none fixed inset-x-0 bottom-0 z-20 flex justify-center"
     >
-      <div className="pmd-panel pointer-events-auto flex max-w-full items-center gap-1.5 overflow-x-auto px-2 py-1.5">
+      <div className="pmd-panel pmd-scroll-strip pointer-events-auto flex max-w-full items-center gap-1.5 overflow-x-auto px-2 py-1.5">
         {buttons.map((btn) => {
           const isOpen = activeModal === btn.id;
           return (

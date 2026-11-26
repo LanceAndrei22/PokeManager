@@ -97,7 +97,7 @@ function computeFrameDrawSize(
   if (!frame.usesDirectionRow) {
     return { drawW: layout.spriteSize, drawH: layout.spriteSize };
   }
-  const maxAllowed = layout.spriteSize * 1.25;
+  const maxAllowed = layout.spriteSize * 1.75;
   const scale =
     maxDim * layout.unit <= maxAllowed
       ? layout.unit
