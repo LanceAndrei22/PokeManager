@@ -6,6 +6,7 @@
  * per-profile isolated localStorage auto-saves, and Web Audio cozy SFX.
  */
 import { useEffect, useState } from 'react';
+import { preloadPmdPokemon } from './canvas/pmdLoader';
 import { ShopCanvas } from './canvas/ShopCanvas';
 import type { CanvasHitTarget } from './canvas/types';
 import { getDifficultyConfig } from './data/difficulties';
@@ -114,6 +115,12 @@ export function App() {
 
   // Unlock cross-browser Web Audio cleanly on first pointer/key gesture
   useEffect(() => initAudioUnlockListeners(), []);
+
+  // Eagerly preload owned Pokémon PMD sprites in parallel (even while on Main Menu)
+  // so entering the store displays sprites immediately without placeholder flicker.
+  useEffect(() => {
+    preloadPmdPokemon(game.pokemon);
+  }, [game.pokemon]);
 
   // Keep SFX and BGM engines synchronized with active profile audio preferences
   useEffect(() => {

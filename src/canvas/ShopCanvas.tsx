@@ -20,7 +20,7 @@ import type {
 import { computeIndoorLayout } from './layout';
 import { preloadAllHumanNpcs } from './humanNpcAnimator';
 import { buildIndoorBackgroundLayer, renderIndoorScene } from './indoorRenderer';
-import { createPmdSpriteAdapter } from './pmdLoader';
+import { getSharedPmdSpriteAdapter } from './pmdLoader';
 import { onTilesetUpdate, preloadTilesets } from './tilesetLoader';
 import type { CanvasHitTarget, ShopLayout } from './types';
 import {
@@ -98,7 +98,7 @@ export function ShopCanvas({
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [world] = useState(createWorld);
-  const [adapter] = useState(createPmdSpriteAdapter);
+  const [adapter] = useState(getSharedPmdSpriteAdapter);
   const layoutRef = useRef<ShopLayout | null>(null);
   const backgroundRef = useRef<HTMLCanvasElement | null>(null);
   const runningRef = useRef(shiftRunning);

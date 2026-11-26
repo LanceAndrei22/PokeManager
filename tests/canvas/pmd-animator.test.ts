@@ -14,6 +14,8 @@ import {
   getPmdAnimXmlUrl,
   getPmdPortraitUrl,
   getPmdSheetUrl,
+  getSharedPmdSpriteAdapter,
+  preloadPmdPokemon,
   resolvePmdSheetSpec,
 } from '../../src/canvas/pmdLoader';
 
@@ -119,5 +121,18 @@ describe('Hybrid PMD SpriteCollab Loader & Zero-404 URLs', () => {
     const spec = resolvePmdSheetSpec(493, true, 'walk');
     expect(spec.useShinyFolder).toBe(true);
     expect(spec.animKey).toBe('Walk');
+  });
+
+  it('reuses a single shared PMD sprite adapter across screens and supports eager preloading', () => {
+    const a = getSharedPmdSpriteAdapter();
+    const b = getSharedPmdSpriteAdapter();
+    expect(a).toBe(b);
+    expect(() =>
+      preloadPmdPokemon([
+        { speciesId: 133, isShiny: false },
+        { speciesId: 133, isShiny: false },
+        { speciesId: 25, isShiny: true },
+      ]),
+    ).not.toThrow();
   });
 });

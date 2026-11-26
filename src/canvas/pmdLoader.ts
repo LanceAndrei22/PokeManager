@@ -209,11 +209,13 @@ const FALLBACK_IDLE_ANIM: PmdAnimDefinition = {
 
 /**
  * Creates a cached, non-blocking PMD `SpriteEntityAdapter` for the HTML5 Canvas.
- * Requests `AnimData.xml` + spritesheets once per URL, caches parsed XML and decoded
- * `HTMLImageElement` objects in memory + Cache API, and returns `null` while loading
- * so the renderer never blocks or throws.
+ * Requests `AnimData.xml` + spritesheets **in parallel** once per URL, caches parsed XML
+ * and decoded `HTMLImageElement` objects in memory + Cache API, and falls back to the
+ * species portrait if a remote sheet ever fails to load (e.g. strict firewall/VPN).
  */
-export function createPmdSpriteAdapter(): SpriteEntityAdapter {
+export function createPmdSpriteAdapter(): SpriteEntityAdapter & {
+  preloadSpecies: (speciesId: number, isShiny?: boolean) => void;
+} {
   const animDataCache = new Map<number, ParsedAnimData>();
   const animLoading = new Set<number>();
   const sheetCache = new Map<string, HTMLImageElement>();
@@ -257,7 +259,24 @@ export function createPmdSpriteAdapter(): SpriteEntityAdapter {
     return img;
   };
 
+  /** Eagerly fetches `AnimData.xml` and primary grounded sheets in parallel. */
+  const preloadSpecies = (speciesId: number, isShiny = false): void => {
+    ensureAnimData(speciesId);
+    const states: PokemonAnimState[] = ['idle', 'walk', 'sleep'];
+    const queuedUrls = new Set<string>();
+    for (const st of states) {
+      const { animKey, useShinyFolder } = resolvePmdSheetSpec(speciesId, isShiny, st);
+      const url = getPmdSheetUrl(speciesId, animKey, useShinyFolder);
+      if (!queuedUrls.has(url)) {
+        queuedUrls.add(url);
+        ensureSheetImage(url);
+      }
+    }
+  };
+
   return {
+    preloadSpecies,
+
     getFrame(
       speciesId: number,
       isShiny: boolean,
@@ -265,11 +284,16 @@ export function createPmdSpriteAdapter(): SpriteEntityAdapter {
       timeSec: number,
       direction: PmdDirection = 0,
     ): SpriteFrame | null {
+      // Kick off AnimData.xml AND the expected spritesheet PNG in parallel so cold loads
+      // never pay two sequential network round-trips.
       ensureAnimData(speciesId);
+      const { animKey, useShinyFolder } = resolvePmdSheetSpec(speciesId, isShiny, state);
+      const predictedUrl = getPmdSheetUrl(speciesId, animKey, useShinyFolder);
+      ensureSheetImage(predictedUrl);
+
       const parsed = animDataCache.get(speciesId);
       if (!parsed) return null;
 
-      const { animKey, useShinyFolder } = resolvePmdSheetSpec(speciesId, isShiny, state);
       const animDef =
         parsed.anims[animKey] ??
         parsed.anims.Idle ??
@@ -278,7 +302,28 @@ export function createPmdSpriteAdapter(): SpriteEntityAdapter {
 
       const sheetUrl = getPmdSheetUrl(speciesId, animDef.sourceAnim, useShinyFolder);
       const img = ensureSheetImage(sheetUrl);
-      if (!img) return null;
+      if (!img) {
+        // If the remote spritesheet failed to load, gracefully fall back to the species portrait
+        if (failedUrls.has(sheetUrl)) {
+          const portraitUrl = getPmdPortraitUrl(speciesId, isShiny);
+          const portraitImg = ensureSheetImage(portraitUrl);
+          if (portraitImg) {
+            return {
+              image: portraitImg,
+              sx: 0,
+              sy: 0,
+              sw: portraitImg.naturalWidth,
+              sh: portraitImg.naturalHeight,
+              bottomPadPx: 2,
+              visibleWidthPx: portraitImg.naturalWidth,
+              visibleHeightPx: portraitImg.naturalHeight,
+              usesDirectionRow: false,
+              facesLeft: true,
+            };
+          }
+        }
+        return null;
+      }
 
       const slice = computePmdFrameRect(
         animDef,
@@ -309,4 +354,35 @@ export function createPmdSpriteAdapter(): SpriteEntityAdapter {
       };
     },
   };
+}
+
+let sharedAdapter: (SpriteEntityAdapter & {
+  preloadSpecies: (speciesId: number, isShiny?: boolean) => void;
+}) | null = null;
+
+/**
+ * Returns a persistent module-level PMD sprite adapter shared across Main Menu and
+ * Indoor Shop canvases so decoded sprites never reset or flicker across screen switches.
+ */
+export function getSharedPmdSpriteAdapter(): SpriteEntityAdapter & {
+  preloadSpecies: (speciesId: number, isShiny?: boolean) => void;
+} {
+  if (!sharedAdapter) {
+    sharedAdapter = createPmdSpriteAdapter();
+  }
+  return sharedAdapter;
+}
+
+/** Eagerly preloads PMD XML and grounded sheets in parallel for a list of owned Pokémon. */
+export function preloadPmdPokemon(
+  list: ReadonlyArray<{ speciesId: number; isShiny?: boolean }>,
+): void {
+  const adapter = getSharedPmdSpriteAdapter();
+  const seen = new Set<string>();
+  for (const item of list) {
+    const key = `${item.speciesId}:${item.isShiny ? 1 : 0}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    adapter.preloadSpecies(item.speciesId, Boolean(item.isShiny));
+  }
 }

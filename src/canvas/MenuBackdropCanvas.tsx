@@ -18,7 +18,7 @@ import {
 } from './organicTerrain';
 import { drawPixelShadow } from './pixelArt';
 import { vectorToPmdDirection } from './pmdAnimator';
-import { createPmdSpriteAdapter } from './pmdLoader';
+import { getSharedPmdSpriteAdapter } from './pmdLoader';
 import { getTileImage, preloadTilesets } from './tilesetLoader';
 import type { PmdDirection, PokemonAnimState } from './types';
 
@@ -71,7 +71,7 @@ const INITIAL_PETALS: PetalParticle[] = Array.from({ length: 18 }, (_, idx) => (
 /** Animated full-viewport seamless rolling organic meadow behind the Main Menu. */
 export function MenuBackdropCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [adapter] = useState(createPmdSpriteAdapter);
+  const [adapter] = useState(getSharedPmdSpriteAdapter);
 
   const pokemonRef = useRef<RollingMeadowPokemon[]>(
     INITIAL_ROAMERS.map((e) => ({

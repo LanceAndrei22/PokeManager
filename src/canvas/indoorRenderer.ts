@@ -1429,9 +1429,19 @@ function drawPokemon(
       drawH,
     );
   } else {
-    ctx.scale(ent.facing * pose.scaleX, pose.scaleY);
-    ctx.fillStyle = PALETTE.creamDeep;
-    fillPixelRoundRect(ctx, -u * 4, -u * 8, u * 8, u * 8, u);
+    // Crisp pixel Poké Ball placeholder with gentle wobble while a remote sheet decodes
+    const still = world.reducedMotion || world.motionPaused;
+    const wobble = still ? 0 : Math.round(Math.sin(world.time * 6 + ent.phase) * seam(u));
+    const ballU = Math.max(2, Math.round(u * 1.4));
+    const { w: bw, h: bh } = bitmapSize(POKE_BALL);
+    drawBitmap(
+      ctx,
+      POKE_BALL,
+      Math.round(-(bw * ballU) / 2 + wobble),
+      Math.round(-bh * ballU),
+      ballU,
+      BALL_COLORS,
+    );
   }
   ctx.restore();
 
