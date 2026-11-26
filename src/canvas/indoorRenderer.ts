@@ -217,7 +217,7 @@ function drawWallUpgradesBoard(ctx: CanvasRenderingContext2D, layout: ShopLayout
   const tagW = Math.min(b.w - u * 4, Math.ceil(ctx.measureText(label).width) + u * 4);
   const tagH = Math.max(u * 4.5, 10);
   const tagX = Math.round(b.x + (b.w - tagW) / 2);
-  const tagY = Math.round(b.y + b.h - tagH + seam(u));
+  const tagY = Math.round(b.y + b.h - tagH - seam(u));
   ctx.fillStyle = '#13244b';
   ctx.fillRect(tagX, tagY, tagW, tagH);
   ctx.strokeStyle = '#ffd84d';
@@ -285,8 +285,8 @@ function drawMartWall(ctx: CanvasRenderingContext2D, layout: ShopLayout): void {
   // Wall clock positioned cleanly on the wall above the counter bay
   if (clockImg) {
     const cs = u * 11;
-    const cx = Math.round(layout.counter.x + layout.counter.w * 0.78);
-    const cy = Math.max(u * 6, layout.window.y + u * 2);
+    const cx = Math.round(layout.counter.x + layout.counter.w * 0.72);
+    const cy = Math.round(layout.wall.h - u * 27);
     ctx.drawImage(clockImg, cx, cy, cs, cs);
   }
 
@@ -983,8 +983,8 @@ function drawClerk(
 ): void {
   const u = layout.unit;
   const cx = Math.round(layout.counter.x + layout.counter.w * 0.44);
-  // Place Clerk Leo's feet behind the counter's front desk so torso & head stand cleanly above
-  const cy = Math.round(layout.counter.y + u * 11);
+  // Stand Clerk Leo behind the oak desk so head, face & shoulders show clearly while legs stay occluded
+  const cy = Math.round(layout.counter.y + u * 5);
 
   drawPixelShadow(ctx, cx, cy, getHumanSpriteScale(layout) * 10, u, 0.24);
   const drawnH = drawHumanSprite(ctx, 'mart_employee', 'down', false, 0, cx, cy, layout);
