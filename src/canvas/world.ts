@@ -213,7 +213,7 @@ export function buildFloorSnapshot(
     })),
     counterQueue: counterQueue.map((q) => ({
       uid: q.uid,
-      npcSpeciesId: q.npcSpeciesId,
+      npcSpeciesId: q.npcSpeciesId ?? 40,
       customerName: q.customerName,
       archetypeId: q.archetypeId,
       patience: q.patience,

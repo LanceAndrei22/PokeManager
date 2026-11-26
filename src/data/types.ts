@@ -208,8 +208,9 @@ export interface PokemonInstance {
   origin: 'starter' | 'wholesale' | 'rescue' | 'hatched' | 'evolved' | 'vip-contract';
 }
 
-/** Five shop visitor archetypes including high-roller VIP Seekers. */
+/** Six shop visitor archetypes including everyday Normal Shoppers and high-roller VIP Seekers. */
 export type CustomerArchetypeId =
+  | 'normal'
   | 'cozy-collector'
   | 'bargain-browser'
   | 'trend-fan'
@@ -232,25 +233,33 @@ export interface CustomerArchetype {
   haggleEase: number;
 }
 
-/** Active customer browsing a shop display pen before heading to Kecleon's counter. */
+/** Active customer browsing a shop display pen before heading to the PokéMart counter. */
 export interface ShopCustomer {
   uid: string;
   archetypeId: CustomerArchetypeId;
-  npcSpeciesId: number;
-  npcPaddedId: string;
+  /** Human Trainer overworld NPC ID (`public/assets/npcs/overworld/{npcId}.png`). */
+  npcId: string;
+  /** Human Trainer pixel portrait URL (`public/assets/npcs/portraits/...`). */
+  npcPortraitUrl: string;
+  /** Deprecated v2.0 Pokémon NPC ID kept optional solely for legacy save migration. */
+  npcSpeciesId?: number;
+  npcPaddedId?: string;
   name: string;
   targetPenIndex: number;
   statusText: string;
   ticksRemaining: number;
 }
 
-/** Live-clock customer queued at Kecleon's register awaiting Accept, Haggle, or Decline. */
+/** Live-clock customer queued at the PokéMart register awaiting Accept, Haggle, or Decline. */
 export interface CounterOffer {
   uid: string;
   customerUid: string;
   archetypeId: CustomerArchetypeId;
-  npcSpeciesId: number;
-  npcPaddedId: string;
+  npcId: string;
+  npcPortraitUrl: string;
+  /** Deprecated v2.0 Pokémon NPC ID kept optional solely for legacy save migration. */
+  npcSpeciesId?: number;
+  npcPaddedId?: string;
   customerName: string;
   pokemonUid: string;
   speciesId: number;
@@ -383,7 +392,14 @@ export interface GameState {
   profileId: string;
   profileName: string;
   difficulty: DifficultyId;
+  /** Per-profile SFX mute flag (kept as `muted` for v2 compatibility). */
   muted: boolean;
+  /** Per-profile BGM mute flag. */
+  bgmMuted?: boolean;
+  /** Per-profile SFX master gain (0..1, defaults to 0.65). */
+  sfxVolume?: number;
+  /** Per-profile BGM master gain (0..1, defaults to 0.35). */
+  bgmVolume?: number;
   cash: number;
   shiftNumber: number;
   shiftTick: number;

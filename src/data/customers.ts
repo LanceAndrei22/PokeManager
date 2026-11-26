@@ -1,10 +1,23 @@
 /**
- * Five shop visitor archetypes governing pen appraisal, patience at Kecleon's
- * counter, and push-your-luck haggle tolerance.
+ * Six shop visitor archetypes governing pen appraisal, counter patience,
+ * push-your-luck haggle tolerance, and Legendary exclusion rules.
  */
 import type { CustomerArchetype, CustomerArchetypeId } from './types';
 
 export const CUSTOMER_ARCHETYPES: Record<CustomerArchetypeId, CustomerArchetype> = {
+  normal: {
+    id: 'normal',
+    name: 'Normal Shopper',
+    badgeLabel: 'Normal Shopper',
+    shortTag: 'Adopts any non-Legendary Pokémon at fair price',
+    accentClass: 'border-[#78a8f0] bg-[#142958] text-[#dbe8ff]',
+    description:
+      'Everyday trainer happy to adopt any friendly non-Legendary, non-Mythical companion without picky trait demands.',
+    markupTolerance: 112,
+    bonusMultiplier: 1.0,
+    basePatience: 15,
+    haggleEase: 0.0,
+  },
   'cozy-collector': {
     id: 'cozy-collector',
     name: 'Cozy Collector',
@@ -73,9 +86,10 @@ export const CUSTOMER_ARCHETYPES: Record<CustomerArchetypeId, CustomerArchetype>
 };
 
 export const CUSTOMER_FIRST_NAMES: Record<CustomerArchetypeId, string[]> = {
-  'cozy-collector': ['Mina', 'Lana', 'Hana', 'Mallow', 'Wally'],
-  'bargain-browser': ['Joey', 'Benny', 'Pip', 'Nori', 'Sam'],
-  'trend-fan': ['Cheryl', 'Dawn', 'Lucas', 'Sora', 'Mei'],
-  'shiny-seeker': ['Steven', 'Jasmine', 'Riley', 'Volo', 'Wallace'],
-  'vip-seeker': ['Cynthia', 'Lance', 'Palmer', 'Noland', 'Caitlin'],
+  normal: ['Liam', 'Greg', 'Clara', 'Ben', 'Nora'],
+  'cozy-collector': ['Lana', 'Hana', 'Mina', 'Mallow', 'Wally'],
+  'bargain-browser': ['Joey', 'Penny', 'Sam', 'Pip', 'Toby'],
+  'trend-fan': ['Aria', 'Marco', 'Dawn', 'Lucas', 'Sora'],
+  'shiny-seeker': ['Arthur', 'Victor', 'Steven', 'Jasmine', 'Riley'],
+  'vip-seeker': ['Steven', 'Arthur', 'Victor', 'Cynthia', 'Lance'],
 };

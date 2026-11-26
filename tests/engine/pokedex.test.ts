@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { SPECIES_BY_ID, SPECIES_CATALOG, getSpecies } from '../../src/data/species';
-import { CLERK_NPC, SHOPPER_NPCS_BY_ARCHETYPE } from '../../src/data/npcs';
+import { CLERK_NPC, HUMAN_SHOPPER_NPCS_BY_ARCHETYPE } from '../../src/data/npcs';
 
 describe('Full Gen 1–4 Pokédex Catalog (493 Species)', () => {
   it('contains all 493 National Dex species without gaps from #001 Bulbasaur to #493 Arceus', () => {
@@ -66,10 +66,11 @@ describe('Full Gen 1–4 Pokédex Catalog (493 Species)', () => {
     expect(getSpecies(281).evolutions?.['dawn-stone']).toBe(475); // Kirlia -> Gallade
   });
 
-  it('defines Kecleon clerk and PMD shopper NPCs backed by bundled local manifest', () => {
-    expect(CLERK_NPC.speciesId).toBe(352);
-    expect(CLERK_NPC.paddedId).toBe('0352');
-    expect(SHOPPER_NPCS_BY_ARCHETYPE['bargain-browser']).toHaveLength(3);
-    expect(SHOPPER_NPCS_BY_ARCHETYPE['vip-seeker']).toHaveLength(3);
+  it('defines Human Clerk Leo and Human Trainer NPCs across all 6 customer archetypes', () => {
+    expect(CLERK_NPC.id).toBe('mart_employee');
+    expect(CLERK_NPC.portraitUrl).toContain('clerk.png');
+    expect(HUMAN_SHOPPER_NPCS_BY_ARCHETYPE.normal.length).toBeGreaterThanOrEqual(4);
+    expect(HUMAN_SHOPPER_NPCS_BY_ARCHETYPE['bargain-browser']).toHaveLength(3);
+    expect(HUMAN_SHOPPER_NPCS_BY_ARCHETYPE['vip-seeker']).toHaveLength(3);
   });
 });

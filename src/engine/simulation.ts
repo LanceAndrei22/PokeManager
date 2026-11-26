@@ -5,7 +5,7 @@
  * modes, daily rent & upkeep, Emergency Liquidation, Debt Grace, Bankruptcy,
  * 493-species evolution/breeding, and VIP Legendary Contracts.
  */
-import { CUSTOMER_ARCHETYPES, CUSTOMER_FIRST_NAMES } from '../data/customers';
+import { CUSTOMER_ARCHETYPES } from '../data/customers';
 import { getDifficultyConfig } from '../data/difficulties';
 import { getItemDefinition } from '../data/items';
 import { pickShopperNpc } from '../data/npcs';
@@ -183,6 +183,9 @@ export function createInitialGameState(
     profileName,
     difficulty,
     muted,
+    bgmMuted: false,
+    sfxVolume: 0.65,
+    bgmVolume: 0.35,
     cash: diff.startingCash,
     shiftNumber: 1,
     shiftTick: 0,
@@ -272,7 +275,7 @@ export function toggleShiftRunning(state: GameState): ActionResult {
     },
     ok: true,
     message: nextRunning
-      ? 'Shop doors opened! Customers will browse pens and queue at Kecleon’s counter.'
+      ? 'Shop doors opened! Human trainers will browse pens and queue at the PokéMart counter.'
       : 'Shop paused cleanly.',
     sfx: nextRunning ? 'bell' : 'click',
   };
@@ -320,6 +323,21 @@ export function setActiveGiftBall(state: GameState, ball: GiftBallSlug): ActionR
 /** Toggles per-profile Web Audio SFX mute preference. */
 export function toggleMuteAction(state: GameState): GameState {
   return { ...state, muted: !state.muted, updatedAt: Date.now() };
+}
+
+/** Toggles per-profile background music mute preference. */
+export function toggleBgmMuteAction(state: GameState): GameState {
+  return { ...state, bgmMuted: !(state.bgmMuted ?? false), updatedAt: Date.now() };
+}
+
+/** Sets per-profile SFX volume (clamped 0..1). */
+export function setSfxVolumeAction(state: GameState, volume: number): GameState {
+  return { ...state, sfxVolume: clamp(volume, 0, 1), updatedAt: Date.now() };
+}
+
+/** Sets per-profile BGM volume (clamped 0..1). */
+export function setBgmVolumeAction(state: GameState, volume: number): GameState {
+  return { ...state, bgmVolume: clamp(volume, 0, 1), updatedAt: Date.now() };
 }
 
 /** Promotes any owned Pokémon to be the featured Store Mascot on the Main Menu spotlight. */
@@ -1402,7 +1420,22 @@ export function advanceShiftTick(state: GameState, providedRng?: RngFn): TickRes
     );
 
     const species = getSpecies(penMon.speciesId);
-    const isVip = species.isLegendary || species.isMythical || customer.archetypeId === 'vip-seeker';
+    const isVipSpecies = species.isLegendary || species.isMythical;
+
+    // Normal Shoppers provide everyday foot traffic on non-Legendary Pokémon, but
+    // never make purchase offers on Legendaries or Mythicals (VIP Collectors only).
+    if (customer.archetypeId === 'normal' && isVipSpecies) {
+      nextState.activityLog = appendLog(
+        nextState.activityLog,
+        nextState.shiftNumber,
+        `${customer.name} marveled at ${species.name} — only VIP Collectors can adopt Legendaries!`,
+        'info',
+        `browse-vip-${nextState.shiftTick}-${customer.uid}`,
+      );
+      continue;
+    }
+
+    const isVip = isVipSpecies || customer.archetypeId === 'vip-seeker';
 
     if (rng() <= buyChance && nextState.counterQueue.length < 4) {
       const offerAmount = Math.round(
@@ -1415,8 +1448,8 @@ export function advanceShiftTick(state: GameState, providedRng?: RngFn): TickRes
         uid: `offer-${nextState.shiftNumber}-${nextState.shiftTick}-${customer.uid}`,
         customerUid: customer.uid,
         archetypeId: customer.archetypeId,
-        npcSpeciesId: customer.npcSpeciesId,
-        npcPaddedId: customer.npcPaddedId,
+        npcId: customer.npcId,
+        npcPortraitUrl: customer.npcPortraitUrl,
         customerName: customer.name,
         pokemonUid: penMon.uid,
         speciesId: penMon.speciesId,
@@ -1439,7 +1472,7 @@ export function advanceShiftTick(state: GameState, providedRng?: RngFn): TickRes
       nextState.activityLog = appendLog(
         nextState.activityLog,
         nextState.shiftNumber,
-        `${customer.name} brought ${penMon.isShiny ? '✨ Shiny ' : ''}${species.name} to Kecleon's counter (Offering ₽${offerAmount.toLocaleString()}).`,
+        `${customer.name} brought ${penMon.isShiny ? '✨ Shiny ' : ''}${species.name} to the PokéMart counter (Offering ₽${offerAmount.toLocaleString()}).`,
         isVip ? 'shiny' : 'info',
         `queue-${nextState.shiftTick}-${customer.uid}`,
       );
@@ -1455,7 +1488,7 @@ export function advanceShiftTick(state: GameState, providedRng?: RngFn): TickRes
   }
   nextState.customers = remainingCustomers;
 
-  // 5. Spawn new PMD Pokémon shoppers when display pens are stocked
+  // 5. Spawn new Human Trainer shoppers (~40% Normal Shopper + ~60% Specialists)
   const maxShoppers = 2 + Math.min(2, nextState.upgrades['cafe-decor']);
   const spawnInterval = Math.max(2, 4 - Math.floor(nextState.upgrades['cafe-decor'] / 2));
   const stockedPens = nextState.pokemon.filter((p) => p.location === 'pen' && p.penIndex !== null);
@@ -1473,11 +1506,15 @@ export function advanceShiftTick(state: GameState, providedRng?: RngFn): TickRes
     let archetypeId: CustomerArchetypeId;
     if (hasVipOnFloor && roll < 0.48) {
       archetypeId = 'vip-seeker';
-    } else if (roll < 0.3) {
+    } else if (hasVipOnFloor) {
+      archetypeId = roll < 0.72 ? 'normal' : roll < 0.86 ? 'cozy-collector' : 'trend-fan';
+    } else if (roll < 0.4) {
+      archetypeId = 'normal';
+    } else if (roll < 0.56) {
       archetypeId = 'cozy-collector';
-    } else if (roll < 0.6) {
+    } else if (roll < 0.72) {
       archetypeId = 'bargain-browser';
-    } else if (roll < 0.84) {
+    } else if (roll < 0.86) {
       archetypeId = 'trend-fan';
     } else if (roll < 0.94) {
       archetypeId = 'shiny-seeker';
@@ -1486,14 +1523,13 @@ export function advanceShiftTick(state: GameState, providedRng?: RngFn): TickRes
     }
 
     const npc = pickShopperNpc(archetypeId, rng);
-    const firstName = pickRandom(CUSTOMER_FIRST_NAMES[archetypeId], rng);
 
     const newCustomer: ShopCustomer = {
       uid: `cust-${nextState.shiftNumber}-${nextState.shiftTick}-${randomInt(10, 99, rng)}`,
       archetypeId,
-      npcSpeciesId: npc.speciesId,
-      npcPaddedId: npc.paddedId,
-      name: `${firstName} (${npc.name})`,
+      npcId: npc.id,
+      npcPortraitUrl: npc.portraitUrl,
+      name: npc.name,
       targetPenIndex: targetMon.penIndex as number,
       statusText: `Admiring ${targetSpecies.name}...`,
       ticksRemaining: randomInt(2, 4, rng),

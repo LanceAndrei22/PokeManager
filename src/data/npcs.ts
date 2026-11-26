@@ -1,56 +1,247 @@
 /**
- * PMD Pokémon NPC cast for PokéMart: Low Cortisol Shift (v2).
- * Store Clerk Kecleon stands behind the register counter, while animated PMD
- * Pokémon shoppers browse pens and queue at the counter with archetype personalities.
+ * Human Trainer NPC cast for PokéMart: Low Cortisol Shift (v2.1).
+ * Store Clerk Leo manages the PokéMart counter while 15 authentic Gen 3/4 Human
+ * Trainer shoppers browse pens and negotiate offers with pixel trainer portraits.
  */
-import type { CustomerArchetypeId } from './types';
 import { pickRandom, type RngFn } from '../engine/rng';
+import type { CustomerArchetypeId } from './types';
 
-export interface PmdNpcProfile {
-  speciesId: number;
-  paddedId: string;
+/** Complete visual and narrative profile for a Human Trainer NPC. */
+export interface HumanNpcProfile {
+  id: string;
   name: string;
   role: string;
+  archetypeId: CustomerArchetypeId | 'clerk';
+  overworldUrl: string;
+  portraitUrl: string;
+  flavorLine: string;
 }
 
-/** Store Clerk standing behind the PokéMart register counter. */
-export const CLERK_NPC: PmdNpcProfile = {
-  speciesId: 352,
-  paddedId: '0352',
-  name: 'Kecleon',
-  role: 'Shopkeeper',
+/** PokéMart Store Clerk standing behind the checkout counter. */
+export const CLERK_NPC: HumanNpcProfile = {
+  id: 'mart_employee',
+  name: 'Clerk Leo',
+  role: 'PokéMart Clerk',
+  archetypeId: 'clerk',
+  overworldUrl: './assets/npcs/overworld/mart_employee.png',
+  portraitUrl: './assets/npcs/portraits/clerk.png',
+  flavorLine: 'Welcome to PokéMart! Every companion here is happy and well-rested.',
 };
 
-/** Archetype-matched PMD Pokémon shoppers bundled locally for instant offline boot. */
-export const SHOPPER_NPCS_BY_ARCHETYPE: Record<CustomerArchetypeId, PmdNpcProfile[]> = {
+/** Archetype-matched Human Trainer shoppers bundled locally under `public/assets/npcs/`. */
+export const HUMAN_SHOPPER_NPCS_BY_ARCHETYPE: Record<CustomerArchetypeId, HumanNpcProfile[]> = {
+  normal: [
+    {
+      id: 'camper',
+      name: 'Camper Liam',
+      role: 'Normal Shopper',
+      archetypeId: 'normal',
+      overworldUrl: './assets/npcs/overworld/camper.png',
+      portraitUrl: './assets/npcs/portraits/camper.png',
+      flavorLine: 'Looking for a cheerful partner to join my weekend hikes!',
+    },
+    {
+      id: 'hiker',
+      name: 'Hiker Greg',
+      role: 'Normal Shopper',
+      archetypeId: 'normal',
+      overworldUrl: './assets/npcs/overworld/hiker.png',
+      portraitUrl: './assets/npcs/portraits/hiker-gen4.png',
+      flavorLine: 'Haha! Any sturdy, friendly Pokémon catches my eye today!',
+    },
+    {
+      id: 'woman_2',
+      name: 'Breeder Clara',
+      role: 'Normal Shopper',
+      archetypeId: 'normal',
+      overworldUrl: './assets/npcs/overworld/woman_2.png',
+      portraitUrl: './assets/npcs/portraits/pokemonbreederf-gen4.png',
+      flavorLine: 'You keep your shop habitats so clean — let’s make a fair deal.',
+    },
+    {
+      id: 'man_3',
+      name: 'Traveler Ben',
+      role: 'Normal Shopper',
+      archetypeId: 'normal',
+      overworldUrl: './assets/npcs/overworld/man_3.png',
+      portraitUrl: './assets/npcs/portraits/pokemonbreeder-gen4.png',
+      flavorLine: 'Just stopping by PokéMart for a kind new companion!',
+    },
+  ],
   'bargain-browser': [
-    { speciesId: 52, paddedId: '0052', name: 'Meowth', role: 'Bargain Browser' },
-    { speciesId: 399, paddedId: '0399', name: 'Bidoof', role: 'Bargain Browser' },
-    { speciesId: 263, paddedId: '0263', name: 'Zigzagoon', role: 'Bargain Browser' },
+    {
+      id: 'youngster',
+      name: 'Youngster Joey',
+      role: 'Bargain Browser',
+      archetypeId: 'bargain-browser',
+      overworldUrl: './assets/npcs/overworld/youngster.png',
+      portraitUrl: './assets/npcs/portraits/youngster-gen4.png',
+      flavorLine: 'My allowance goes far if the price tag is fair — deal?',
+    },
+    {
+      id: 'lass',
+      name: 'Lass Penny',
+      role: 'Bargain Browser',
+      archetypeId: 'bargain-browser',
+      overworldUrl: './assets/npcs/overworld/lass.png',
+      portraitUrl: './assets/npcs/portraits/lass-gen4.png',
+      flavorLine: 'Ooh, cute! Just don’t push the markup too steep on me!',
+    },
+    {
+      id: 'school_kid_m',
+      name: 'School Kid Sam',
+      role: 'Bargain Browser',
+      archetypeId: 'bargain-browser',
+      overworldUrl: './assets/npcs/overworld/school_kid_m.png',
+      portraitUrl: './assets/npcs/portraits/schoolkid-gen4.png',
+      flavorLine: 'I studied PokéMart pricing charts in class today!',
+    },
   ],
   'cozy-collector': [
-    { speciesId: 40, paddedId: '0040', name: 'Wigglytuff', role: 'Cozy Collector' },
-    { speciesId: 113, paddedId: '0113', name: 'Chansey', role: 'Cozy Collector' },
-    { speciesId: 143, paddedId: '0143', name: 'Snorlax', role: 'Cozy Collector' },
+    {
+      id: 'picnicker',
+      name: 'Picnicker Lana',
+      role: 'Cozy Collector',
+      archetypeId: 'cozy-collector',
+      overworldUrl: './assets/npcs/overworld/picnicker.png',
+      portraitUrl: './assets/npcs/portraits/picnicker.png',
+      flavorLine: 'Sleepy, cozy companions make the best picnic buddies!',
+    },
+    {
+      id: 'woman_1',
+      name: 'Lady Hana',
+      role: 'Cozy Collector',
+      archetypeId: 'cozy-collector',
+      overworldUrl: './assets/npcs/overworld/woman_1.png',
+      portraitUrl: './assets/npcs/portraits/lady-gen4.png',
+      flavorLine: 'Oh my, look at that gentle temperament — worth every Pokédollar.',
+    },
+    {
+      id: 'pokefan_f',
+      name: 'Poké Fan Mina',
+      role: 'Cozy Collector',
+      archetypeId: 'cozy-collector',
+      overworldUrl: './assets/npcs/overworld/pokefan_f.png',
+      portraitUrl: './assets/npcs/portraits/pokefanf-gen4.png',
+      flavorLine: 'High Cute stats steal my heart every single visit!',
+    },
   ],
   'trend-fan': [
-    { speciesId: 279, paddedId: '0279', name: 'Pelipper', role: 'Trend Fan' },
-    { speciesId: 272, paddedId: '0272', name: 'Ludicolo', role: 'Trend Fan' },
-    { speciesId: 417, paddedId: '0417', name: 'Pachirisu', role: 'Trend Fan' },
+    {
+      id: 'beauty',
+      name: 'Beauty Aria',
+      role: 'Trend Fan',
+      archetypeId: 'trend-fan',
+      overworldUrl: './assets/npcs/overworld/beauty.png',
+      portraitUrl: './assets/npcs/portraits/beauty-gen4dp.png',
+      flavorLine: 'Everyone in Jubilife wants today’s trending type!',
+    },
+    {
+      id: 'artist',
+      name: 'Artist Marco',
+      role: 'Trend Fan',
+      archetypeId: 'trend-fan',
+      overworldUrl: './assets/npcs/overworld/artist.png',
+      portraitUrl: './assets/npcs/portraits/artist-gen4.png',
+      flavorLine: 'Magnifique! A trending companion inspires my next canvas.',
+    },
   ],
   'shiny-seeker': [
-    { speciesId: 53, paddedId: '0053', name: 'Persian', role: 'Shiny Seeker' },
-    { speciesId: 430, paddedId: '0430', name: 'Honchkrow', role: 'Shiny Seeker' },
-    { speciesId: 448, paddedId: '0448', name: 'Lucario', role: 'Shiny Seeker' },
+    {
+      id: 'gentleman',
+      name: 'Gentleman Arthur',
+      role: 'Shiny Seeker',
+      archetypeId: 'shiny-seeker',
+      overworldUrl: './assets/npcs/overworld/gentleman.png',
+      portraitUrl: './assets/npcs/portraits/gentleman-gen4.png',
+      flavorLine: 'Rarity and shimmering coats command top Pokédollars.',
+    },
+    {
+      id: 'rich_boy',
+      name: 'Rich Boy Victor',
+      role: 'Shiny Seeker',
+      archetypeId: 'shiny-seeker',
+      overworldUrl: './assets/npcs/overworld/rich_boy.png',
+      portraitUrl: './assets/npcs/portraits/richboy-gen4.png',
+      flavorLine: 'Only shimmering or ultra-rare companions for my estate!',
+    },
   ],
   'vip-seeker': [
-    { speciesId: 53, paddedId: '0053', name: 'Persian', role: 'VIP Legendary Seeker' },
-    { speciesId: 430, paddedId: '0430', name: 'Honchkrow', role: 'VIP Legendary Seeker' },
-    { speciesId: 448, paddedId: '0448', name: 'Lucario', role: 'VIP Legendary Seeker' },
+    {
+      id: 'steven',
+      name: 'Champion Steven',
+      role: 'VIP Collector',
+      archetypeId: 'vip-seeker',
+      overworldUrl: './assets/npcs/overworld/steven.png',
+      portraitUrl: './assets/npcs/portraits/steven.png',
+      flavorLine: 'A legendary partner here? Name your terms at the counter.',
+    },
+    {
+      id: 'gentleman',
+      name: 'Gentleman Arthur',
+      role: 'VIP Collector',
+      archetypeId: 'vip-seeker',
+      overworldUrl: './assets/npcs/overworld/gentleman.png',
+      portraitUrl: './assets/npcs/portraits/gentleman-gen4.png',
+      flavorLine: 'I have traveled far across Sinnoh for a VIP-tier companion.',
+    },
+    {
+      id: 'rich_boy',
+      name: 'Rich Boy Victor',
+      role: 'VIP Collector',
+      archetypeId: 'vip-seeker',
+      overworldUrl: './assets/npcs/overworld/rich_boy.png',
+      portraitUrl: './assets/npcs/portraits/richboy-gen4.png',
+      flavorLine: 'Money is no object for a Legend or Pseudo-Legend!',
+    },
   ],
 };
 
-/** Selects a matching PMD shopper NPC species for the given customer archetype. */
-export function pickShopperNpc(archetypeId: CustomerArchetypeId, rng: RngFn): PmdNpcProfile {
-  return pickRandom(SHOPPER_NPCS_BY_ARCHETYPE[archetypeId], rng);
+/** Backward-compatible alias preserved for external imports. */
+export const SHOPPER_NPCS_BY_ARCHETYPE = HUMAN_SHOPPER_NPCS_BY_ARCHETYPE;
+
+/** Flat lookup map across Clerk + all unique Human Trainer NPCs by `id`. */
+export const HUMAN_NPCS_BY_ID: Record<string, HumanNpcProfile> = (() => {
+  const map: Record<string, HumanNpcProfile> = {
+    [CLERK_NPC.id]: CLERK_NPC,
+  };
+  for (const list of Object.values(HUMAN_SHOPPER_NPCS_BY_ARCHETYPE)) {
+    for (const npc of list) {
+      if (!map[npc.id]) {
+        map[npc.id] = npc;
+      }
+    }
+  }
+  return map;
+})();
+
+/** Ordered list of all distinct Human Trainer NPCs (Clerk + 15 shoppers). */
+export const ALL_HUMAN_NPCS: HumanNpcProfile[] = Object.values(HUMAN_NPCS_BY_ID);
+
+/** Selects a matching Human Trainer shopper profile for the given customer archetype. */
+export function pickShopperNpc(archetypeId: CustomerArchetypeId, rng: RngFn): HumanNpcProfile {
+  const list =
+    HUMAN_SHOPPER_NPCS_BY_ARCHETYPE[archetypeId] ?? HUMAN_SHOPPER_NPCS_BY_ARCHETYPE.normal;
+  return pickRandom(list, rng);
+}
+
+/** Resolves a Human NPC profile by ID (returns null if not found). */
+export function getHumanNpcById(npcId: string): HumanNpcProfile | null {
+  return HUMAN_NPCS_BY_ID[npcId] ?? null;
+}
+
+/**
+ * Safely resolves an NPC profile for legacy v2.0 saves missing `npcId` / `npcPortraitUrl`,
+ * returning the deterministic first Human Trainer in the requested archetype.
+ */
+export function resolveHumanNpcFallback(
+  archetypeId: CustomerArchetypeId,
+  npcId?: string,
+): HumanNpcProfile {
+  if (npcId && HUMAN_NPCS_BY_ID[npcId]) {
+    return HUMAN_NPCS_BY_ID[npcId];
+  }
+  const pool =
+    HUMAN_SHOPPER_NPCS_BY_ARCHETYPE[archetypeId] ?? HUMAN_SHOPPER_NPCS_BY_ARCHETYPE.normal;
+  return pool[0];
 }

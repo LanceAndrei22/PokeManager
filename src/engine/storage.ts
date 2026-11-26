@@ -5,6 +5,7 @@
  * so v1 data stays untouched, stores Difficulty per profile, and validates exported saves
  * with an FNV-1a checksum.
  */
+import { resolveHumanNpcFallback } from '../data/npcs';
 import type {
   DifficultyId,
   GameState,
@@ -100,12 +101,53 @@ export function loadProfileGameState(
   try {
     const parsed = JSON.parse(raw) as GameState;
     if (parsed && parsed.version === 2 && typeof parsed.cash === 'number') {
-      return parsed;
+      return migrateLegacyGameState(parsed);
     }
   } catch {
     return null;
   }
   return null;
+}
+
+/**
+ * Safely migrates pre-v2.1 saves: maps stale Pokémon NPC entries in `customers` /
+ * `counterQueue` to Human Trainer profiles and populates default BGM/SFX preferences.
+ */
+export function migrateLegacyGameState(state: GameState): GameState {
+  const customers = (state.customers ?? []).map((cust) => {
+    const resolved = resolveHumanNpcFallback(cust.archetypeId, cust.npcId);
+    if (cust.npcId === resolved.id && cust.npcPortraitUrl === resolved.portraitUrl) {
+      return cust;
+    }
+    return {
+      ...cust,
+      npcId: resolved.id,
+      npcPortraitUrl: resolved.portraitUrl,
+      name: cust.npcId ? cust.name : resolved.name,
+    };
+  });
+
+  const counterQueue = (state.counterQueue ?? []).map((offer) => {
+    const resolved = resolveHumanNpcFallback(offer.archetypeId, offer.npcId);
+    if (offer.npcId === resolved.id && offer.npcPortraitUrl === resolved.portraitUrl) {
+      return offer;
+    }
+    return {
+      ...offer,
+      npcId: resolved.id,
+      npcPortraitUrl: resolved.portraitUrl,
+      customerName: offer.npcId ? offer.customerName : resolved.name,
+    };
+  });
+
+  return {
+    ...state,
+    bgmMuted: state.bgmMuted ?? false,
+    sfxVolume: typeof state.sfxVolume === 'number' ? state.sfxVolume : 0.65,
+    bgmVolume: typeof state.bgmVolume === 'number' ? state.bgmVolume : 0.35,
+    customers,
+    counterQueue,
+  };
 }
 
 export function saveProfileGameState(
@@ -346,7 +388,7 @@ export function importSaveCode(
     throw new Error('Save payload is missing required shop data.');
   }
 
-  return {
+  return migrateLegacyGameState({
     ...imported,
     profileId: targetProfileId,
     profileName: targetProfileName ?? imported.profileName,
@@ -354,5 +396,5 @@ export function importSaveCode(
     shiftPhase: imported.isBankrupt ? 'bankrupt' : imported.pendingSettlement ? 'settlement-debt' : 'prep',
     customers: [],
     updatedAt: Date.now(),
-  };
+  });
 }

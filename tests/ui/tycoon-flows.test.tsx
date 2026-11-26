@@ -22,9 +22,9 @@ function makeQueuedCounterOffer(): CounterOffer {
     uid: 'offer-live-1',
     customerUid: 'cust-live-1',
     archetypeId: 'cozy-collector',
-    npcSpeciesId: 40,
-    npcPaddedId: '0040',
-    customerName: 'Mina (Wigglytuff)',
+    npcId: 'pokefan_f',
+    npcPortraitUrl: './assets/npcs/portraits/pokefanf-gen4.png',
+    customerName: 'Poké Fan Mina',
     pokemonUid: 'mon-starter-eevee',
     speciesId: 133,
     isShiny: false,
@@ -76,7 +76,7 @@ describe('Checkpoint 2 Counter Haggling, Debt Liquidation & Bankruptcy UI', () =
     // Open live counter queue from Top HUD alert pill
     await user.click(screen.getByRole('button', { name: /Counter: 1 waiting/i }));
     const counterPanel = screen.getByLabelText('Live Counter Negotiation');
-    expect(within(counterPanel).getByText('Mina (Wigglytuff)')).toBeInTheDocument();
+    expect(within(counterPanel).getByText('Poké Fan Mina')).toBeInTheDocument();
     expect(within(counterPanel).getByText('Offer: ₽1,200')).toBeInTheDocument();
 
     // Accept sale -> funds increase immediately and counter alert clears

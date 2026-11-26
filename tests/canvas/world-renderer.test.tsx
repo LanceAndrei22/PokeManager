@@ -41,9 +41,9 @@ const makePokemon = (overrides: Partial<PokemonInstance> = {}): PokemonInstance 
 const makeCustomer = (overrides: Partial<ShopCustomer> = {}): ShopCustomer => ({
   uid: 'cust-1',
   archetypeId: 'trend-fan',
-  npcSpeciesId: 279,
-  npcPaddedId: '0279',
-  name: 'Cheryl (Pelipper)',
+  npcId: 'beauty',
+  npcPortraitUrl: './assets/npcs/portraits/beauty-gen4dp.png',
+  name: 'Beauty Aria',
   targetPenIndex: 0,
   statusText: 'Admiring Eevee...',
   ticksRemaining: 3,
@@ -54,9 +54,9 @@ const makeCounterOffer = (overrides: Partial<CounterOffer> = {}): CounterOffer =
   uid: 'offer-1',
   customerUid: 'cust-q-1',
   archetypeId: 'cozy-collector',
-  npcSpeciesId: 40,
-  npcPaddedId: '0040',
-  customerName: 'Mina (Wigglytuff)',
+  npcId: 'pokefan_f',
+  npcPortraitUrl: './assets/npcs/portraits/pokefanf-gen4.png',
+  customerName: 'Poké Fan Mina',
   pokemonUid: 'mon-1',
   speciesId: 133,
   isShiny: false,
@@ -275,9 +275,9 @@ describe('2D Canvas Indoor Pixel Renderer & ShopCanvas UI', () => {
     expect(ctx.setTransform).toHaveBeenCalledWith(1, 0, 0, 1, 0, 0);
     expect(ctx.imageSmoothingEnabled).toBe(false);
     expect(ctx.drawImage).toHaveBeenCalled();
-    // Verifies Kecleon (#352 South=0), browsing shopper (#279), and queued counter shopper (#40 North=4)
+    // Temporary Step 2 PMD fallback check before Step 3 swaps shoppers/clerk to Human Trainer sprites
     expect(getFrame).toHaveBeenCalledWith(352, false, 'idle', expect.any(Number), 0);
-    expect(getFrame).toHaveBeenCalledWith(279, false, 'walk', expect.any(Number), expect.any(Number));
+    expect(getFrame).toHaveBeenCalledWith(52, false, 'walk', expect.any(Number), expect.any(Number));
     expect(getFrame).toHaveBeenCalledWith(40, false, 'idle', expect.any(Number), 4);
 
     // Also confirm legacy renderer still honors reducedMotion static scale

@@ -9,7 +9,6 @@
  *   browsing PMD shoppers, queued register shoppers with live Patience Bars +
  *   bouncing `!` offer bubbles, hover highlights + pixel tooltip, and pixel particles.
  */
-import { CLERK_NPC } from '../data/npcs';
 import type { CustomerArchetypeId } from '../data/types';
 import {
   HOP_DURATION,
@@ -59,6 +58,7 @@ export interface IndoorRenderOptions {
 }
 
 const ARCHETYPE_SHIRTS: Record<CustomerArchetypeId, string> = {
+  normal: '#5c8ed6',
   'cozy-collector': PALETTE.berry,
   'bargain-browser': PALETTE.sage,
   'trend-fan': PALETTE.honeyDeep,
@@ -67,6 +67,7 @@ const ARCHETYPE_SHIRTS: Record<CustomerArchetypeId, string> = {
 };
 
 const BUBBLE_ICONS: Record<CustomerArchetypeId, PixelBitmap> = {
+  normal: COIN,
   'cozy-collector': HEART,
   'bargain-browser': COIN,
   'trend-fan': STAR,
@@ -455,7 +456,7 @@ function drawClerk(
 ): void {
   const still = world.reducedMotion || world.motionPaused;
   const animTime = still ? 0 : world.time;
-  const frame = adapter.getFrame(CLERK_NPC.speciesId, false, 'idle', animTime, 0);
+  const frame = adapter.getFrame(352, false, 'idle', animTime, 0);
   const cx = Math.round(layout.counter.x + layout.counter.w * 0.55);
   const cy = Math.round(layout.counter.y + layout.unit * 2);
 

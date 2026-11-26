@@ -81,6 +81,7 @@ export function doesArchetypeMatchPokemon(
         pokemon.stats.rarity >= 80
       );
     case 'bargain-browser':
+    case 'normal':
       return false;
   }
 }
@@ -145,7 +146,8 @@ export function calculateBuyProbability(
   trendMatched: boolean,
 ): number {
   const archetype = CUSTOMER_ARCHETYPES[archetypeId];
-  const baseChance = archetypeId === 'bargain-browser' ? 0.88 : 0.8;
+  const baseChance =
+    archetypeId === 'bargain-browser' ? 0.88 : archetypeId === 'normal' ? 0.84 : 0.8;
   const discountBoost = markupPercent < 100 ? (100 - markupPercent) * 0.005 : 0;
   const overTolerance = Math.max(0, markupPercent - archetype.markupTolerance);
   const markupPenalty = overTolerance * (archetypeId === 'bargain-browser' ? 0.022 : 0.015);
