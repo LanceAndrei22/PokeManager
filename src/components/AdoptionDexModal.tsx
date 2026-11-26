@@ -101,7 +101,7 @@ export function AdoptionDexModal({ open, dex, onClose }: AdoptionDexModalProps) 
                   <div className="text-[11px] text-wood-700">
                     {discovered
                       ? `Adopted ${entry?.adoptedCount ?? 0} • Hatched ${entry?.hatchedCount ?? 0}`
-                      : `Unlocks Rank ${species.minCozyRank}`}
+                      : `Unlocks Rank ${species.unlockRank}`}
                   </div>
                 </div>
               </div>

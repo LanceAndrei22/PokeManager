@@ -59,10 +59,11 @@ describe('Shift Clock & Live-Tick Progression', () => {
     const nextShift = startNextShift(closingTick.state, createSeededRng(99));
     expect(nextShift.shiftNumber).toBe(2);
     expect(nextShift.shiftTick).toBe(0);
+    expect(nextShift.shiftPhase).toBe('prep');
     expect(nextShift.lastShiftSummary).toBeNull();
     expect(nextShift.recentSpeciesSales[133]).toBe(2);
     expect(nextShift.recentSpeciesSales[79]).toBeUndefined();
-    expect(nextShift.wholesaleCatalog.length).toBe(5);
+    expect(nextShift.wholesaleCatalog.length).toBeGreaterThanOrEqual(5);
   });
 
   it('supports manual closeShiftEarly with closedEarly flag', () => {

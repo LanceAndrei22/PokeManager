@@ -40,7 +40,9 @@ const makePokemon = (overrides: Partial<PokemonInstance> = {}): PokemonInstance 
 const makeCustomer = (overrides: Partial<ShopCustomer> = {}): ShopCustomer => ({
   uid: 'cust-1',
   archetypeId: 'trend-fan',
-  name: 'Cheryl',
+  npcSpeciesId: 279,
+  npcPaddedId: '0279',
+  name: 'Cheryl (Pelipper)',
   targetPenIndex: 0,
   statusText: 'Admiring Eevee...',
   ticksRemaining: 3,
@@ -203,15 +205,25 @@ describe('2D Canvas Pixel Renderer & ShopFloorPreview UI', () => {
     } as unknown as CanvasRenderingContext2D;
 
     const fakeImage = {} as CanvasImageSource;
-    const adapter: SpriteEntityAdapter = {
-      getFrame: () => ({ image: fakeImage, sx: 0, sy: 0, sw: 80, sh: 80, facesLeft: true }),
-    };
+    const getFrame = vi.fn(() => ({
+      image: fakeImage,
+      sx: 0,
+      sy: 0,
+      sw: 80,
+      sh: 80,
+      usesDirectionRow: false,
+      facesLeft: true,
+    }));
+    const adapter: SpriteEntityAdapter = { getFrame };
 
     renderScene(ctx, layout, world, null, adapter, { shiftRunning: false, hoverUid: 'eevee' });
 
     expect(ctx.setTransform).toHaveBeenCalledWith(1, 0, 0, 1, 0, 0);
     expect(ctx.imageSmoothingEnabled).toBe(false);
     expect(ctx.drawImage).toHaveBeenCalled();
+    // Verifies Kecleon clerk (#352) and PMD shopper NPC (#279) are queried by the renderer
+    expect(getFrame).toHaveBeenCalledWith(352, false, 'idle', expect.any(Number), 0);
+    expect(getFrame).toHaveBeenCalledWith(279, false, 'walk', expect.any(Number), expect.any(Number));
     const scaleCalls = (ctx.scale as ReturnType<typeof vi.fn>).mock.calls;
     expect(scaleCalls.some(([sx, sy]) => sx < 0 && sy > 0)).toBe(true);
 

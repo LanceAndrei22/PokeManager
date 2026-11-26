@@ -1,7 +1,8 @@
 /**
- * Static Pokémon Platinum (80×80) and Gen 4 item icon renderers using crisp
- * pixelated scaling and relative `./assets/...` URLs for GitHub Pages support.
+ * PMD portrait and Gen 4 item icon renderers using crisp pixelated scaling
+ * and hybrid local/SpriteCollab URLs.
  */
+import { getPmdPortraitUrl } from '../canvas/pmdLoader';
 import type { ItemSlug } from '../data/types';
 
 export interface PokemonSpriteProps {
@@ -12,17 +13,12 @@ export interface PokemonSpriteProps {
   className?: string;
 }
 
-/** Resolves the static relative Platinum sprite URL for a species ID. */
-export function getPlatinumSpriteUrl(speciesId: number, isShiny = false): string {
-  return `./assets/platinum/${isShiny ? 'shiny' : 'normal'}/${speciesId}.png`;
-}
-
 /** Resolves the static relative Gen 4 item icon URL for an item slug. */
 export function getItemIconUrl(slug: ItemSlug | 'egg'): string {
   return `./assets/items/${slug}.png`;
 }
 
-/** Renders a crisp pixelated Pokémon Platinum front sprite image. */
+/** Renders a crisp pixelated PMD Pokémon portrait image. */
 export function PokemonSprite({
   speciesId,
   name,
@@ -32,11 +28,12 @@ export function PokemonSprite({
 }: PokemonSpriteProps) {
   return (
     <img
-      src={getPlatinumSpriteUrl(speciesId, isShiny)}
+      src={getPmdPortraitUrl(speciesId, isShiny)}
       alt={`${isShiny ? 'Shiny ' : ''}${name}`}
       width={size}
       height={size}
       loading="lazy"
+      crossOrigin="anonymous"
       className={`pixel-art select-none object-contain ${className}`}
     />
   );

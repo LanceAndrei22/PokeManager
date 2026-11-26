@@ -13,6 +13,7 @@ const TONE_BADGE: Record<ActivityEntry['tone'], string> = {
   heal: 'bg-sky-100 text-sky-600',
   breed: 'bg-lavender-100 text-lavender-600',
   shiny: 'bg-honey-100 text-wood-900',
+  warning: 'bg-berry-100 text-wood-900',
 };
 
 export function ActivityLog({ entries }: ActivityLogProps) {

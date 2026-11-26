@@ -3,7 +3,7 @@
  * Close Shift & Rest), Cozy Rank progress, and the active Shift Market Trend.
  */
 import type { MarketTrend } from '../data/types';
-import type { CozyRankInfo } from '../engine/dex';
+import type { ShopRankInfo } from '../engine/dex';
 
 export interface ShiftHudProps {
   cash: number;
@@ -12,7 +12,7 @@ export interface ShiftHudProps {
   shiftDurationTicks: number;
   shiftRunning: boolean;
   shiftSpeed: 1 | 2;
-  rankInfo: CozyRankInfo;
+  rankInfo: ShopRankInfo;
   trend: MarketTrend;
   hasPendingSummary: boolean;
   onToggleRunning: () => void;

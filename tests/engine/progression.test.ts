@@ -20,23 +20,23 @@ describe('Adoption Dex, Cozy Rank, Healing & Upgrades', () => {
     dex = recordDexDiscovery(dex, 79, { isShiny: false, event: 'hatched' });
 
     const summary = getDexSummary(dex);
-    expect(summary.totalSpecies).toBe(45);
+    expect(summary.totalSpecies).toBe(493);
     expect(summary.discoveredSpecies).toBe(2);
     expect(summary.shinySpecies).toBe(1);
     expect(summary.totalAdoptions).toBe(1);
     expect(summary.totalHatched).toBe(1);
   });
 
-  it('levels up Cozy Rank and unlocks more species tiers', () => {
+  it('levels up Shop Rank across 10 tiers and unlocks all 493 species', () => {
     const rank1 = getCozyRankInfo(0);
-    const rank3 = getCozyRankInfo(340);
-    const rank5 = getCozyRankInfo(1200);
+    const rank5 = getCozyRankInfo(650);
+    const rank10 = getCozyRankInfo(3500);
 
     expect(rank1.rank).toBe(1);
-    expect(rank3.rank).toBe(3);
     expect(rank5.rank).toBe(5);
-    expect(rank3.unlockedSpeciesCount).toBeGreaterThan(rank1.unlockedSpeciesCount);
-    expect(rank5.unlockedSpeciesCount).toBe(45);
+    expect(rank10.rank).toBe(10);
+    expect(rank5.unlockedSpeciesCount).toBeGreaterThan(rank1.unlockedSpeciesCount);
+    expect(rank10.unlockedSpeciesCount).toBe(493);
   });
 
   it('completes stray nap healing over live ticks and moves rested stray to pen', () => {
@@ -60,7 +60,7 @@ describe('Adoption Dex, Cozy Rank, Healing & Upgrades', () => {
     const penUpgrade = purchaseUpgradeAction(state, 'extra-pen');
     expect(penUpgrade.ok).toBe(true);
     expect(getPenCapacity(penUpgrade.state.upgrades)).toBe(4);
-    expect(penUpgrade.state.cash).toBe(1800 - 750);
+    expect(penUpgrade.state.cash).toBe(2000 - 750);
 
     // Exhaust incubators up to max level 2 with ample cash
     let richState = { ...penUpgrade.state, cash: 10000 };

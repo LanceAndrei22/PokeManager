@@ -25,6 +25,7 @@ import {
   buyWholesaleOffer,
   claimHatchedEggAction,
   closeShiftEarly,
+  finalizeDebtSettlement,
   movePokemonLocation,
   purchaseUpgradeAction,
   setActiveGiftBall,
@@ -142,7 +143,7 @@ export function App() {
   };
 
   const handleCreateProfile = (name: string) => {
-    const next = createProfile(name);
+    const next = createProfile(name, 'standard');
     setStore({ index: next.index, game: next.activeState });
     setInspectUid(null);
     setToast(`Welcome, ${next.activeState.profileName}!`);
@@ -352,8 +353,8 @@ export function App() {
 
         <footer className="rounded-xl border border-wood-300 bg-cream-100/70 px-4 py-3 text-center text-[11px] text-wood-700">
           <strong>PokéMart: Low Cortisol Shift</strong> is a simple, completely free fan project made
-          for entertainment purposes only. Pokémon names and Platinum sprites belong to Nintendo,
-          Creatures Inc., and Game Freak (curated via PokeAPI/sprites).
+          for entertainment purposes only. Pokémon names belong to Nintendo, Creatures Inc., and
+          Game Freak; animated sprites &amp; portraits by PMDCollab/SpriteCollab (CC BY-NC 4.0).
         </footer>
       </div>
 
@@ -373,10 +374,19 @@ export function App() {
       />
 
       <ShiftSummaryModal
-        summary={game.lastShiftSummary}
+        summary={game.lastShiftSummary ?? game.pendingSettlement}
         onStartNextShift={() => {
           playSfx('bell', game.muted);
-          setStore((prev) => ({ ...prev, game: startNextShift(prev.game) }));
+          setStore((prev) => {
+            const settled =
+              prev.game.shiftPhase === 'settlement-debt'
+                ? finalizeDebtSettlement(prev.game)
+                : prev.game;
+            return {
+              ...prev,
+              game: settled.isBankrupt ? settled : startNextShift(settled),
+            };
+          });
         }}
       />
 

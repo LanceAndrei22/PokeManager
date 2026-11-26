@@ -61,10 +61,21 @@ const bulbasaur: PokemonInstance = {
 };
 
 describe('Breeding & Genetics Incubator', () => {
-  it('checks egg group compatibility and blocks recovering or mismatched parents', () => {
+  it('checks egg group compatibility, Ditto & Manaphy->Phione rules, and blocks Legendaries/recovering parents', () => {
     expect(areCompatibleParents(restedEevee, restedVaporeon)).toBe(true); // Field + Field
     expect(areCompatibleParents(restedEevee, restedEevee)).toBe(false); // Self
     expect(areCompatibleParents(restedEevee, bulbasaur)).toBe(false); // Field vs Monster/Grass
+
+    const mewtwo: PokemonInstance = { ...restedEevee, uid: 'mewtwo-p', speciesId: 150 };
+    const ditto: PokemonInstance = { ...restedEevee, uid: 'ditto-p', speciesId: 132 };
+    const manaphy: PokemonInstance = { ...restedEevee, uid: 'manaphy-p', speciesId: 490 };
+
+    expect(areCompatibleParents(mewtwo, ditto)).toBe(false);
+    expect(areCompatibleParents(bulbasaur, ditto)).toBe(true);
+    expect(areCompatibleParents(manaphy, ditto)).toBe(true);
+
+    const phioneEgg = createEggFromParents(manaphy, ditto, 0, () => 0.5, 'egg-phione');
+    expect(phioneEgg.speciesId).toBe(489); // Phione
 
     const recovering: PokemonInstance = { ...restedVaporeon, needsRecovery: true };
     expect(areCompatibleParents(restedEevee, recovering)).toBe(false);

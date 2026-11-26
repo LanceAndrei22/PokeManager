@@ -56,6 +56,7 @@ export function WholesaleCatalogPanel({
             const canAfford = cash >= offer.cost;
             const isEgg = offer.kind === 'egg';
             const isStray = offer.kind === 'stray';
+            const isVip = offer.kind === 'vip-contract';
 
             return (
               <article
@@ -81,18 +82,22 @@ export function WholesaleCatalogPanel({
                   <div className="min-w-0 flex-1">
                     <span
                       className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-extrabold ${
-                        isEgg
-                          ? 'bg-lavender-100 text-lavender-600'
-                          : isStray
-                            ? 'bg-berry-100 text-wood-900'
-                            : 'bg-sage-100 text-sage-800'
+                        isVip
+                          ? 'bg-honey-100 text-wood-900'
+                          : isEgg
+                            ? 'bg-lavender-100 text-lavender-600'
+                            : isStray
+                              ? 'bg-berry-100 text-wood-900'
+                              : 'bg-sage-100 text-sage-800'
                       }`}
                     >
-                      {isEgg
-                        ? 'Mystery Egg'
-                        : isStray
-                          ? `Tired Stray (${offer.initialHealingProgress}% rested)`
-                          : 'Healthy Adoptable'}
+                      {isVip
+                        ? 'VIP Legendary Contract'
+                        : isEgg
+                          ? 'Mystery Egg'
+                          : isStray
+                            ? `Tired Stray (${offer.initialHealingProgress}% rested)`
+                            : 'Healthy Adoptable'}
                     </span>
 
                     <h4 className="mt-1 truncate text-sm font-extrabold text-wood-900">

@@ -1,11 +1,11 @@
 /**
- * Cozy Shift Summary Modal shown when a shift finishes or is closed early.
+ * Shift Summary & Rent Settlement Modal shown when a shift closes.
  */
-import type { ShiftSummary } from '../data/types';
+import type { ShiftSettlement } from '../data/types';
 import { CozyDialog } from './CozyDialog';
 
 export interface ShiftSummaryModalProps {
-  summary: ShiftSummary | null;
+  summary: ShiftSettlement | null;
   onStartNextShift: () => void;
 }
 
@@ -65,11 +65,11 @@ export function ShiftSummaryModal({ summary, onStartNextShift }: ShiftSummaryMod
         <div className="flex flex-wrap gap-3 rounded-lg border border-sage-300 bg-sage-100/70 px-3 py-2 text-xs font-bold text-sage-800">
           <span>Adoptions: {summary.adoptionsCount}</span>
           <span>•</span>
-          <span>Eggs Hatched: {summary.eggsHatched}</span>
+          <span>Walk-outs: {summary.walkoutsCount}</span>
           <span>•</span>
-          <span>Strays Rested: {summary.straysHealed}</span>
+          <span>Dues Paid: ₽{summary.totalDues.toLocaleString()}</span>
           <span>•</span>
-          <span>Cozy XP: +{summary.cozyXpEarned}</span>
+          <span>Shop XP: {summary.cozyXpEarned >= 0 ? '+' : ''}{summary.cozyXpEarned}</span>
         </div>
 
         <div className="flex justify-end">

@@ -31,10 +31,12 @@ describe('Per-Profile Local Storage & Base64 Save Transfer', () => {
     const storage = createMemoryStorage();
     ensureInitialProfileStore(storage);
 
-    const profileA = createProfile('Red', storage);
-    const profileB = createProfile('Blue', storage);
+    const profileA = createProfile('Red', 'high-stakes', storage);
+    const profileB = createProfile('Blue', 'relaxed', storage);
 
     expect(profileA.activeState.profileId).not.toBe(profileB.activeState.profileId);
+    expect(profileA.activeState.cash).toBe(1200);
+    expect(profileB.activeState.cash).toBe(3500);
 
     // Switch to Red and mutate cash and cozyXp
     const loadedRed = switchActiveProfile(profileA.activeState.profileId, storage);
@@ -47,7 +49,7 @@ describe('Per-Profile Local Storage & Base64 Save Transfer', () => {
 
     // Switch to Blue and confirm Blue is completely untouched
     const loadedBlue = switchActiveProfile(profileB.activeState.profileId, storage);
-    expect(loadedBlue.activeState.cash).toBe(1800);
+    expect(loadedBlue.activeState.cash).toBe(3500);
     expect(loadedBlue.activeState.cozyXp).toBe(0);
 
     // Switch back to Red and verify persistence
@@ -55,15 +57,15 @@ describe('Per-Profile Local Storage & Base64 Save Transfer', () => {
     expect(reloadedRed.activeState.cash).toBe(9999);
     expect(reloadedRed.activeState.cozyXp).toBe(450);
 
-    // Resetting Red does not alter Blue
+    // Resetting Red resets back to High Stakes starting cash without altering Blue
     const resetRed = resetProfile(profileA.activeState.profileId, storage);
-    expect(resetRed.cash).toBe(1800);
-    expect(switchActiveProfile(profileB.activeState.profileId, storage).activeState.cash).toBe(1800);
+    expect(resetRed.cash).toBe(1200);
+    expect(switchActiveProfile(profileB.activeState.profileId, storage).activeState.cash).toBe(3500);
   });
 
   it('round-trips Unicode Base64 Save Export/Import and rejects corrupted codes', () => {
     const storage = createMemoryStorage();
-    const { activeState } = createProfile('PokéHost Lance', storage);
+    const { activeState } = createProfile('PokéHost Lance', 'standard', storage);
     const modified = {
       ...activeState,
       cash: 4321,

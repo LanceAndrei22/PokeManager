@@ -47,9 +47,9 @@ describe('PokéMart: Low Cortisol Shift UI Integration', () => {
     await user.click(eeveeInspectBtn);
 
     const dialog = screen.getByRole('dialog');
-    expect(within(dialog).getByText(/Eevee/i)).toBeInTheDocument();
+    expect(within(dialog).getByRole('heading', { name: /Eevee/i })).toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', { name: 'Evolve' }));
-    expect(within(dialog).getByText(/Vaporeon/i)).toBeInTheDocument();
+    expect(within(dialog).getByRole('heading', { name: /Vaporeon/i })).toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', { name: 'Close' }));
 
     // 6. Pair rested Vaporeon (Field) & healed Psyduck (Water/Field) in Breeding Incubator

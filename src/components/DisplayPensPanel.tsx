@@ -35,6 +35,7 @@ const GIFT_BALL_OPTIONS: GiftBallSlug[] = [
   'heal-ball',
   'friend-ball',
   'luxury-ball',
+  'cherish-ball',
 ];
 
 export function DisplayPensPanel({

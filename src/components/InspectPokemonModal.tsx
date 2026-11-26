@@ -186,7 +186,9 @@ export function InspectPokemonModal({
                 const evoTargetId =
                   item.category === 'stone'
                     ? getEvolutionTarget(pokemon.speciesId, item.slug as EvolutionStoneSlug)
-                    : null;
+                    : item.category === 'candy' && check.targetSpeciesId
+                      ? check.targetSpeciesId
+                      : null;
                 const evoTargetName = evoTargetId ? getSpecies(evoTargetId).name : null;
 
                 return (
