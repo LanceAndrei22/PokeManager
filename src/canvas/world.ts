@@ -811,13 +811,13 @@ export function hitTestPokemon(
   const u = layout.unit;
   const sorted = [...world.pokemon.values()].sort((a, b) => b.y - a.y);
   for (const ent of sorted) {
-    const halfW = Math.max(u * 14, s * 0.24);
-    const topH = Math.max(u * 28, s * 0.56);
+    const halfW = Math.max(u * 16, s * 0.28);
+    const topH = Math.max(u * 36, s * 0.65);
     if (
       x >= ent.x - halfW &&
       x <= ent.x + halfW &&
       y >= ent.y - topH &&
-      y <= ent.y + u * 2
+      y <= ent.y + u * 3
     ) {
       return ent.uid;
     }

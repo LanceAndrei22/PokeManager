@@ -71,22 +71,30 @@ export function getPokemonPose(world: ShopWorld, ent: PokemonEntity): Pose {
 }
 
 /**
- * Computes crisp integer scaling for variable-size PMD sprite frames so small/medium
- * Pokémon stay bold (~2× art scale) while large Legendaries still fit cleanly inside pens.
+ * Keeps uniform integer pixel density (`layout.unit`) across all PMD species, only
+ * stepping down if the visible silhouette exceeds the pen interior.
  */
 function computeFrameDrawSize(
   frame: SpriteFrame,
   layout: ShopLayout,
 ): { drawW: number; drawH: number } {
-  const maxDim = Math.max(frame.sw, frame.sh);
   if (!frame.usesDirectionRow) {
     return { drawW: layout.spriteSize, drawH: layout.spriteSize };
   }
-  const maxAllowed = layout.spriteSize * 1.75;
-  const scale =
-    maxDim * layout.unit <= maxAllowed
-      ? layout.unit
-      : Math.max(1, Math.floor(maxAllowed / maxDim));
+  const visW = frame.visibleWidthPx ?? Math.round(frame.sw * 0.56);
+  const visH = frame.visibleHeightPx ?? Math.round(frame.sh * 0.56);
+  const penInnerH = layout.pens[0]?.inner.h ?? layout.spriteSize * 1.8;
+  const penInnerW = layout.pens[0]?.inner.w ?? layout.spriteSize * 3.0;
+  const maxVisH = penInnerH * 0.88;
+  const maxVisW = penInnerW * 0.82;
+
+  let scale = layout.unit;
+  if (visH * scale > maxVisH || visW * scale > maxVisW) {
+    scale = Math.max(
+      1,
+      Math.floor(Math.min(maxVisH / Math.max(1, visH), maxVisW / Math.max(1, visW))),
+    );
+  }
   return { drawW: frame.sw * scale, drawH: frame.sh * scale };
 }
 

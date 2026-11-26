@@ -87,20 +87,35 @@ function seam(unit: number): number {
   return Math.max(1, Math.round(unit / 2));
 }
 
+/**
+ * Scales every PMD Pokémon at the room's uniform integer pixel density (`layout.unit`) so
+ * all 493 species share identical crisp pixel thickness and authentic relative PMD body
+ * proportions (e.g. Dialga/Lugia/Arceus naturally taller than Mewtwo/Eevee). Only steps
+ * down an integer multiplier if the Pokémon's *visible* opaque silhouette (not empty PMD
+ * attack-frame cell padding) would overflow the pen interior.
+ */
 function computeFrameDrawSize(
   frame: SpriteFrame,
   layout: ShopLayout,
-): { drawW: number; drawH: number } {
-  const maxDim = Math.max(frame.sw, frame.sh);
+): { drawW: number; drawH: number; scale: number } {
   if (!frame.usesDirectionRow) {
-    return { drawW: layout.spriteSize, drawH: layout.spriteSize };
+    return { drawW: layout.spriteSize, drawH: layout.spriteSize, scale: layout.spriteScale };
   }
-  const maxAllowed = layout.spriteSize * 1.75;
-  const scale =
-    maxDim * layout.unit <= maxAllowed
-      ? layout.unit
-      : Math.max(1, Math.floor(maxAllowed / maxDim));
-  return { drawW: frame.sw * scale, drawH: frame.sh * scale };
+  const visW = frame.visibleWidthPx ?? Math.round(frame.sw * 0.56);
+  const visH = frame.visibleHeightPx ?? Math.round(frame.sh * 0.56);
+  const penInnerH = layout.pens[0]?.inner.h ?? layout.spriteSize * 1.8;
+  const penInnerW = layout.pens[0]?.inner.w ?? layout.spriteSize * 3.0;
+  const maxVisH = penInnerH * 0.88;
+  const maxVisW = penInnerW * 0.82;
+
+  let scale = layout.unit;
+  if (visH * scale > maxVisH || visW * scale > maxVisW) {
+    scale = Math.max(
+      1,
+      Math.floor(Math.min(maxVisH / Math.max(1, visH), maxVisW / Math.max(1, visW))),
+    );
+  }
+  return { drawW: frame.sw * scale, drawH: frame.sh * scale, scale };
 }
 
 function getPokemonPose(world: ShopWorld, ent: PokemonEntity): Pose {

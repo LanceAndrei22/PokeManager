@@ -455,18 +455,19 @@ export function getCounterQueueSpot(layout: ShopLayout, queueIndex: number): Poi
   return { ...spots[Math.min(Math.max(0, queueIndex), spots.length - 1)] };
 }
 
-/** Feet-position bounds a Pokémon may wander to inside a pen (clears fences cleanly). */
+/** Feet-position bounds a Pokémon may wander to inside a pen (generous headroom for Legendaries). */
 export function getPenWanderBounds(layout: ShopLayout, penIndex: number): Rect | null {
   const pen = layout.pens[penIndex];
   if (!pen) return null;
   const u = layout.unit;
   const { inner } = pen;
-  const marginX = Math.max(u * 14, layout.spriteSize * 0.26);
+  const marginX = Math.max(u * 22, inner.w * 0.14);
   let minX = inner.x + marginX;
   let maxX = inner.x + inner.w - marginX;
   if (minX > maxX) minX = maxX = inner.x + inner.w / 2;
-  const maxY = inner.y + inner.h - u * 3;
-  let minY = inner.y + Math.max(u * 22, layout.spriteSize * 0.45);
+  const maxY = inner.y + inner.h - u * 4;
+  // Leave upper pen headroom so tall Legendaries (Lugia, Rayquaza, Dialga, Arceus) never clip top rail
+  let minY = inner.y + Math.min(inner.h * 0.72, Math.max(u * 38, inner.h * 0.54));
   if (minY > maxY) minY = maxY;
   return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
 }
