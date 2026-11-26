@@ -31,10 +31,10 @@
   - `user.name = "Lance Andrei C. Bolaños"`
   - `user.email = "bolanoslanceandrei@gmail.com"`
 - **Strict Local-Only Rule:** NEVER run `gh repo create`, `git remote add`, or `git push` unless the user explicitly asks to publish.
-- Commit every completed step, feature slice, or fix locally with:
-  - A short, concise summary line (`< 60` characters).
-  - A brief 1–3 line description body summarizing changes and verification.
-- Never commit `node_modules/`, `dist/`, `.npm-cache/`, `.npmrc`, `*.log`, or temporary files.
+- Commit every completed step, feature slice, or fix locally using **Conventional Commits**:
+  - Format the summary line as `type(scope): concise summary` (`< 60` characters), using standard types (`feat`, `fix`, `refactor`, `perf`, `chore`, `docs`, `test`).
+  - Include a brief 1–3 line description body summarizing changes and verification.
+- Never commit `node_modules/`, `dist/`, `.npm-cache/`, `.npmrc`, `graphify-out/`, `*.log`, or temporary files.
 
 ## 6. Per-User Local Storage Architecture (v2)
 - All saves stay strictly local in browser `localStorage` with multi-profile support (isolated v2 namespace leaving v1 keys untouched):
