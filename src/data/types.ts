@@ -1,41 +1,88 @@
 /**
- * Core domain types for PokéMart: Low Cortisol Shift.
- * Defines species metadata, Pokémon instances, market trends, customer archetypes,
- * breeding eggs, shop upgrades, Adoption Dex tracking, and per-profile save envelopes.
+ * Core domain types for PokéMart: Low Cortisol Shift (v2 Tycoon Overhaul).
+ * Covers all 493 Gen 1–4 species, PMD SpriteCollab animations, 3 difficulties,
+ * live-clock counter haggling, daily rent/upkeep, Debt Grace, Liquidation, and Bankruptcy.
  */
 
-/** Elemental types used by the curated Gen 1–4 shop roster and market trends. */
+/** All 18 canonical Pokémon elemental types present in the 493 Pokédex. */
 export type PokemonType =
   | 'normal'
-  | 'grass'
+  | 'fighting'
+  | 'flying'
+  | 'poison'
+  | 'ground'
+  | 'rock'
+  | 'bug'
+  | 'ghost'
+  | 'steel'
   | 'fire'
   | 'water'
+  | 'grass'
   | 'electric'
-  | 'fairy'
   | 'psychic'
+  | 'ice'
+  | 'dragon'
   | 'dark'
-  | 'fighting'
-  | 'dragon';
+  | 'fairy';
 
-/** Low-stress temperament traits that interact with market trends and collectors. */
+/** Temperament traits interacting with daily Market Trends and collector preferences. */
 export type ChillTrait = 'Docile' | 'Sleepy' | 'Unbothered' | 'Cozy' | 'Lucky';
 
-/** Breeding compatibility groups shared across curated Gen 1–4 species. */
+/** Standard Pokémon Egg Groups across Gen 1–4. */
 export type EggGroup =
-  | 'Field'
-  | 'Water'
   | 'Monster'
+  | 'Water 1'
+  | 'Water 2'
+  | 'Water 3'
+  | 'Bug'
+  | 'Flying'
+  | 'Field'
   | 'Fairy'
   | 'Grass'
+  | 'Human-Like'
+  | 'Mineral'
   | 'Amorphous'
-  | 'Dragon';
+  | 'Ditto'
+  | 'Dragon'
+  | 'Undiscovered';
 
-/** Curated item slugs matching PNGs fetched into `public/assets/items/`. */
+/** Rarity classification driving Wholesale rank gating, pricing, and VIP contracts. */
+export type RarityTier = 'common' | 'uncommon' | 'rare' | 'pseudo' | 'legendary' | 'mythical';
+
+/** Three playable tycoon difficulty modes stored per Shift Manager profile. */
+export type DifficultyId = 'relaxed' | 'standard' | 'high-stakes';
+
+/** Difficulty balance curve parameters. */
+export interface DifficultyConfig {
+  id: DifficultyId;
+  name: string;
+  tagline: string;
+  startingCash: number;
+  baseRent: number;
+  rentPerShift: number;
+  upkeepPerPen: number;
+  upkeepPerBed: number;
+  debtGraceShifts: number;
+  /** Multiplier applied to shopper patience durations at the register. */
+  patienceMultiplier: number;
+  /** Additive bonus/penalty applied to haggle success probability. */
+  haggleSuccessModifier: number;
+  /** Shop XP deducted when a queued customer walks out at 0 patience. */
+  walkoutXpPenalty: number;
+  wholesaleCostMultiplier: number;
+  /** Bonus additive shiny rate & VIP Legendary weight. */
+  shinyBonus: number;
+  vipRankFloor: number;
+  vipPayoutMultiplier: number;
+}
+
+/** Curated item slugs matching PNGs in `public/assets/items/`. */
 export type ItemSlug =
   | 'poke-ball'
   | 'heal-ball'
   | 'friend-ball'
   | 'luxury-ball'
+  | 'cherish-ball'
   | 'potion'
   | 'fresh-water'
   | 'moomoo-milk'
@@ -47,45 +94,77 @@ export type ItemSlug =
   | 'thunder-stone'
   | 'leaf-stone'
   | 'moon-stone'
+  | 'sun-stone'
+  | 'shiny-stone'
+  | 'dusk-stone'
+  | 'dawn-stone'
   | 'lucky-egg'
   | 'egg';
 
-/** Evolution stone subset used to trigger stone evolutions in the shop. */
+/** All 9 Gen 1–4 Evolution Stones. */
 export type EvolutionStoneSlug =
   | 'fire-stone'
   | 'water-stone'
   | 'thunder-stone'
   | 'leaf-stone'
-  | 'moon-stone';
+  | 'moon-stone'
+  | 'sun-stone'
+  | 'shiny-stone'
+  | 'dusk-stone'
+  | 'dawn-stone';
 
-/** Specialty Poké Ball subset selectable as optional checkout gift wrap. */
-export type GiftBallSlug = 'poke-ball' | 'heal-ball' | 'friend-ball' | 'luxury-ball';
+/** Poké Balls selectable as checkout gift wrap. */
+export type GiftBallSlug =
+  | 'poke-ball'
+  | 'heal-ball'
+  | 'friend-ball'
+  | 'luxury-ball'
+  | 'cherish-ball';
 
 /** Functional item classification for bag filtering and wholesale shelves. */
 export type ItemCategory = 'stone' | 'care' | 'candy' | 'ball' | 'egg';
 
-/** Primary stats governing valuation, cozy appeal, and breeding inheritance. */
+/** Supported PMD SpriteCollab spritesheet animation names. */
+export type PmdAnimKey = 'Walk' | 'Idle' | 'Sleep' | 'Hop';
+
+/** Pre-verified PMD SpriteCollab asset availability from `tracker.json`. */
+export interface PmdAnimAvailability {
+  normal: PmdAnimKey[];
+  shiny: PmdAnimKey[];
+  portrait: boolean;
+  shinyPortrait: boolean;
+}
+
+/** Primary stats governing valuation, shop appeal, and breeding inheritance. */
 export interface PokemonStats {
   cute: number;
   comfort: number;
   rarity: number;
 }
 
-/** Static catalog definition for one of the 45 curated Platinum species. */
+/** Static catalog definition for one of the 493 Gen 1–4 National Dex species. */
 export interface SpeciesDefinition {
   id: number;
+  paddedId: string;
   name: string;
   types: PokemonType[];
   eggGroups: EggGroup[];
   basePrice: number;
   baseStats: PokemonStats;
-  /** Minimum Cozy Rank (1–5) required for this species to appear in Wholesale offers. */
-  minCozyRank: number;
-  /** Optional mapping of evolution stone slug to evolved target species ID. */
-  evolutions?: Partial<Record<EvolutionStoneSlug, number>>;
-  /** Base species ID hatched when breeding this line. */
+  rarityTier: RarityTier;
+  /** Minimum Shop Rank (1–10) required for Wholesale offers. */
+  unlockRank: number;
+  isLegendary: boolean;
+  isMythical: boolean;
+  canBreed: boolean;
+  /** Base species ID hatched when breeding this line (Manaphy #490 -> Phione #489). */
   babySpeciesId: number;
+  /** Optional mapping of Evolution Stone slug -> evolved target species ID. */
+  evolutions?: Partial<Record<EvolutionStoneSlug, number>>;
+  /** Optional Rare Candy next-stage evolution target within #1–#493. */
+  levelEvolutionId?: number;
   cozyNote: string;
+  pmdAnims: PmdAnimAvailability;
 }
 
 /** Shop inventory item metadata and mechanical effect parameters. */
@@ -115,23 +194,23 @@ export interface PokemonInstance {
   trait: ChillTrait;
   stats: PokemonStats;
   location: PokemonLocation;
-  /** Assigned pen slot (0-based) when `location === 'pen'`. */
   penIndex: number | null;
   /** Healing readiness from 0 to 100 (`100` means rested and display-ready). */
   healingProgress: number;
   needsRecovery: boolean;
   acquiredAtShift: number;
-  origin: 'starter' | 'wholesale' | 'rescue' | 'hatched' | 'evolved';
+  origin: 'starter' | 'wholesale' | 'rescue' | 'hatched' | 'evolved' | 'vip-contract';
 }
 
-/** Four shop visitor archetypes with distinct preference badges and pricing rules. */
+/** Five shop visitor archetypes including high-roller VIP Seekers. */
 export type CustomerArchetypeId =
   | 'cozy-collector'
   | 'bargain-browser'
   | 'trend-fan'
-  | 'shiny-seeker';
+  | 'shiny-seeker'
+  | 'vip-seeker';
 
-/** Metadata describing how a customer archetype evaluates Pokémon and markup. */
+/** Metadata describing how a customer archetype evaluates Pokémon, markup, and haggling. */
 export interface CustomerArchetype {
   id: CustomerArchetypeId;
   name: string;
@@ -139,19 +218,50 @@ export interface CustomerArchetype {
   shortTag: string;
   accentClass: string;
   description: string;
-  /** Maximum comfortable markup percentage before buy chance decays quickly. */
   markupTolerance: number;
   bonusMultiplier: number;
+  /** Base patience ticks at Kecleon's counter before difficulty scaling. */
+  basePatience: number;
+  /** Base haggle resistance offset (negative = tougher negotiator). */
+  haggleEase: number;
 }
 
-/** Active customer currently browsing a shop display pen during an open shift. */
+/** Active customer browsing a shop display pen before heading to Kecleon's counter. */
 export interface ShopCustomer {
   uid: string;
   archetypeId: CustomerArchetypeId;
+  npcSpeciesId: number;
+  npcPaddedId: string;
   name: string;
   targetPenIndex: number;
   statusText: string;
   ticksRemaining: number;
+}
+
+/** Live-clock customer queued at Kecleon's register awaiting Accept, Haggle, or Decline. */
+export interface CounterOffer {
+  uid: string;
+  customerUid: string;
+  archetypeId: CustomerArchetypeId;
+  npcSpeciesId: number;
+  npcPaddedId: string;
+  customerName: string;
+  pokemonUid: string;
+  speciesId: number;
+  isShiny: boolean;
+  penIndex: number;
+  fairValue: number;
+  initialOffer: number;
+  currentOffer: number;
+  haggleAttempts: number;
+  maxHaggleAttempts: number;
+  /** Live countdown ticking down while the shift clock runs; 0 triggers a walk-out. */
+  patience: number;
+  maxPatience: number;
+  trendMatched: boolean;
+  archetypeMatched: boolean;
+  isVip: boolean;
+  lastActionNote?: string;
 }
 
 /** Daily shift market trend boosting demand for matching types or chill traits. */
@@ -164,10 +274,10 @@ export interface MarketTrend {
   matchesPokemon: (species: SpeciesDefinition, pokemon: PokemonInstance) => boolean;
 }
 
-/** Rotating offer on the daily Wholesale & Rescue shelf. */
+/** Rotating offer on the daily Wholesale, Rescue, or VIP Legendary Contract shelf. */
 export interface WholesaleOffer {
   uid: string;
-  kind: 'healthy' | 'stray' | 'egg';
+  kind: 'healthy' | 'stray' | 'egg' | 'vip-contract';
   speciesId: number;
   isShiny: boolean;
   trait: ChillTrait;
@@ -185,7 +295,6 @@ export interface EggInstance {
   isShiny: boolean;
   trait: ChillTrait;
   inheritedStats: PokemonStats;
-  /** Incubation progress from 0 to 100. */
   progress: number;
   readyToHatch: boolean;
 }
@@ -208,7 +317,7 @@ export interface ShopUpgrade {
   maxLevel: number;
 }
 
-/** Per-species record inside the player's Adoption Dex. */
+/** Per-species record inside the player's 493-species Adoption Dex. */
 export interface AdoptionDexEntry {
   speciesId: number;
   seenNormal: boolean;
@@ -218,41 +327,68 @@ export interface AdoptionDexEntry {
   evolvedCount: number;
 }
 
-/** Summary shown at the cozy close of each shift. */
-export interface ShiftSummary {
+/** Discrete phase of the active shift cycle. */
+export type ShiftPhase = 'prep' | 'open' | 'settlement-debt' | 'summary' | 'bankrupt';
+
+/** Itemized shift settlement including daily store rent and pen/bed upkeep. */
+export interface ShiftSettlement {
   shiftNumber: number;
   revenue: number;
   expenses: number;
   tipsEarned: number;
+  dailyRent: number;
+  penUpkeep: number;
+  bedUpkeep: number;
+  totalDues: number;
+  netBeforeDues: number;
+  cashAfterDues: number;
   adoptionsCount: number;
+  walkoutsCount: number;
   eggsHatched: number;
   straysHealed: number;
   cozyXpEarned: number;
   trendTitle: string;
   closedEarly: boolean;
+  usedDebtGrace: boolean;
+  debtGraceRemaining: number;
 }
 
-/** Single entry in the cozy shop activity log. */
+/** Final run scorecard captured if a profile goes bankrupt. */
+export interface BankruptcySummary {
+  shiftNumber: number;
+  totalRevenue: number;
+  totalAdoptions: number;
+  highestSale: number;
+  dexDiscovered: number;
+  difficulty: DifficultyId;
+}
+
+/** Single entry in the shop activity log. */
 export interface ActivityEntry {
   id: string;
   shift: number;
   text: string;
-  tone: 'info' | 'sale' | 'heal' | 'breed' | 'shiny';
+  tone: 'info' | 'sale' | 'heal' | 'breed' | 'shiny' | 'warning';
 }
 
-/** Complete serializable game state for a single local Shift Manager profile. */
+/** Complete serializable v2 game state for a single local Shift Manager profile. */
 export interface GameState {
-  version: 1;
+  version: 2;
   profileId: string;
   profileName: string;
+  difficulty: DifficultyId;
   muted: boolean;
   cash: number;
   shiftNumber: number;
   shiftTick: number;
   shiftDurationTicks: number;
+  shiftPhase: ShiftPhase;
   shiftRunning: boolean;
   shiftSpeed: 1 | 2;
   cozyXp: number;
+  debtGraceDaysRemaining: number;
+  isBankrupt: boolean;
+  bankruptcySummary: BankruptcySummary | null;
   activeTrendId: string;
   globalMarkup: number;
   penMarkups: Record<number, number | null>;
@@ -262,8 +398,9 @@ export interface GameState {
   inventory: Partial<Record<ItemSlug, number>>;
   wholesaleCatalog: WholesaleOffer[];
   customers: ShopCustomer[];
+  /** Live-clock shoppers waiting at Kecleon's counter to be accepted, haggled, or declined. */
+  counterQueue: CounterOffer[];
   upgrades: Record<ShopUpgradeId, number>;
-  /** Tracks recent shift adoptions per species for gentle oversupply saturation. */
   recentSpeciesSales: Record<number, number>;
   dex: Record<number, AdoptionDexEntry>;
   shiftStats: {
@@ -271,27 +408,35 @@ export interface GameState {
     expenses: number;
     tipsEarned: number;
     adoptionsCount: number;
+    walkoutsCount: number;
     eggsHatched: number;
     straysHealed: number;
     cozyXpEarned: number;
   };
-  lastShiftSummary: ShiftSummary | null;
+  lifetimeStats: {
+    totalRevenue: number;
+    totalAdoptions: number;
+    highestSale: number;
+  };
+  pendingSettlement: ShiftSettlement | null;
+  lastShiftSummary: ShiftSettlement | null;
   activityLog: ActivityEntry[];
   seedCounter: number;
   updatedAt: number;
 }
 
-/** Lightweight metadata entry stored in the multi-profile index. */
+/** Lightweight metadata entry stored in the v2 multi-profile index. */
 export interface ProfileMeta {
   id: string;
   name: string;
+  difficulty: DifficultyId;
   createdAt: number;
   updatedAt: number;
 }
 
-/** Root index stored under `pokemart-low-cortisol:v1:index`. */
+/** Root index stored under `pokemart-low-cortisol:v2:index`. */
 export interface ProfileIndex {
-  version: 1;
+  version: 2;
   activeProfileId: string;
   profiles: ProfileMeta[];
 }
@@ -299,7 +444,7 @@ export interface ProfileIndex {
 /** Checksum-protected wrapper used for Base64 Save Export/Import. */
 export interface SaveEnvelope {
   format: 'pokemart-low-cortisol-save';
-  version: 1;
+  version: 2;
   checksum: string;
   exportedAt: string;
   state: GameState;

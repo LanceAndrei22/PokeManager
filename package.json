@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "fetch-assets": "node scripts/fetch-assets.mjs"
+    "build-pokedex": "node scripts/build-pokedex.mjs"
   },
   "dependencies": {
     "react": "^19.3.1",
