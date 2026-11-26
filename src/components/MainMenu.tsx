@@ -8,6 +8,7 @@
 import { useState, type FormEvent } from 'react';
 import { MenuBackdropCanvas } from '../canvas/MenuBackdropCanvas';
 import { DIFFICULTIES, DIFFICULTY_LIST } from '../data/difficulties';
+import { CLERK_ROSTER, DEFAULT_CLERK_ID } from '../data/npcs';
 import { getSpecies } from '../data/species';
 import {
   STARTER_MASCOT_IDS,
@@ -24,7 +25,12 @@ export interface MainMenuProps {
   activeState: GameState;
   onPlay: () => void;
   onSwitchProfile: (profileId: string) => void;
-  onCreateProfile: (name: string, difficulty: DifficultyId, starterSpeciesId: number) => void;
+  onCreateProfile: (
+    name: string,
+    difficulty: DifficultyId,
+    starterSpeciesId: number,
+    clerkNpcId?: string,
+  ) => void;
   onToggleBgmMute: () => void;
   onToggleMute: () => void;
   onChangeBgmVolume: (volume: number) => void;
@@ -56,6 +62,7 @@ export function MainMenu({
   const [trainerName, setTrainerName] = useState('');
   const [selectedDiff, setSelectedDiff] = useState<DifficultyId>(activeState.difficulty);
   const [selectedStarter, setSelectedStarter] = useState<number>(133);
+  const [selectedClerk, setSelectedClerk] = useState<string>(DEFAULT_CLERK_ID);
 
   const mascotMon =
     activeState.pokemon.find((mon) => mon.uid === activeState.mascotUid) ?? activeState.pokemon[0];
@@ -69,7 +76,7 @@ export function MainMenu({
     event.preventDefault();
     const cleaned = trainerName.trim();
     if (!cleaned) return;
-    onCreateProfile(cleaned, selectedDiff, selectedStarter);
+    onCreateProfile(cleaned, selectedDiff, selectedStarter, selectedClerk);
     setTrainerName('');
     setCreatorOpen(false);
   };
@@ -248,6 +255,47 @@ export function MainMenu({
                         >
                           <PokemonSprite speciesId={speciesId} name={sp.name} size={40} />
                           <span className="text-xs font-semibold text-white">{sp.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 6 Bundled Starting Shopkeepers */}
+                <div>
+                  <div className="mb-1.5 flex items-center justify-between gap-2">
+                    <span className="text-sm font-semibold text-[#dbe8ff]">
+                      Pick Initial Shopkeeper
+                    </span>
+                    <span className="text-xs text-[#9ec4ff]">
+                      Hire extra random clerks later via Upgrades
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6">
+                    {CLERK_ROSTER.map((clerk) => {
+                      const chosen = selectedClerk === clerk.id;
+                      const shortName = clerk.name.replace(/^Clerk\s+/, '');
+                      return (
+                        <button
+                          key={clerk.id}
+                          type="button"
+                          aria-pressed={chosen}
+                          onClick={() => setSelectedClerk(clerk.id)}
+                          title={`${clerk.name} — ${clerk.role}`}
+                          className={`flex flex-col items-center gap-1 border-2 p-1.5 text-center transition ${
+                            chosen
+                              ? 'border-[#ffd84d] bg-[#24458a]'
+                              : 'border-[#3a61a3] bg-[#0d1c40] hover:border-[#78a8f0]'
+                          }`}
+                        >
+                          <img
+                            src={clerk.portraitUrl}
+                            alt={clerk.name}
+                            width={36}
+                            height={36}
+                            className="pixel-art h-9 w-9 object-contain"
+                          />
+                          <span className="text-xs font-semibold text-white">{shortName}</span>
                         </button>
                       );
                     })}

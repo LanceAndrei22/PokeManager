@@ -17,6 +17,9 @@ export interface HumanNpcProfile {
   flavorLine: string;
 }
 
+/** Default initial Shopkeeper NPC ID when creating a profile without explicit selection. */
+export const DEFAULT_CLERK_ID = 'mart_employee';
+
 /** PokéMart Store Clerk standing behind the checkout counter. */
 export const CLERK_NPC: HumanNpcProfile = {
   id: 'mart_employee',
@@ -27,6 +30,83 @@ export const CLERK_NPC: HumanNpcProfile = {
   portraitUrl: './assets/npcs/portraits/clerk.png',
   flavorLine: 'Welcome to PokéMart! Every companion here is happy and well-rested.',
 };
+
+/**
+ * Playable & hireable Counter Shopkeeper roster (6 bundled local Human Trainer sprites).
+ * Players choose their initial shopkeeper when creating a profile; hiring additional
+ * counter clerks via the Upgrades board draws randomly from remaining unhired clerks.
+ */
+export const CLERK_ROSTER: HumanNpcProfile[] = [
+  CLERK_NPC,
+  {
+    id: 'woman_2',
+    name: 'Clerk Clara',
+    role: 'Care Clerk',
+    archetypeId: 'clerk',
+    overworldUrl: './assets/npcs/overworld/woman_2.png',
+    portraitUrl: './assets/npcs/portraits/pokemonbreederf-gen4.png',
+    flavorLine: 'Happy companions and calm checkouts keep every customer smiling!',
+  },
+  {
+    id: 'camper',
+    name: 'Clerk Liam',
+    role: 'Trail Clerk',
+    archetypeId: 'clerk',
+    overworldUrl: './assets/npcs/overworld/camper.png',
+    portraitUrl: './assets/npcs/portraits/camper.png',
+    flavorLine: 'Quick on the register and always ready with a friendly trail tip!',
+  },
+  {
+    id: 'lass',
+    name: 'Clerk Penny',
+    role: 'Front Clerk',
+    archetypeId: 'clerk',
+    overworldUrl: './assets/npcs/overworld/lass.png',
+    portraitUrl: './assets/npcs/portraits/lass-gen4.png',
+    flavorLine: 'I’ll greet every shopper at the door so nobody feels rushed!',
+  },
+  {
+    id: 'woman_1',
+    name: 'Clerk Hana',
+    role: 'Boutique Clerk',
+    archetypeId: 'clerk',
+    overworldUrl: './assets/npcs/overworld/woman_1.png',
+    portraitUrl: './assets/npcs/portraits/lady-gen4.png',
+    flavorLine: 'Gracious hospitality makes every PokéMart visit unforgettable.',
+  },
+  {
+    id: 'steven',
+    name: 'Clerk Steven',
+    role: 'Concierge Clerk',
+    archetypeId: 'clerk',
+    overworldUrl: './assets/npcs/overworld/steven.png',
+    portraitUrl: './assets/npcs/portraits/steven.png',
+    flavorLine: 'A steady hand at the counter puts even VIP collectors at ease.',
+  },
+];
+
+const CLERK_BY_ID: Record<string, HumanNpcProfile> = Object.fromEntries(
+  CLERK_ROSTER.map((clerk) => [clerk.id, clerk]),
+);
+
+/** Resolves a valid Shopkeeper profile by ID, defaulting safely to Clerk Leo. */
+export function getClerkById(clerkId?: string): HumanNpcProfile {
+  if (clerkId && CLERK_BY_ID[clerkId]) return CLERK_BY_ID[clerkId];
+  return CLERK_NPC;
+}
+
+/** Picks a random unhired Shopkeeper from `CLERK_ROSTER` for the Hire Counter Clerk upgrade. */
+export function pickRandomAdditionalClerk(
+  existingClerkIds: readonly string[],
+  rng: RngFn,
+): HumanNpcProfile {
+  const hired = new Set(existingClerkIds);
+  const available = CLERK_ROSTER.filter((clerk) => !hired.has(clerk.id));
+  if (available.length === 0) {
+    return pickRandom(CLERK_ROSTER, rng);
+  }
+  return pickRandom(available, rng);
+}
 
 /** Archetype-matched Human Trainer shoppers bundled locally under `public/assets/npcs/`. */
 export const HUMAN_SHOPPER_NPCS_BY_ARCHETYPE: Record<CustomerArchetypeId, HumanNpcProfile[]> = {

@@ -74,4 +74,73 @@ describe('Adoption Dex, Cozy Rank, Healing & Upgrades', () => {
     richState = purchaseUpgradeAction(richState, 'extra-nap-bed').state;
     expect(getNapBedCapacity(richState.upgrades)).toBe(3);
   });
+
+  it('supports choosing initial shopkeeper, hiring random extra clerks, and slowing counter expiration', () => {
+    // Choose initial shopkeeper on profile creation
+    let state = createInitialGameState('p-clerk', 'Dawn', 'standard', false, 2025, 133, 'woman_2');
+    expect(state.shopkeepers).toEqual(['woman_2']);
+    expect(state.upgrades['hire-clerk']).toBe(0);
+
+    // Hire 1st and 2nd random additional shopkeepers (all unique, up to 3 total)
+    state = { ...state, cash: 5000 };
+    const hire1 = purchaseUpgradeAction(state, 'hire-clerk', createSeededRng(7));
+    expect(hire1.ok).toBe(true);
+    expect(hire1.state.upgrades['hire-clerk']).toBe(1);
+    expect(hire1.state.shopkeepers).toHaveLength(2);
+    expect(new Set(hire1.state.shopkeepers).size).toBe(2);
+
+    const hire2 = purchaseUpgradeAction(hire1.state, 'hire-clerk', createSeededRng(13));
+    expect(hire2.ok).toBe(true);
+    expect(hire2.state.upgrades['hire-clerk']).toBe(2);
+    expect(hire2.state.shopkeepers).toHaveLength(3);
+    expect(new Set(hire2.state.shopkeepers).size).toBe(3);
+
+    // Capped at maxLevel 2 (3 total shopkeepers)
+    const hire3 = purchaseUpgradeAction(hire2.state, 'hire-clerk', createSeededRng(19));
+    expect(hire3.ok).toBe(false);
+
+    // Verify 2 extra clerks slow counter patience decay by 50% compared to 0 extra clerks
+    const offerBase = {
+      uid: 'offer-patience-test',
+      customerUid: 'cust-1',
+      archetypeId: 'normal' as const,
+      npcId: 'camper',
+      npcPortraitUrl: './assets/npcs/portraits/camper.png',
+      customerName: 'Camper Liam',
+      pokemonUid: 'mon-starter-eevee',
+      speciesId: 133,
+      isShiny: false,
+      penIndex: 0,
+      fairValue: 1000,
+      initialOffer: 1000,
+      currentOffer: 1000,
+      haggleAttempts: 0,
+      maxHaggleAttempts: 2,
+      patience: 20,
+      maxPatience: 20,
+      trendMatched: false,
+      archetypeMatched: true,
+      isVip: false,
+    };
+
+    let soloState = toggleShiftRunning({
+      ...createInitialGameState('p-solo', 'Solo'),
+      counterQueue: [offerBase],
+    }).state;
+    let staffedState = toggleShiftRunning({
+      ...hire2.state,
+      counterQueue: [{ ...offerBase }],
+    }).state;
+
+    for (let i = 0; i < 6; i += 1) {
+      soloState = advanceShiftTick(soloState, createSeededRng(500 + i)).state;
+      staffedState = advanceShiftTick(staffedState, createSeededRng(500 + i)).state;
+    }
+
+    const soloRemaining = soloState.counterQueue[0]?.patience ?? 0;
+    const staffedRemaining = staffedState.counterQueue[0]?.patience ?? 0;
+    // Solo loses 6 patience in 6 ticks (20 -> 14); 2 extra clerks skip every 2nd tick (20 -> 17)
+    expect(soloRemaining).toBe(14);
+    expect(staffedRemaining).toBe(17);
+  });
 });

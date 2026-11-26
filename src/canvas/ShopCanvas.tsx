@@ -37,6 +37,9 @@ export interface ShopCanvasProps {
   cash: number;
   shiftSpeed: 1 | 2;
   shiftRunning: boolean;
+  shiftTick?: number;
+  shiftDurationTicks?: number;
+  shopkeepers?: string[];
   pokemon: PokemonInstance[];
   customers: ShopCustomer[];
   counterQueue: CounterOffer[];
@@ -79,6 +82,9 @@ export function ShopCanvas({
   cash,
   shiftSpeed,
   shiftRunning,
+  shiftTick = 0,
+  shiftDurationTicks = 100,
+  shopkeepers,
   pokemon,
   customers,
   counterQueue,
@@ -96,6 +102,11 @@ export function ShopCanvas({
   const layoutRef = useRef<ShopLayout | null>(null);
   const backgroundRef = useRef<HTMLCanvasElement | null>(null);
   const runningRef = useRef(shiftRunning);
+  const shiftTickRef = useRef(shiftTick);
+  const shiftDurationRef = useRef(shiftDurationTicks);
+  const shopkeepersRef = useRef<string[]>(
+    shopkeepers && shopkeepers.length > 0 ? shopkeepers : ['mart_employee'],
+  );
   const hoverTargetRef = useRef<CanvasHitTarget | null>(null);
   const [hoverLabel, setHoverLabel] = useState<string | null>(null);
   const [size, setSize] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
@@ -119,7 +130,11 @@ export function ShopCanvas({
 
   useEffect(() => {
     runningRef.current = shiftRunning;
-  }, [shiftRunning]);
+    shiftTickRef.current = shiftTick;
+    shiftDurationRef.current = shiftDurationTicks;
+    shopkeepersRef.current =
+      shopkeepers && shopkeepers.length > 0 ? shopkeepers : ['mart_employee'];
+  }, [shiftRunning, shiftTick, shiftDurationTicks, shopkeepers]);
 
   useEffect(() => {
     // Keep core gameplay animations (PMD sprite stepping & trainer pathing) active
@@ -199,6 +214,9 @@ export function ShopCanvas({
         stepWorld(world, dt, layout, Math.random);
         renderIndoorScene(ctx, layout, world, backgroundRef.current, adapter, {
           shiftRunning: runningRef.current,
+          shiftTick: shiftTickRef.current,
+          shiftDurationTicks: shiftDurationRef.current,
+          shopkeepers: shopkeepersRef.current,
           hoverTarget: hoverTargetRef.current,
         });
       }

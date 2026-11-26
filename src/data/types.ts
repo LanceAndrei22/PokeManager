@@ -320,7 +320,8 @@ export type ShopUpgradeId =
   | 'extra-incubator'
   | 'extra-nap-bed'
   | 'cafe-decor'
-  | 'mystery-shipment';
+  | 'mystery-shipment'
+  | 'hire-clerk';
 
 /** Static definition for a shop upgrade track. */
 export interface ShopUpgrade {
@@ -417,6 +418,8 @@ export interface GameState {
   activeGiftBall: GiftBallSlug;
   /** UID of the player's featured Store Mascot shown on the Main Menu spotlight card. */
   mascotUid?: string;
+  /** Ordered list of hired shopkeeper NPC IDs standing behind the counter (index 0 = chosen starter clerk). */
+  shopkeepers?: string[];
   pokemon: PokemonInstance[];
   eggs: EggInstance[];
   inventory: Partial<Record<ItemSlug, number>>;
@@ -456,6 +459,8 @@ export interface ProfileMeta {
   difficulty: DifficultyId;
   /** Species ID of the profile's chosen or promoted Store Mascot portrait. */
   mascotSpeciesId?: number;
+  /** Starting Shopkeeper NPC ID selected when creating the profile. */
+  clerkNpcId?: string;
   createdAt: number;
   updatedAt: number;
 }

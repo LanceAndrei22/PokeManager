@@ -8,7 +8,12 @@
 import { CUSTOMER_ARCHETYPES } from '../data/customers';
 import { getDifficultyConfig } from '../data/difficulties';
 import { getItemDefinition } from '../data/items';
-import { pickShopperNpc } from '../data/npcs';
+import {
+  DEFAULT_CLERK_ID,
+  getClerkById,
+  pickRandomAdditionalClerk,
+  pickShopperNpc,
+} from '../data/npcs';
 import { getSpecies } from '../data/species';
 import { MARKET_TRENDS, getMarketTrend } from '../data/trends';
 import { UPGRADES_BY_ID, getUpgradeCost } from '../data/upgrades';
@@ -111,9 +116,11 @@ export function createInitialGameState(
   muted = false,
   seed = 1042,
   starterSpeciesId = 133,
+  initialClerkId: string = DEFAULT_CLERK_ID,
 ): GameState {
   const diff = getDifficultyConfig(difficulty);
   const rng = createSeededRng(seed);
+  const resolvedClerk = getClerkById(initialClerkId);
   const resolvedStarterId = STARTER_MASCOT_IDS.includes(
     starterSpeciesId as (typeof STARTER_MASCOT_IDS)[number],
   )
@@ -202,6 +209,7 @@ export function createInitialGameState(
     penMarkups: {},
     activeGiftBall: 'poke-ball',
     mascotUid: starterUid,
+    shopkeepers: [resolvedClerk.id],
     pokemon: starterPokemon,
     eggs: [],
     inventory: {
@@ -220,6 +228,7 @@ export function createInitialGameState(
       'extra-nap-bed': 0,
       'cafe-decor': 0,
       'mystery-shipment': 0,
+      'hire-clerk': 0,
     },
     recentSpeciesSales: {},
     dex,
@@ -796,8 +805,12 @@ export function claimHatchedEggAction(state: GameState, eggUid: string): ActionR
   };
 }
 
-/** Purchases one level of a persistent shop expansion upgrade. */
-export function purchaseUpgradeAction(state: GameState, upgradeId: ShopUpgradeId): ActionResult {
+/** Purchases one level of a persistent shop expansion upgrade (or hires a random counter clerk). */
+export function purchaseUpgradeAction(
+  state: GameState,
+  upgradeId: ShopUpgradeId,
+  providedRng?: RngFn,
+): ActionResult {
   const def = UPGRADES_BY_ID[upgradeId];
   const level = state.upgrades[upgradeId] ?? 0;
   if (level >= def.maxLevel) {
@@ -808,10 +821,25 @@ export function purchaseUpgradeAction(state: GameState, upgradeId: ShopUpgradeId
     return { state, ok: false, message: `Need ₽${cost.toLocaleString()} for ${def.name}.` };
   }
 
+  let nextShopkeepers = state.shopkeepers ?? [DEFAULT_CLERK_ID];
+  let nextSeed = state.seedCounter + 1;
+  let logText = `Upgraded ${def.name} to Lv.${level + 1}!`;
+  let toastMessage = `${def.name} upgraded to Lv.${level + 1}!`;
+
+  if (upgradeId === 'hire-clerk') {
+    const rolled = nextRng(state, providedRng);
+    nextSeed = rolled.nextSeed;
+    const hired = pickRandomAdditionalClerk(nextShopkeepers, rolled.rng);
+    nextShopkeepers = [...nextShopkeepers, hired.id];
+    logText = `Hired ${hired.name} (${hired.role}) behind the counter — shoppers now stay patient longer!`;
+    toastMessage = `Hired ${hired.name} to help at the counter!`;
+  }
+
   return {
     state: {
       ...state,
       cash: state.cash - cost,
+      shopkeepers: nextShopkeepers,
       upgrades: { ...state.upgrades, [upgradeId]: level + 1 },
       cozyXp: state.cozyXp + 20,
       shiftStats: {
@@ -822,15 +850,15 @@ export function purchaseUpgradeAction(state: GameState, upgradeId: ShopUpgradeId
       activityLog: appendLog(
         state.activityLog,
         state.shiftNumber,
-        `Upgraded ${def.name} to Lv.${level + 1}!`,
+        logText,
         'info',
-        `upg-${state.seedCounter + 1}`,
+        `upg-${nextSeed}`,
       ),
-      seedCounter: state.seedCounter + 1,
+      seedCounter: nextSeed,
       updatedAt: Date.now(),
     },
     ok: true,
-    message: `${def.name} upgraded to Lv.${level + 1}!`,
+    message: toastMessage,
     sfx: 'click',
   };
 }
@@ -1356,12 +1384,32 @@ export function advanceShiftTick(state: GameState, providedRng?: RngFn): TickRes
     );
   }
 
-  // 3. Live-clock Patience countdown for shoppers queued at Kecleon's counter
+  // 3. Live-clock Patience countdown for shoppers queued at the PokéMart counter.
+  // Extra hired shopkeepers slow how quickly queued shoppers expire before walking out:
+  // 0 extra clerks = decays every tick; 1 extra clerk = skips every 3rd tick (~33% slower);
+  // 2+ extra clerks = skips every 2nd tick (50% slower).
+  const extraClerks = Math.max(
+    0,
+    (nextState.shopkeepers?.length ?? 1) - 1,
+    nextState.upgrades['hire-clerk'] ?? 0,
+  );
+  const shouldDecayPatience =
+    extraClerks <= 0
+      ? true
+      : extraClerks === 1
+        ? nextState.shiftTick % 3 !== 0
+        : nextState.shiftTick % 2 !== 0;
+
   const activeQueue: CounterOffer[] = [];
   for (const offer of nextState.counterQueue) {
     // Only keep queue offers whose Pokémon is still on display
     const stillOwned = nextState.pokemon.some((m) => m.uid === offer.pokemonUid);
     if (!stillOwned) continue;
+
+    if (!shouldDecayPatience) {
+      activeQueue.push(offer);
+      continue;
+    }
 
     const nextPatience = offer.patience - 1;
     if (nextPatience <= 0) {
@@ -1442,7 +1490,11 @@ export function advanceShiftTick(state: GameState, providedRng?: RngFn): TickRes
         valuation.askingPrice * (isVip ? diff.vipPayoutMultiplier : 1),
       );
       const arch = CUSTOMER_ARCHETYPES[customer.archetypeId];
-      const maxPatience = Math.max(6, Math.round(arch.basePatience * diff.patienceMultiplier));
+      const clerkBonus = extraClerks * 5;
+      const maxPatience = Math.max(
+        6,
+        Math.round(arch.basePatience * diff.patienceMultiplier) + clerkBonus,
+      );
 
       const counterOffer: CounterOffer = {
         uid: `offer-${nextState.shiftNumber}-${nextState.shiftTick}-${customer.uid}`,

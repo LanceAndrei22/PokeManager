@@ -91,6 +91,9 @@ function createMockContext(): CanvasRenderingContext2D {
     fillRect: vi.fn(),
     strokeRect: vi.fn(),
     beginPath: vi.fn(),
+    closePath: vi.fn(),
+    arc: vi.fn(),
+    fill: vi.fn(),
     moveTo: vi.fn(),
     lineTo: vi.fn(),
     stroke: vi.fn(),
@@ -235,6 +238,13 @@ describe('Shop World State Machine', () => {
     const headTop = getHumanHeadTopY(fhdLayout.counterQueueSpots[0].y, fhdLayout);
     expect(fhdLayout.counterQueueSpots[0].y - headTop).toBe(21 * fhdLayout.unit);
 
+    // All extra sunlit back-wall windows align on the exact same vertical datum as the primary window
+    expect(fhdLayout.extraWindows.length).toBeGreaterThanOrEqual(2);
+    for (const win of fhdLayout.extraWindows) {
+      expect(win.y).toBe(fhdLayout.window.y);
+      expect(win.h).toBe(fhdLayout.window.h);
+    }
+
     // Every integrated station (wall-side PC, wall-mounted Upgrades, Incubator pedestal, Resting Corner)
     // resolves cleanly via hitTestIndoorScene at 1920x1080
     expect(
@@ -374,12 +384,16 @@ describe('2D Canvas Indoor Pixel Renderer & ShopCanvas UI', () => {
 
     renderIndoorScene(ctx, layout, world, null, adapter, {
       shiftRunning: true,
+      shiftTick: 35,
+      shiftDurationTicks: 100,
+      shopkeepers: ['mart_employee', 'woman_2', 'steven'],
       hoverTarget: { kind: 'station', station: 'wholesale', label: 'Wholesale PC Terminal' },
     });
 
     expect(ctx.setTransform).toHaveBeenCalledWith(1, 0, 0, 1, 0, 0);
     expect(ctx.imageSmoothingEnabled).toBe(false);
     expect(ctx.drawImage).toHaveBeenCalled();
+    expect(ctx.arc).toHaveBeenCalled();
     // Verifies 100% PMD SpriteCollab adapter is used for store Pokémon (Eevee #133 pen, Psyduck #54 sleep)
     expect(getFrame).toHaveBeenCalledWith(133, false, expect.any(String), expect.any(Number), expect.any(Number));
     expect(getFrame).toHaveBeenCalledWith(54, false, 'sleep', expect.any(Number), 0);

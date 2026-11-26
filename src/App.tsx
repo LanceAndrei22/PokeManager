@@ -220,8 +220,9 @@ export function App() {
     name: string,
     selectedDiff: DifficultyId = 'standard',
     starterSpeciesId = 133,
+    clerkNpcId?: string,
   ) => {
-    const next = createProfile(name, selectedDiff, undefined, starterSpeciesId);
+    const next = createProfile(name, selectedDiff, undefined, starterSpeciesId, clerkNpcId);
     setStore({ index: next.index, game: next.activeState });
     setInspectUid(null);
     setActiveOfferUid(null);
@@ -350,6 +351,9 @@ export function App() {
             cash={game.cash}
             shiftSpeed={game.shiftSpeed}
             shiftRunning={game.shiftRunning}
+            shiftTick={game.shiftTick}
+            shiftDurationTicks={game.shiftDurationTicks}
+            shopkeepers={game.shopkeepers}
             pokemon={game.pokemon}
             customers={game.customers}
             counterQueue={game.counterQueue}
@@ -553,6 +557,7 @@ export function App() {
               <UpgradesPanel
                 cash={game.cash}
                 upgrades={game.upgrades}
+                shopkeepers={game.shopkeepers}
                 onPurchaseUpgrade={(upgradeId: ShopUpgradeId) =>
                   applyAction((state) => purchaseUpgradeAction(state, upgradeId))
                 }

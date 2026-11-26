@@ -131,31 +131,31 @@ export function computeIndoorLayout(
   const topBand = px(Math.round(70 + (resScale - 1) * 18));
   const bottomBand = px(Math.round(76 + (resScale - 1) * 20));
 
-  const wallH = topBand + spx(78);
+  const wallH = topBand + spx(86);
   const wall: Rect = { x: 0, y: 0, w: width, h: wallH };
 
-  const doorW = spx(64);
-  const doorH = spx(64);
+  const doorW = spx(74);
+  const doorH = spx(74);
   const door: Rect = {
-    x: width - pad - spx(8) - doorW,
+    x: width - pad - spx(26) - doorW,
     y: wall.h - doorH,
     w: doorW,
     h: doorH,
   };
 
   const foyer: Rect = {
-    x: door.x - spx(10),
+    x: door.x - spx(4),
     y: wall.h,
-    w: doorW + spx(20),
-    h: spx(28),
+    w: doorW + spx(8),
+    h: spx(26),
   };
 
-  // Larger, deeper Gen 4 Checkout Counter projecting organically onto the floor so Clerk Leo
-  // stands visibly behind the desk top while shoppers queue right up against the front edge.
-  const counterW = Math.min(spx(304), Math.round(width * 0.29));
+  // Larger, deeper Gen 4 Checkout Counter projecting organically onto the floor so hired
+  // shopkeepers stand visibly behind the desk top while shoppers queue right up against it.
+  const counterW = Math.min(spx(308), Math.round(width * 0.29));
   const counterH = spx(50);
   const counter: Rect = {
-    x: pad + spx(6),
+    x: pad + spx(24),
     y: wall.h - spx(14),
     w: counterW,
     h: counterH,
@@ -172,32 +172,75 @@ export function computeIndoorLayout(
     h: pcH,
   };
 
-  // Sunlit center-left store window seated cleanly in the upper wall above the shelf band.
-  const windowW = Math.min(spx(156), Math.round(width * 0.14));
-  const windowX = Math.max(
-    pcStation.x + pcStation.w + spx(24),
-    Math.round(width * 0.50 - windowW / 2),
-  );
-  const windowRect: Rect = {
-    x: windowX,
-    y: topBand + spx(6),
-    w: windowW,
-    h: spx(34),
-  };
+  // Unified vertical window band datum shared across ALL sunlit back-wall windows
+  const windowY = topBand + spx(4);
+  const windowH = spx(34);
 
-  // Physical oak Upgrades Notice Board mounted directly on the upper-right back wall.
-  const upgradesW = Math.min(spx(124), Math.max(spx(96), door.x - (windowRect.x + windowRect.w) - spx(68)));
-  const upgradesH = spx(50);
-  const upgradesX = Math.min(
-    door.x - upgradesW - spx(32),
-    windowRect.x + windowRect.w + spx(30),
+  // Physical oak Upgrades Notice Board mounted directly on the upper-right back wall
+  const upgradesW = spx(122);
+  const upgradesH = spx(48);
+  const upgradesX = Math.round(
+    pcStation.x + pcStation.w + (door.x - (pcStation.x + pcStation.w)) * 0.56 - upgradesW / 2,
   );
   const upgradesStation: Rect = {
-    x: upgradesX,
-    y: topBand + spx(8),
+    x: Math.min(door.x - upgradesW - spx(28), Math.max(pcStation.x + pcStation.w + spx(110), upgradesX)),
+    y: windowY,
     w: upgradesW,
     h: upgradesH,
   };
+
+  // Primary sunlit window centered cleanly between the Wholesale PC and the Upgrades Board
+  const midGapStart = pcStation.x + pcStation.w + spx(18);
+  const midGapEnd = upgradesStation.x - spx(18);
+  const midGapW = Math.max(spx(72), midGapEnd - midGapStart);
+  const windowW = Math.min(spx(164), midGapW);
+  const windowRect: Rect = {
+    x: Math.round(midGapStart + (midGapW - windowW) / 2),
+    y: windowY,
+    w: windowW,
+    h: windowH,
+  };
+
+  // Additional aligned sunlit windows sharing exact `windowY` and `windowH`:
+  // 1) Right-side sunlit window between Upgrades Board and Sliding Glass Exit
+  // 2) Twin accent windows flanking the enlarged centered Wall Clock above the Counter
+  const extraWindows: Rect[] = [];
+
+  const rightGapStart = upgradesStation.x + upgradesStation.w + spx(18);
+  const rightGapEnd = door.x - spx(18);
+  const rightGapW = rightGapEnd - rightGapStart;
+  if (rightGapW >= spx(72)) {
+    const rightWinW = Math.min(spx(156), rightGapW);
+    extraWindows.push({
+      x: Math.round(rightGapStart + (rightGapW - rightWinW) / 2),
+      y: windowY,
+      w: rightWinW,
+      h: windowH,
+    });
+  }
+
+  const clockClearHalf = spx(29);
+  const counterCenterX = Math.round(counter.x + counter.w / 2);
+  const leftClockWinStart = counter.x + spx(8);
+  const leftClockWinEnd = counterCenterX - clockClearHalf;
+  if (leftClockWinEnd - leftClockWinStart >= spx(54)) {
+    extraWindows.push({
+      x: leftClockWinStart,
+      y: windowY,
+      w: leftClockWinEnd - leftClockWinStart,
+      h: windowH,
+    });
+  }
+  const rightClockWinStart = counterCenterX + clockClearHalf;
+  const rightClockWinEnd = counter.x + counter.w - spx(8);
+  if (rightClockWinEnd - rightClockWinStart >= spx(54)) {
+    extraWindows.push({
+      x: rightClockWinStart,
+      y: windowY,
+      w: rightClockWinEnd - rightClockWinStart,
+      h: windowH,
+    });
+  }
 
   // Up to 4 shoppers stand grounded on the Checkout Mat right up against the counter front.
   const queueY = counterBottom + unit * 18;
@@ -295,6 +338,7 @@ export function computeIndoorLayout(
     counter,
     counterQueueSpots,
     window: windowRect,
+    extraWindows,
     aisleY,
     pens,
     napArea,
@@ -303,8 +347,8 @@ export function computeIndoorLayout(
     pcStation,
     upgradesStation,
     lamps: [
-      { x: Math.round(width * 0.30), y: topBand + spx(24) },
-      { x: Math.round(width * 0.72), y: topBand + spx(24) },
+      { x: Math.round(pcStation.x + pcStation.w / 2), y: topBand + spx(18) },
+      { x: Math.round(upgradesStation.x + upgradesStation.w / 2), y: topBand - spx(4) },
     ],
   };
 }
@@ -429,6 +473,7 @@ export function computeShopLayout(
     counter,
     counterQueueSpots,
     window: windowRect,
+    extraWindows: [],
     aisleY,
     pens,
     napArea,

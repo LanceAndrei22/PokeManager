@@ -13,10 +13,11 @@ A full-screen, **PC desktop web browser** click-to-manage 2D pixel-art Gen 4 Pok
 ## Gameplay Highlights (v2.2 — Desktop Edition)
 
 - **Seamless Organic Meadow Main Menu & Cohesive Indoor PokéMart (`1280×800` → `2560×1440+`):**
-  - **Main Menu & Title Screen:** Continuously scrolling, seam-free organic pixel meadow (mottled grass, Bayer-dithered winding dirt trails, scattered wildflowers, dark-outlined tall grass clusters, slate boulders, and edge trees) populated by 12 grounded multi-frame PMD SpriteCollab Pokémon walking and idling with snug pixel-oval contact shadows alongside the Profile Switcher, New Trainer Creator (**6 starters + 3-Tier Difficulty Box**), **Your Mascot** card, Save Transfer, Audio Mixer, and Credits.
-  - **Click-to-Manage Indoor Store (`1280×720` min; crisp integer scaling for `1920×1080` & `2560×1440+`):** Tiled GBA PokéMart interior featuring a deep Gen 4 Checkout Counter with **Clerk Leo** naturally layered behind the desk, grounded shoppers on the Checkout Mat, organic grass/dirt Display Pens with front-fence Y-sorting, standing **Wholesale PC Kiosk** beside the counter, wall-mounted oak **Upgrades Board**, modular braided-rug **Resting Corner**, and physical oak-and-glass **Egg Incubator** pedestal.
-- **Human Trainer Shoppers & `Normal Shopper` Archetype:**
-  - **Clerk Leo** (`mart_employee`) greets visitors while **15 Gen 3/4 Human Trainer shoppers** across **6 archetypes** browse pens and queue at the counter with pixel trainer portraits: **Normal Shopper** (~40% spawn weight, cheerfully adopts regular non-Legendary Pokémon at fair tags without needing trait/trend matches, never offering on Legendaries/Mythicals), **Bargain Browser**, **Cozy Collector**, **Trend Fan**, **Shiny Seeker**, and **VIP Collector**.
+  - **Main Menu & Title Screen:** Continuously scrolling, seam-free organic pixel meadow (mottled grass, Bayer-dithered winding dirt trails, scattered wildflowers, dark-outlined tall grass clusters, slate boulders, and edge trees) populated by 12 grounded multi-frame PMD SpriteCollab Pokémon walking and idling with snug pixel-oval contact shadows alongside the Profile Switcher, New Trainer Creator (**6 starters, 6 selectable Initial Shopkeepers & 3-Tier Difficulty Box**), **Your Mascot** card, Save Transfer, Audio Mixer, and Credits.
+  - **Click-to-Manage Indoor Store (`1280×720` min; crisp integer scaling for `1920×1080` & `2560×1440+`):** Tiled GBA PokéMart interior featuring a solid paneled back wall with **multiple aligned sunlit meadow windows**, a **dynamic shift-countdown wall clock** centered above the counter (ticks down during shifts and freezes cleanly when closed/paused), a recessed automatic sliding glass vestibule with woven entrance mat and grounded potted plants, a deep Gen 4 Checkout Counter with up to **3 Shopkeepers** layered behind the desk (Slot 0 right beside the Cash Register), organic grass/dirt Display Pens with front-fence Y-sorting, standing **Wholesale PC Kiosk**, wall-mounted oak **Upgrades Board**, modular braided-rug **Resting Corner**, and physical oak-and-glass **Egg Incubator** pedestal.
+- **Selectable Shopkeepers, Random Counter Hiring & Human Trainer Shoppers:**
+  - Pick your **Initial Shopkeeper** from 6 bundled Human Clerks (`Leo`, `Clara`, `Liam`, `Penny`, `Hana`, `Steven`) when creating a profile, and purchase the **Hire Counter Clerk** upgrade (`Lv.0→2`) to recruit up to 2 additional random clerks behind the counter—slowing shopper patience expiration (`+5s` starting patience & slower countdown ticks per extra clerk).
+  - **15 Gen 3/4 Human Trainer shoppers** across **6 archetypes** browse pens and queue at the counter with pixel trainer portraits: **Normal Shopper** (~40% spawn weight, cheerfully adopts regular non-Legendary Pokémon at fair tags without needing trait/trend matches, never offering on Legendaries/Mythicals), **Bargain Browser**, **Cozy Collector**, **Trend Fan**, **Shiny Seeker**, and **VIP Collector**.
 - **Active Timed Shifts & Live Counter Haggling:** Prep stock while closed, open doors (`1×` / `2×`), and negotiate at the non-blocking **PokéMart Counter** (**Accept**, **Haggle +15%**, **Haggle +30%**, **Decline**, + Gift-Wrap Balls) before shopper Patience expires.
 - **3 Difficulty Modes (`Relaxed`, `Standard`, `High Stakes`), Debt Grace & Bankruptcy:** Governs starting capital (`₽3,500` / `₽2,000` / `₽1,200`), daily rent + pen/bed upkeep, patience decay, Debt Grace (`1` / `1` / `0`), Emergency Liquidation (50% wholesale return), and **Store Foreclosure**.
 - **Full 493 Gen 1–4 Pokédex & VIP Legendary Contracts:** Browse `#001–#493` with search, rarity filter & pagination; evolve via 9 Evolution Stones + `Rare Candy`; breed Egg Groups (including Manaphy → Phione); promote mascots; and fulfill **VIP Legendary Contracts**.
@@ -31,7 +32,7 @@ A full-screen, **PC desktop web browser** click-to-manage 2D pixel-art Gen 4 Pok
 - **Rendering:** Plain HTML5 2D Canvas (`imageSmoothingEnabled = false`), `AnimData.xml` 60 fps slicing + 4-dir Human Trainer walking animation, decoded GBA metatile sheets, and Cache API hybrid PMD sprite loading
 - **Assets & Data:** [PMDCollab / SpriteCollab](https://github.com/PMDCollab/SpriteCollab) (`CC BY-NC 4.0`), [pret/pokeemerald](https://github.com/pret/pokeemerald) tilesets & overworld trainers, [Pokémon Showdown](https://play.pokemonshowdown.com/sprites/trainers/) trainer portraits, and [PokeAPI](https://github.com/PokeAPI/pokeapi)
 - **Audio:** Cross-browser Web Audio API chiptune SFX + dual BGM sequencer (`src/engine/sfx.ts`, `src/engine/bgm.ts`)
-- **Testing:** Vitest + React Testing Library (`jsdom`) — 15 suites, 56 tests
+- **Testing:** Vitest + React Testing Library (`jsdom`) — 15 suites, 57 tests
 
 ---
 
@@ -58,7 +59,7 @@ D:\PokeManager\
 │   ├── engine/                # Tycoon sim, haggling, rent, debt, breeding, storage, SFX & dual BGM
 │   ├── canvas/                # Tiled indoor store, living nature backdrop, PMD & Human animators
 │   └── components/            # Main Menu, HUD, AudioControls, DS Dock, Counter Panel & modals
-└── tests/                     # Engine, audio, canvas/PMD/Human animator & React UI tests (56 tests)
+└── tests/                     # Engine, audio, canvas/PMD/Human animator & React UI tests (57 tests)
 ```
 
 ---

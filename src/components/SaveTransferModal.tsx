@@ -5,6 +5,7 @@
  */
 import { useEffect, useState, type FormEvent } from 'react';
 import { DIFFICULTIES, DIFFICULTY_LIST } from '../data/difficulties';
+import { CLERK_ROSTER, DEFAULT_CLERK_ID } from '../data/npcs';
 import { getSpecies } from '../data/species';
 import {
   STARTER_MASCOT_IDS,
@@ -21,7 +22,12 @@ export interface SaveTransferModalProps {
   profileIndex: ProfileIndex;
   activeState: GameState;
   onClose: () => void;
-  onCreateProfile: (name: string, difficulty: DifficultyId, starterSpeciesId: number) => void;
+  onCreateProfile: (
+    name: string,
+    difficulty: DifficultyId,
+    starterSpeciesId: number,
+    clerkNpcId?: string,
+  ) => void;
   onSwitchProfile: (profileId: string) => void;
   onResetProfile: (profileId: string) => void;
   onDeleteProfile: (profileId: string) => void;
@@ -42,6 +48,7 @@ export function SaveTransferModal({
   const [newProfileName, setNewProfileName] = useState('');
   const [newDifficulty, setNewDifficulty] = useState<DifficultyId>('standard');
   const [newStarterId, setNewStarterId] = useState<number>(133);
+  const [newClerkId, setNewClerkId] = useState<string>(DEFAULT_CLERK_ID);
   const [importInput, setImportInput] = useState('');
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [statusError, setStatusError] = useState(false);
@@ -58,7 +65,7 @@ export function SaveTransferModal({
   const handleCreate = (event: FormEvent) => {
     event.preventDefault();
     if (!newProfileName.trim()) return;
-    onCreateProfile(newProfileName.trim(), newDifficulty, newStarterId);
+    onCreateProfile(newProfileName.trim(), newDifficulty, newStarterId, newClerkId);
     setStatusMessage(`Created & switched to profile "${newProfileName.trim()}".`);
     setStatusError(false);
     setNewProfileName('');
@@ -216,6 +223,18 @@ export function SaveTransferModal({
                 {STARTER_MASCOT_IDS.map((id) => (
                   <option key={id} value={id}>
                     {getSpecies(id).name}
+                  </option>
+                ))}
+              </select>
+              <select
+                aria-label="New profile starting shopkeeper"
+                value={newClerkId}
+                onChange={(e) => setNewClerkId(e.target.value)}
+                className="border-2 border-[#78a8f0] bg-[#0a1430] px-2 py-1 text-xs font-bold text-[#b5d4ff]"
+              >
+                {CLERK_ROSTER.map((clerk) => (
+                  <option key={clerk.id} value={clerk.id}>
+                    {clerk.name}
                   </option>
                 ))}
               </select>

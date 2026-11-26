@@ -5,7 +5,7 @@
  * so v1 data stays untouched, stores Difficulty per profile, and validates exported saves
  * with an FNV-1a checksum.
  */
-import { resolveHumanNpcFallback } from '../data/npcs';
+import { DEFAULT_CLERK_ID, getClerkById, resolveHumanNpcFallback } from '../data/npcs';
 import type {
   DifficultyId,
   GameState,
@@ -140,11 +140,21 @@ export function migrateLegacyGameState(state: GameState): GameState {
     };
   });
 
+  const shopkeepers =
+    Array.isArray(state.shopkeepers) && state.shopkeepers.length > 0
+      ? state.shopkeepers.map((id) => getClerkById(id).id)
+      : [DEFAULT_CLERK_ID];
+
   return {
     ...state,
     bgmMuted: state.bgmMuted ?? false,
     sfxVolume: typeof state.sfxVolume === 'number' ? state.sfxVolume : 0.65,
     bgmVolume: typeof state.bgmVolume === 'number' ? state.bgmVolume : 0.35,
+    shopkeepers,
+    upgrades: {
+      ...state.upgrades,
+      'hire-clerk': state.upgrades?.['hire-clerk'] ?? 0,
+    },
     customers,
     counterQueue,
   };
@@ -168,6 +178,7 @@ export function saveProfileGameState(
             name: state.profileName,
             difficulty: state.difficulty,
             mascotSpeciesId: mascotMon?.speciesId ?? meta.mascotSpeciesId ?? 133,
+            clerkNpcId: state.shopkeepers?.[0] ?? meta.clerkNpcId ?? DEFAULT_CLERK_ID,
             updatedAt: Date.now(),
           }
         : meta,
@@ -219,17 +230,19 @@ export function ensureInitialProfileStore(storage: StorageLike = getDefaultStora
   return { index, activeState: initialState };
 }
 
-/** Creates a brand-new isolated v2 Shift Manager profile with chosen Difficulty & Starter Mascot. */
+/** Creates a brand-new isolated v2 Shift Manager profile with chosen Difficulty, Starter Mascot & Initial Shopkeeper. */
 export function createProfile(
   rawName: string,
   difficulty: DifficultyId = 'standard',
   storage: StorageLike = getDefaultStorage(),
   starterSpeciesId = 133,
+  initialClerkId: string = DEFAULT_CLERK_ID,
 ): { index: ProfileIndex; activeState: GameState } {
   const trimmed = rawName.trim().slice(0, 24) || 'Trainer';
   const current = ensureInitialProfileStore(storage).index;
   const now = Date.now();
   const newId = createProfileId(trimmed);
+  const resolvedClerk = getClerkById(initialClerkId);
   const newState = createInitialGameState(
     newId,
     trimmed,
@@ -237,6 +250,7 @@ export function createProfile(
     false,
     (now ^ (trimmed.length * 131)) >>> 0,
     starterSpeciesId,
+    resolvedClerk.id,
   );
   const resolvedStarterId = newState.pokemon[0]?.speciesId ?? 133;
 
@@ -250,6 +264,7 @@ export function createProfile(
         name: trimmed,
         difficulty,
         mascotSpeciesId: resolvedStarterId,
+        clerkNpcId: resolvedClerk.id,
         createdAt: now,
         updatedAt: now,
       },
@@ -293,6 +308,7 @@ export function resetProfile(
   const prevState = loadProfileGameState(profileId, storage);
   const diff = difficultyOverride ?? prevState?.difficulty ?? targetMeta.difficulty ?? 'standard';
   const starterId = targetMeta.mascotSpeciesId ?? 133;
+  const clerkId = targetMeta.clerkNpcId ?? prevState?.shopkeepers?.[0] ?? DEFAULT_CLERK_ID;
   const freshState = createInitialGameState(
     targetMeta.id,
     targetMeta.name,
@@ -300,6 +316,7 @@ export function resetProfile(
     prevState?.muted ?? false,
     1042,
     starterId,
+    clerkId,
   );
   saveProfileGameState(freshState, storage);
   return freshState;

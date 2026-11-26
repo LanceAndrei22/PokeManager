@@ -45,6 +45,15 @@ export const SHOP_UPGRADES: ShopUpgrade[] = [
     costStep: 700,
     maxLevel: 3,
   },
+  {
+    id: 'hire-clerk',
+    name: 'Hire Counter Clerk',
+    description:
+      'Hires a random extra shopkeeper behind the counter to slow shopper expiration (+5s patience & slower countdown per clerk).',
+    baseCost: 900,
+    costStep: 750,
+    maxLevel: 2,
+  },
 ];
 
 export const UPGRADES_BY_ID: Record<ShopUpgradeId, ShopUpgrade> = Object.fromEntries(

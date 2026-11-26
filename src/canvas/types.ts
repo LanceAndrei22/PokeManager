@@ -63,9 +63,12 @@ export interface ShopLayout {
   /** Where shoppers appear/disappear (just inside the door, on the floor). */
   doorSpot: Point;
   counter: Rect;
-  /** Queue positions standing in front of Clerk Leo's register (up to 4). */
+  /** Queue positions standing in front of the PokéMart register (up to 4). */
   counterQueueSpots: Point[];
+  /** Primary sunlit center back-wall window. */
   window: Rect;
+  /** Additional back-wall sunlit windows aligned on the exact same vertical datum as `window`. */
+  extraWindows: Rect[];
   /** Horizontal walkway directly below the back wall. */
   aisleY: number;
   pens: PenRect[];

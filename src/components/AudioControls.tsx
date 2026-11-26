@@ -57,7 +57,7 @@ export function AudioControls({
     : 'px-2.5 py-1 text-sm font-semibold whitespace-nowrap shrink-0';
 
   return (
-    <div ref={rootRef} className="relative inline-flex shrink-0 items-center gap-1 whitespace-nowrap">
+    <div ref={rootRef} className="relative inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap">
       <button
         type="button"
         aria-pressed={!bgmMuted}
