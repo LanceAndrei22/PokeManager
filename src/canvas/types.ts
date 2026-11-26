@@ -32,6 +32,13 @@ export interface PenRect extends Rect {
   inner: Rect;
 }
 
+/** Interactive click target resolved by `hitTestIndoorScene`. */
+export type CanvasHitTarget =
+  | { kind: 'pokemon'; uid: string; label: string }
+  | { kind: 'counter-offer'; offerUid: string; label: string }
+  | { kind: 'empty-pen'; penIndex: number; label: string }
+  | { kind: 'station'; station: 'wholesale' | 'breeding' | 'healing' | 'upgrades'; label: string };
+
 /** Fully resolved shop floor geometry for one canvas size / pen count / DPR combination. */
 export interface ShopLayout {
   cssWidth: number;
@@ -41,6 +48,8 @@ export interface ShopLayout {
   /** Backing-store height (`canvas.height`). */
   height: number;
   dpr: number;
+  /** True on compact narrow viewports (<768 CSS px). */
+  isPortrait: boolean;
   /** Size of one procedural "art pixel" (tiles, particles, UI accents) in backing px. */
   unit: number;
   /** Integer base scale factor derived from pen size. */
@@ -49,15 +58,25 @@ export interface ShopLayout {
   spriteSize: number;
   wall: Rect;
   door: Rect;
+  /** Stone tile entrance mat below the sliding glass doors. */
+  foyer: Rect;
   /** Where shoppers appear/disappear (just inside the door, on the floor). */
   doorSpot: Point;
   counter: Rect;
+  /** Queue positions standing in front of Kecleon's register (up to 4). */
+  counterQueueSpots: Point[];
   window: Rect;
   /** Horizontal walkway directly below the back wall. */
   aisleY: number;
   pens: PenRect[];
   napArea: Rect;
   beds: Rect[];
+  /** Clickable Glowing Egg Incubator Bench bounds. */
+  incubatorStation: Rect;
+  /** Clickable Blinking Wholesale PC Terminal bounds. */
+  pcStation: Rect;
+  /** Clickable Wooden Upgrades Board bounds. */
+  upgradesStation: Rect;
   /** Pendant lamp centres used for warm lighting glows. */
   lamps: Point[];
 }
@@ -83,6 +102,19 @@ export interface FloorCustomer {
   targetPenIndex: number;
 }
 
+/** Minimal queued register offer rendered in front of Kecleon's counter. */
+export interface FloorCounterOffer {
+  uid: string;
+  npcSpeciesId: number;
+  customerName: string;
+  archetypeId: CustomerArchetypeId;
+  patience: number;
+  maxPatience: number;
+  currentOffer: number;
+  isVip: boolean;
+  penIndex: number;
+}
+
 /** Immutable snapshot of simulation state diffed by the canvas world each update. */
 export interface FloorSnapshot {
   profileId: string;
@@ -90,8 +122,12 @@ export interface FloorSnapshot {
   shiftSpeed: 1 | 2;
   pokemon: FloorPokemon[];
   customers: FloorCustomer[];
-  /** Number of shoppers currently waiting in front of Kecleon's counter. */
+  /** Customers waiting at Kecleon's counter with live Patience Bars. */
+  counterQueue: FloorCounterOffer[];
   counterQueueCount?: number;
+  eggCount?: number;
+  readyEggCount?: number;
+  hasVipContract?: boolean;
 }
 
 /** Animation state of a Pokémon entity on the floor. */

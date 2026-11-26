@@ -5,7 +5,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { clampDpr } from './layout';
-import { usePrefersReducedMotion } from './ShopFloorCanvas';
+import { usePrefersReducedMotion } from './useReducedMotion';
 import { createPmdSpriteAdapter } from './pmdLoader';
 import { vectorToPmdDirection } from './pmdAnimator';
 import type { PmdDirection } from './types';

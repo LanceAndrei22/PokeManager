@@ -6,7 +6,7 @@
 import type { RngFn } from '../engine/rng';
 
 /** Particle visual kinds. */
-export type ParticleKind = 'heart' | 'zzz' | 'sparkle' | 'coin';
+export type ParticleKind = 'heart' | 'zzz' | 'sparkle' | 'coin' | 'sweat';
 
 /** One live particle (positions/velocities in backing px and px/s). */
 export interface Particle {
@@ -126,4 +126,17 @@ export function spawnZzz(x: number, y: number, unit: number, rng: RngFn): Partic
 /** A rising adoption coin with its `+₽` amount label. */
 export function spawnCoin(x: number, y: number, unit: number, label: string): Particle {
   return makeParticle({ kind: 'coin', x, y, vx: 0, vy: -unit * 26, life: 1.8, label, phase: 0 });
+}
+
+/** An urgent cyan sweat drop arcing off an impatient shopper at Kecleon's counter. */
+export function spawnSweatDrop(x: number, y: number, unit: number, rng: RngFn): Particle {
+  return makeParticle({
+    kind: 'sweat',
+    x,
+    y,
+    vx: (rng() < 0.5 ? -1 : 1) * unit * 10,
+    vy: -unit * 6,
+    life: 0.75,
+    phase: rng() * Math.PI * 2,
+  });
 }

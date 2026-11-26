@@ -44,6 +44,30 @@ export const SPARKLE: PixelBitmap = [
 
 export const LETTER_Z: PixelBitmap = ['zzzz', '...z', '..z.', '.z..', 'zzzz'];
 
+export const SWEAT_DROP: PixelBitmap = ['..b..', '.bbb.', '.bwb.', 'bbwbb', '.bbb.'];
+
+export const EXCLAMATION_MARK: PixelBitmap = ['kk', 'kk', 'kk', '..', 'kk'];
+
+export const EGG_ICON: PixelBitmap = [
+  '..cccc..',
+  '.ccyycc.',
+  'ccyccycc',
+  'ccccsscc',
+  'ccsscccc',
+  '.cccccc.',
+  '..cccc..',
+];
+
+export const PC_ICON: PixelBitmap = [
+  'bbbbbbbb',
+  'bccccccb',
+  'bcwwwwcb',
+  'bccccccb',
+  'bbbbbbbb',
+  '..bbbb..',
+  '.bbbbbb.',
+];
+
 /**
  * Left-facing shopper, 8×15 art pixels, two walk frames (only the legs differ).
  * h = hair, s = skin, e = eye, c = shirt (archetype colour), p = pants, b = shoes.
@@ -94,6 +118,10 @@ export const ICON_COLORS: Record<string, string> = {
   y: PALETTE.honey,
   o: PALETTE.honeyDeep,
   z: PALETTE.lavender,
+  b: '#3b82f6',
+  k: '#1b1200',
+  c: '#78e0ff',
+  s: '#6ee7a0',
 };
 
 /** Bitmap dimensions in art pixels. */

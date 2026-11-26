@@ -25,6 +25,7 @@ import {
   SHOPPER_FRAMES,
   SPARKLE,
   STAR,
+  SWEAT_DROP,
   bitmapSize,
   drawBitmap,
   drawPixelShadow,
@@ -306,6 +307,9 @@ function drawParticle(ctx: CanvasRenderingContext2D, layout: ShopLayout, p: Part
       }
       break;
     }
+    case 'sweat':
+      drawBitmap(ctx, SWEAT_DROP, p.x - 2.5 * small, p.y - 2.5 * small, small, ICON_COLORS);
+      break;
   }
   ctx.globalAlpha = 1;
 }
