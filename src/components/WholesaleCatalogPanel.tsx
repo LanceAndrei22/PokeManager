@@ -1,8 +1,7 @@
 /**
- * Daily Wholesale & Rescue Catalog plus Supply Shelf for purchasing Evolution Stones,
- * Care Drinks/Berries, Rare Candy, and Gift-Wrap Poké Balls.
+ * Wholesale PC Terminal, VIP Legendary Contracts & Supply Shelf in PMD Navy & Gold.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ITEMS_CATALOG } from '../data/items';
 import { getSpecies } from '../data/species';
 import type { ItemSlug, WholesaleOffer } from '../data/types';
@@ -12,6 +11,7 @@ export interface WholesaleCatalogPanelProps {
   cash: number;
   offers: WholesaleOffer[];
   inventory: Partial<Record<ItemSlug, number>>;
+  initialTab?: 'pokemon' | 'supplies';
   onBuyOffer: (offerUid: string) => void;
   onBuySupplyItem: (slug: ItemSlug) => void;
 }
@@ -20,21 +20,31 @@ export function WholesaleCatalogPanel({
   cash,
   offers,
   inventory,
+  initialTab = 'pokemon',
   onBuyOffer,
   onBuySupplyItem,
 }: WholesaleCatalogPanelProps) {
-  const [subTab, setSubTab] = useState<'pokemon' | 'supplies'>('pokemon');
+  const [subTab, setSubTab] = useState<'pokemon' | 'supplies'>(initialTab);
+
+  useEffect(() => {
+    setSubTab(initialTab);
+  }, [initialTab]);
+
   const purchasableItems = ITEMS_CATALOG.filter((item) => item.cost > 0);
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2 border-b-2 border-wood-300 pb-1" role="tablist" aria-label="Wholesale Shelf Sections">
+    <div className="space-y-3 text-[#e2eeff]">
+      <div
+        className="flex flex-wrap items-center gap-2 border-b-2 border-[#4e78bd] pb-1"
+        role="tablist"
+        aria-label="Wholesale Shelf Sections"
+      >
         <button
           type="button"
           role="tab"
           aria-selected={subTab === 'pokemon'}
           onClick={() => setSubTab('pokemon')}
-          className="cozy-tab rounded-t-md px-3 py-1.5 text-xs font-extrabold text-wood-900"
+          className="pmd-tab px-3 py-1.5 text-xs font-bold text-[#ffd84d]"
         >
           Daily Wholesale &amp; Rescues ({offers.filter((o) => !o.purchased).length})
         </button>
@@ -43,7 +53,7 @@ export function WholesaleCatalogPanel({
           role="tab"
           aria-selected={subTab === 'supplies'}
           onClick={() => setSubTab('supplies')}
-          className="cozy-tab rounded-t-md px-3 py-1.5 text-xs font-extrabold text-wood-900"
+          className="pmd-tab px-3 py-1.5 text-xs font-bold text-[#ffd84d]"
         >
           Shop Supplies &amp; Stones
         </button>
@@ -61,38 +71,38 @@ export function WholesaleCatalogPanel({
             return (
               <article
                 key={offer.uid}
-                className={`ds-inset flex flex-col justify-between rounded-xl p-3 ${
-                  offer.purchased ? 'opacity-55' : ''
-                }`}
+                className={`pmd-inset flex flex-col justify-between p-3 ${
+                  isVip ? 'border-[#ffd84d] bg-[#2a2208]/75' : ''
+                } ${offer.purchased ? 'opacity-50' : ''}`}
               >
                 <div className="flex items-start gap-2.5">
                   {isEgg ? (
-                    <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-wood-300 bg-cream-50">
-                      <ItemIcon slug="egg" name="Mystery Egg" size={44} />
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center border border-[#78a8f0] bg-[#0a1430]">
+                      <ItemIcon slug="egg" name="Mystery Egg" size={40} />
                     </div>
                   ) : (
                     <PokemonSprite
                       speciesId={offer.speciesId}
                       name={species.name}
                       isShiny={offer.isShiny}
-                      size={64}
+                      size={56}
                     />
                   )}
 
                   <div className="min-w-0 flex-1">
                     <span
-                      className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-extrabold ${
+                      className={`inline-block border px-1.5 py-0.5 text-[10px] font-bold ${
                         isVip
-                          ? 'bg-honey-100 text-wood-900'
+                          ? 'border-[#ffd84d] bg-[#5c3e00] text-[#ffd84d]'
                           : isEgg
-                            ? 'bg-lavender-100 text-lavender-600'
+                            ? 'border-[#a78bfa] bg-[#2b1f52] text-[#ddd6fe]'
                             : isStray
-                              ? 'bg-berry-100 text-wood-900'
-                              : 'bg-sage-100 text-sage-800'
+                              ? 'border-[#f472b6] bg-[#4c1d3d] text-[#fbcfe8]'
+                              : 'border-[#2ecc71] bg-[#14472c] text-[#9effc3]'
                       }`}
                     >
                       {isVip
-                        ? 'VIP Legendary Contract'
+                        ? '👑 VIP Legendary Contract'
                         : isEgg
                           ? 'Mystery Egg'
                           : isStray
@@ -100,10 +110,10 @@ export function WholesaleCatalogPanel({
                             : 'Healthy Adoptable'}
                     </span>
 
-                    <h4 className="mt-1 truncate text-sm font-extrabold text-wood-900">
+                    <h4 className="mt-1 truncate text-sm font-bold text-white">
                       {isEgg ? 'Warm Mystery Egg' : `${offer.isShiny ? '✨ ' : ''}${species.name}`}
                     </h4>
-                    <div className="text-[11px] text-wood-700">
+                    <div className="text-[11px] text-[#a8c4f0]">
                       {isEgg
                         ? 'Hatches a surprise baby companion'
                         : `${offer.trait} • Cute ${offer.stats.cute} • Comfort ${offer.stats.comfort}`}
@@ -111,15 +121,17 @@ export function WholesaleCatalogPanel({
                   </div>
                 </div>
 
-                <div className="mt-3 flex items-center justify-between border-t border-wood-300/60 pt-2">
-                  <span className="font-mono text-sm font-extrabold text-wood-900">
+                <div className="mt-3 flex items-center justify-between border-t border-[#3b60a0] pt-2">
+                  <span className="font-mono text-sm font-bold text-[#ffd84d]">
                     ₽{offer.cost.toLocaleString()}
                   </span>
                   <button
                     type="button"
                     disabled={offer.purchased || !canAfford}
                     onClick={() => onBuyOffer(offer.uid)}
-                    className="rounded-md border-2 border-sage-800 bg-sage-600 px-3 py-1 text-xs font-bold text-cream-50 hover:bg-sage-800 disabled:cursor-not-allowed disabled:border-wood-300 disabled:bg-cream-200 disabled:text-wood-500"
+                    className={`px-3 py-1 text-xs font-bold ${
+                      isVip ? 'pmd-btn-gold' : 'pmd-btn-emerald'
+                    }`}
                   >
                     {offer.purchased ? 'Adopted' : isEgg ? 'Incubate' : isStray ? 'Rescue' : 'Welcome'}
                   </button>
@@ -134,36 +146,33 @@ export function WholesaleCatalogPanel({
             const owned = inventory[item.slug] ?? 0;
             const canAfford = cash >= item.cost;
             return (
-              <article
-                key={item.slug}
-                className="ds-inset flex flex-col justify-between rounded-xl p-3"
-              >
+              <article key={item.slug} className="pmd-inset flex flex-col justify-between p-3">
                 <div className="flex items-start gap-2.5">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-wood-300 bg-cream-50">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center border border-[#78a8f0] bg-[#0a1430]">
                     <ItemIcon slug={item.slug} name={item.name} size={28} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-1">
-                      <h4 className="text-xs font-extrabold text-wood-900">{item.name}</h4>
-                      <span className="font-mono text-[11px] font-bold text-sage-800">
+                      <h4 className="text-xs font-bold text-white">{item.name}</h4>
+                      <span className="font-mono text-[11px] font-bold text-[#6ee7a0]">
                         Bag: {owned}
                       </span>
                     </div>
-                    <p className="mt-0.5 text-[11px] leading-snug text-wood-700">
+                    <p className="mt-0.5 text-[11px] leading-snug text-[#a8c4f0]">
                       {item.description}
                     </p>
                   </div>
                 </div>
 
-                <div className="mt-2.5 flex items-center justify-between border-t border-wood-300/60 pt-2">
-                  <span className="font-mono text-xs font-extrabold text-wood-900">
+                <div className="mt-2.5 flex items-center justify-between border-t border-[#3b60a0] pt-2">
+                  <span className="font-mono text-xs font-bold text-[#ffd84d]">
                     ₽{item.cost.toLocaleString()}
                   </span>
                   <button
                     type="button"
                     disabled={!canAfford}
                     onClick={() => onBuySupplyItem(item.slug)}
-                    className="rounded-md border-2 border-wood-700 bg-honey-100 px-3 py-1 text-xs font-bold text-wood-900 hover:bg-honey-400/50 disabled:cursor-not-allowed disabled:opacity-45"
+                    className="pmd-btn-gold px-3 py-1 text-xs font-bold"
                   >
                     Buy 1
                   </button>

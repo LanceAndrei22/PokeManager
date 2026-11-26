@@ -1,5 +1,5 @@
 /**
- * Recent cozy shop activity log feed.
+ * Shift Journal / Activity Log feed styled in PMD Navy & Gold.
  */
 import type { ActivityEntry } from '../data/types';
 
@@ -8,30 +8,29 @@ export interface ActivityLogProps {
 }
 
 const TONE_BADGE: Record<ActivityEntry['tone'], string> = {
-  info: 'bg-cream-200 text-wood-900',
-  sale: 'bg-sage-100 text-sage-800',
-  heal: 'bg-sky-100 text-sky-600',
-  breed: 'bg-lavender-100 text-lavender-600',
-  shiny: 'bg-honey-100 text-wood-900',
-  warning: 'bg-berry-100 text-wood-900',
+  info: 'border-[#78a8f0] bg-[#142958] text-[#cfe0ff]',
+  sale: 'border-[#2ecc71] bg-[#14472c] text-[#9effc3]',
+  heal: 'border-[#38bdf8] bg-[#0c3a52] text-[#bae6fd]',
+  breed: 'border-[#a78bfa] bg-[#2b1f52] text-[#ddd6fe]',
+  shiny: 'border-[#ffd84d] bg-[#5c3e00] text-[#ffd84d]',
+  warning: 'border-[#e74c3c] bg-[#4a161b] text-[#ffd4d0]',
 };
 
 export function ActivityLog({ entries }: ActivityLogProps) {
   return (
-    <section aria-label="Cozy Shop Activity Log" className="ds-panel rounded-xl p-4">
-      <h2 className="mb-2 text-sm font-extrabold text-wood-900">Shift Journal</h2>
-      <ul className="max-h-56 space-y-1.5 overflow-y-auto pr-1 text-xs">
+    <section aria-label="Shift Activity Journal" className="space-y-2 text-xs text-[#e2eeff]">
+      <ul className="max-h-80 space-y-1.5 overflow-y-auto pr-1">
         {entries.map((entry) => (
           <li
             key={entry.id}
-            className="flex items-start gap-2 rounded-lg border border-cream-200 bg-cream-100/60 px-2.5 py-1.5"
+            className="pmd-inset flex items-start gap-2 px-2.5 py-2"
           >
             <span
-              className={`shrink-0 rounded px-1.5 py-0.5 font-mono text-[10px] font-bold ${TONE_BADGE[entry.tone]}`}
+              className={`shrink-0 border px-1.5 py-0.5 font-mono text-[10px] font-bold ${TONE_BADGE[entry.tone]}`}
             >
               S{entry.shift}
             </span>
-            <span className="text-wood-900">{entry.text}</span>
+            <span className="leading-snug text-[#e2eeff]">{entry.text}</span>
           </li>
         ))}
       </ul>

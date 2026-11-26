@@ -1,10 +1,12 @@
 /**
- * Adoption Dex Modal displaying all 45 curated Gen 1–4 Pokémon Platinum species,
- * Normal & Shiny discoveries, and per-species adopted/hatched/evolved counters.
+ * 493-Species Gen 1–4 Adoption Dex Modal in PMD Navy & Gold.
+ * Supports instant search (name or #ID), Legendaries & Mythicals filter,
+ * Normal/Shiny discovery tabs, rarity filtering, and 48-entry pagination so
+ * all 493 species browse snappily with zero request storms.
  */
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { SPECIES_CATALOG } from '../data/species';
-import type { AdoptionDexEntry } from '../data/types';
+import type { AdoptionDexEntry, RarityTier } from '../data/types';
 import { getDexSummary } from '../engine/dex';
 import { CozyDialog } from './CozyDialog';
 import { PokemonSprite } from './PokemonSprite';
@@ -15,17 +17,46 @@ export interface AdoptionDexModalProps {
   onClose: () => void;
 }
 
+type DexTabFilter = 'all' | 'discovered' | 'shiny' | 'legendary';
+const PAGE_SIZE = 48;
+
 export function AdoptionDexModal({ open, dex, onClose }: AdoptionDexModalProps) {
-  const [filter, setFilter] = useState<'all' | 'discovered' | 'shiny'>('all');
+  const [filter, setFilter] = useState<DexTabFilter>('all');
+  const [rarityFilter, setRarityFilter] = useState<'all' | RarityTier>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(1);
+
   const summary = getDexSummary(dex);
 
-  const visibleSpecies = SPECIES_CATALOG.filter((species) => {
-    const entry = dex[species.id];
-    const discovered = Boolean(entry && (entry.seenNormal || entry.seenShiny));
-    if (filter === 'discovered') return discovered;
-    if (filter === 'shiny') return Boolean(entry?.seenShiny);
-    return true;
-  });
+  const legendaryCount = useMemo(
+    () => SPECIES_CATALOG.filter((sp) => sp.isLegendary || sp.isMythical).length,
+    [],
+  );
+
+  const filteredSpecies = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    return SPECIES_CATALOG.filter((species) => {
+      const entry = dex[species.id];
+      const discovered = Boolean(entry && (entry.seenNormal || entry.seenShiny));
+      if (filter === 'discovered' && !discovered) return false;
+      if (filter === 'shiny' && !entry?.seenShiny) return false;
+      if (filter === 'legendary' && !species.isLegendary && !species.isMythical) return false;
+      if (rarityFilter !== 'all' && species.rarityTier !== rarityFilter) return false;
+      if (query) {
+        const matchesName = species.name.toLowerCase().includes(query);
+        const matchesId =
+          String(species.id) === query ||
+          species.paddedId.includes(query) ||
+          `#${species.id}` === query;
+        if (!matchesName && !matchesId) return false;
+      }
+      return true;
+    });
+  }, [dex, filter, rarityFilter, searchQuery]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredSpecies.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pageItems = filteredSpecies.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   return (
     <CozyDialog
@@ -33,81 +64,150 @@ export function AdoptionDexModal({ open, dex, onClose }: AdoptionDexModalProps) 
       onClose={onClose}
       title={`Adoption Dex (${summary.discoveredSpecies}/${summary.totalSpecies} Species)`}
     >
-      <div className="space-y-3">
-        <div className="ds-inset flex flex-wrap items-center justify-between gap-2 rounded-xl px-3 py-2 text-xs font-bold text-wood-900">
+      <div className="space-y-3 text-xs text-[#e2eeff]">
+        {/* Summary Stats */}
+        <div className="pmd-inset flex flex-wrap items-center justify-between gap-2 px-3 py-2 font-bold">
           <span>Normal/Seen: {summary.discoveredSpecies}</span>
-          <span>✨ Shiny Seen: {summary.shinySpecies}</span>
+          <span className="text-[#ffd84d]">✨ Shiny: {summary.shinySpecies}</span>
           <span>Adopted: {summary.totalAdoptions}</span>
           <span>Hatched: {summary.totalHatched}</span>
           <span>Evolved: {summary.totalEvolved}</span>
         </div>
 
-        <div className="flex gap-2 border-b-2 border-wood-300 pb-1" role="tablist" aria-label="Adoption Dex Filter">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={filter === 'all'}
-            onClick={() => setFilter('all')}
-            className="cozy-tab px-3 py-1 text-xs font-extrabold text-wood-900"
+        {/* Search + Rarity Select */}
+        <div className="flex flex-wrap gap-2">
+          <input
+            type="search"
+            aria-label="Search Pokédex"
+            placeholder="Search name or #ID (e.g. Arceus, 493)..."
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setPage(1);
+            }}
+            className="min-w-[200px] flex-1 border-2 border-[#78a8f0] bg-[#0a1430] px-2.5 py-1.5 text-xs text-white placeholder:text-[#6f8ec2]"
+          />
+          <select
+            aria-label="Filter by Rarity Tier"
+            value={rarityFilter}
+            onChange={(e) => {
+              setRarityFilter(e.target.value as 'all' | RarityTier);
+              setPage(1);
+            }}
+            className="border-2 border-[#78a8f0] bg-[#0a1430] px-2.5 py-1.5 text-xs font-bold text-[#ffd84d]"
           >
-            All ({SPECIES_CATALOG.length})
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={filter === 'discovered'}
-            onClick={() => setFilter('discovered')}
-            className="cozy-tab px-3 py-1 text-xs font-extrabold text-wood-900"
-          >
-            Discovered ({summary.discoveredSpecies})
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={filter === 'shiny'}
-            onClick={() => setFilter('shiny')}
-            className="cozy-tab px-3 py-1 text-xs font-extrabold text-wood-900"
-          >
-            Shiny ({summary.shinySpecies})
-          </button>
+            <option value="all">All Rarities</option>
+            <option value="common">Common</option>
+            <option value="uncommon">Uncommon</option>
+            <option value="rare">Rare</option>
+            <option value="pseudo">Pseudo-Legendary</option>
+            <option value="legendary">Legendary</option>
+            <option value="mythical">Mythical</option>
+          </select>
         </div>
 
-        <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
-          {visibleSpecies.map((species) => {
-            const entry = dex[species.id];
-            const discovered = Boolean(entry && (entry.seenNormal || entry.seenShiny));
-            const showShiny = Boolean(entry?.seenShiny);
+        {/* Category Filter Tabs */}
+        <div
+          className="flex flex-wrap gap-2 border-b-2 border-[#4e78bd] pb-1"
+          role="tablist"
+          aria-label="Adoption Dex Filter"
+        >
+          {(
+            [
+              ['all', `All (${SPECIES_CATALOG.length})`],
+              ['discovered', `Discovered (${summary.discoveredSpecies})`],
+              ['shiny', `Shiny (${summary.shinySpecies})`],
+              ['legendary', `Legendaries & Mythicals (${legendaryCount})`],
+            ] as Array<[DexTabFilter, string]>
+          ).map(([tabKey, label]) => (
+            <button
+              key={tabKey}
+              type="button"
+              role="tab"
+              aria-selected={filter === tabKey}
+              onClick={() => {
+                setFilter(tabKey);
+                setPage(1);
+              }}
+              className="pmd-tab px-3 py-1 text-xs font-bold text-[#ffd84d]"
+            >
+              {label}
+            </button>
+          ))}
+        </div>
 
-            return (
-              <div
-                key={species.id}
-                className={`ds-inset flex items-center gap-2.5 rounded-lg p-2 ${
-                  discovered ? '' : 'opacity-65'
-                }`}
-              >
-                <PokemonSprite
-                  speciesId={species.id}
-                  name={species.name}
-                  isShiny={showShiny}
-                  size={52}
-                  className={discovered ? '' : 'brightness-50 grayscale'}
-                />
-                <div className="min-w-0 flex-1 text-xs">
-                  <div className="font-mono text-[10px] text-wood-500">#{species.id}</div>
-                  <div className="truncate font-extrabold text-wood-900">
-                    {showShiny ? '✨ ' : ''}
-                    {species.name}
-                  </div>
-                  <div className="text-[11px] text-wood-700">
-                    {discovered
-                      ? `Adopted ${entry?.adoptedCount ?? 0} • Hatched ${entry?.hatchedCount ?? 0}`
-                      : `Unlocks Rank ${species.unlockRank}`}
+        {/* Paginated Species Grid */}
+        {pageItems.length === 0 ? (
+          <div className="pmd-inset p-6 text-center text-[#a8c4f0]">
+            No Gen 1–4 Pokémon match your current search or filter.
+          </div>
+        ) : (
+          <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
+            {pageItems.map((species) => {
+              const entry = dex[species.id];
+              const discovered = Boolean(entry && (entry.seenNormal || entry.seenShiny));
+              const showShiny = Boolean(entry?.seenShiny);
+              const isMythicOrLeg = species.isLegendary || species.isMythical;
+
+              return (
+                <div
+                  key={species.id}
+                  className={`pmd-inset flex items-center gap-2.5 p-2 ${
+                    isMythicOrLeg ? 'border-[#ffd84d]' : ''
+                  } ${discovered ? '' : 'opacity-70'}`}
+                >
+                  <PokemonSprite
+                    speciesId={species.id}
+                    name={species.name}
+                    isShiny={showShiny}
+                    size={48}
+                    className={discovered ? '' : 'brightness-50 grayscale'}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-1 font-mono text-[10px] text-[#a8c4f0]">
+                      <span>#{species.paddedId}</span>
+                      <span className="uppercase text-[#ffd84d]">{species.rarityTier}</span>
+                    </div>
+                    <div className="truncate font-bold text-white">
+                      {showShiny ? '✨ ' : ''}
+                      {species.name}
+                    </div>
+                    <div className="text-[10px] text-[#a8d0ff]">
+                      {discovered
+                        ? `Adopted ${entry?.adoptedCount ?? 0} • Hatched ${entry?.hatchedCount ?? 0}`
+                        : `Unlocks Rank ${species.unlockRank}`}
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Pagination Bar */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between border-t border-[#4e78bd] pt-2">
+            <button
+              type="button"
+              disabled={safePage <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              className="pmd-btn px-3 py-1 font-bold"
+            >
+              Prev
+            </button>
+            <span className="font-mono text-xs font-bold text-[#ffd84d]">
+              Page {safePage} / {totalPages} ({filteredSpecies.length} species)
+            </span>
+            <button
+              type="button"
+              disabled={safePage >= totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              className="pmd-btn px-3 py-1 font-bold"
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
     </CozyDialog>
   );

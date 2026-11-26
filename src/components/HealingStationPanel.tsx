@@ -1,7 +1,5 @@
 /**
- * Stray Healing & Nap Station panel:
- * Displays plush nap beds for recovering strays, progress bars, and 1-click
- * Care Berries/Drinks quick-recovery buttons from the Item Bag.
+ * Stray Healing & Nap Station panel in PMD Navy & Gold.
  */
 import { getItemDefinition } from '../data/items';
 import { getSpecies } from '../data/species';
@@ -35,53 +33,51 @@ export function HealingStationPanel({
   const availableCare = QUICK_CARE_ITEMS.filter((slug) => (inventory[slug] ?? 0) > 0);
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h3 className="text-sm font-extrabold text-wood-900">
-            Plush Nap Beds ({strays.length}/{napBedCapacity} occupied)
-          </h3>
-          <p className="text-xs text-wood-700">
-            Strays rest automatically while the shop is open, or wake up early with warm drinks &amp; berries.
-          </p>
-        </div>
+    <div className="space-y-3 text-[#e2eeff]">
+      <div>
+        <h3 className="text-sm font-bold text-[#ffd84d]">
+          Plush Nap Beds ({strays.length}/{napBedCapacity} occupied)
+        </h3>
+        <p className="text-xs text-[#a8c4f0]">
+          Strays rest automatically while the shop is open, or wake up early with warm drinks &amp; berries.
+        </p>
       </div>
 
       {strays.length === 0 ? (
-        <div className="ds-inset rounded-xl p-4 text-center text-xs text-wood-700">
-          All plush nap beds are empty and fluffed. Check Wholesale &amp; Rescues for discounted tired strays!
+        <div className="pmd-inset p-4 text-center text-xs text-[#a8c4f0]">
+          All plush nap beds are empty and fluffed. Check Wholesale PC for discounted tired strays!
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {strays.map((mon) => {
             const species = getSpecies(mon.speciesId);
             return (
-              <article key={mon.uid} className="ds-inset rounded-xl p-3">
+              <article key={mon.uid} className="pmd-inset p-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2.5">
                     <PokemonSprite
                       speciesId={mon.speciesId}
                       name={species.name}
                       isShiny={mon.isShiny}
-                      size={60}
+                      size={56}
                     />
                     <div>
-                      <h4 className="text-sm font-extrabold text-wood-900">
+                      <h4 className="text-sm font-bold text-white">
                         {mon.isShiny ? '✨ ' : ''}
                         {species.name}
                       </h4>
-                      <div className="text-[11px] font-semibold text-sage-800">
+                      <div className="text-[11px] font-bold text-[#6ee7a0]">
                         {mon.trait} • Cute {mon.stats.cute} • Comfort {mon.stats.comfort}
                       </div>
-                      <div className="mt-1 flex items-center gap-2 text-xs font-bold text-wood-900">
-                        <span>Rested: {mon.healingProgress}%</span>
+                      <div className="mt-1 text-xs font-bold text-[#ffd84d]">
+                        Rested: {mon.healingProgress}%
                       </div>
                     </div>
                   </div>
                   <button
                     type="button"
                     onClick={() => onInspectPokemon(mon.uid)}
-                    className="rounded border border-wood-500 bg-cream-50 px-2 py-0.5 text-[11px] font-bold text-wood-900"
+                    className="pmd-btn px-2 py-0.5 text-[11px] font-bold"
                   >
                     Inspect
                   </button>
@@ -91,12 +87,12 @@ export function HealingStationPanel({
                   aria-label={`Nap recovery for ${species.name}`}
                   max={100}
                   value={mon.healingProgress}
-                  className="mt-2 h-2 w-full"
+                  className="mt-2 h-2 w-full accent-[#6ee7a0]"
                 />
 
-                <div className="mt-2.5 flex flex-wrap gap-1.5 border-t border-wood-300/60 pt-2">
+                <div className="mt-2.5 flex flex-wrap gap-1.5 border-t border-[#3b60a0] pt-2">
                   {availableCare.length === 0 ? (
-                    <span className="text-[11px] text-wood-500">
+                    <span className="text-[11px] text-[#a8c4f0]">
                       Buy Berries or Moomoo Milk in Supplies to speed recovery.
                     </span>
                   ) : (
@@ -108,7 +104,7 @@ export function HealingStationPanel({
                           key={slug}
                           type="button"
                           onClick={() => onUseCareItem(mon.uid, slug)}
-                          className="inline-flex items-center gap-1 rounded border border-sage-800 bg-sage-100 px-2 py-0.5 text-[11px] font-bold text-sage-800 hover:bg-sage-300/60"
+                          className="pmd-btn-emerald inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-bold"
                         >
                           <ItemIcon slug={slug} name={def.name} size={16} />
                           <span>

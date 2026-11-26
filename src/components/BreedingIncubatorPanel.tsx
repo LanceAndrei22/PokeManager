@@ -1,7 +1,5 @@
 /**
- * Breeding & Genetics Incubator panel:
- * Lets the player select two compatible rested Pokémon (sharing an Egg Group or
- * species), incubate an inherited Egg, track live-tick progress, and hatch it.
+ * Breeding & Genetics Incubator panel in PMD Navy & Gold.
  */
 import { useMemo, useState } from 'react';
 import { getSpecies } from '../data/species';
@@ -48,31 +46,32 @@ export function BreedingIncubatorPanel({
     eggs.length < incubatorCapacity &&
     areCompatibleParents(resolvedA!, resolvedB!);
 
-  const baseShinyPct = 5 + mysteryShipmentLevel * 2 + (resolvedA?.isShiny || resolvedB?.isShiny ? 5 : 0);
+  const baseShinyPct =
+    5 + mysteryShipmentLevel * 2 + (resolvedA?.isShiny || resolvedB?.isShiny ? 5 : 0);
 
   return (
-    <div className="space-y-4">
-      <div className="ds-inset rounded-xl p-3">
+    <div className="space-y-4 text-[#e2eeff]">
+      <div className="pmd-inset p-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h3 className="text-sm font-extrabold text-wood-900">Pair Compatible Companions</h3>
-            <p className="text-xs text-wood-700">
-              Share a species or Egg Group (e.g., Field, Water, Monster, Fairy) to inherit stats &amp; traits.
+            <h3 className="text-sm font-bold text-[#ffd84d]">Pair Compatible Companions</h3>
+            <p className="text-xs text-[#a8c4f0]">
+              Share a species or Egg Group (or Ditto) to inherit stats &amp; traits. Legendaries cannot breed except Manaphy → Phione!
             </p>
           </div>
-          <span className="rounded-full border border-honey-600 bg-honey-100 px-2.5 py-0.5 text-[11px] font-bold text-wood-900">
+          <span className="border border-[#ffd84d] bg-[#5c3e00] px-2.5 py-0.5 text-[11px] font-bold text-[#ffd84d]">
             Shiny Odds: ~{Math.min(25, baseShinyPct)}%
           </span>
         </div>
 
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <label className="block text-xs font-bold text-wood-900">
+          <label className="block text-xs font-bold text-white">
             <span>Parent A</span>
             <select
               aria-label="Breeding Parent A"
               value={resolvedA?.uid ?? ''}
               onChange={(e) => setParentAUid(e.target.value)}
-              className="mt-1 w-full rounded-md border-2 border-wood-500 bg-cream-50 px-2.5 py-1.5 text-xs font-semibold text-wood-900"
+              className="mt-1 w-full border-2 border-[#78a8f0] bg-[#0a1430] px-2.5 py-1.5 text-xs font-bold text-white"
             >
               {eligible.length === 0 ? (
                 <option value="">No rested companions available</option>
@@ -90,13 +89,13 @@ export function BreedingIncubatorPanel({
             </select>
           </label>
 
-          <label className="block text-xs font-bold text-wood-900">
+          <label className="block text-xs font-bold text-white">
             <span>Parent B (Compatible Partners)</span>
             <select
               aria-label="Breeding Parent B"
               value={resolvedB?.uid ?? ''}
               onChange={(e) => setParentBUid(e.target.value)}
-              className="mt-1 w-full rounded-md border-2 border-wood-500 bg-cream-50 px-2.5 py-1.5 text-xs font-semibold text-wood-900"
+              className="mt-1 w-full border-2 border-[#78a8f0] bg-[#0a1430] px-2.5 py-1.5 text-xs font-bold text-white"
             >
               {compatiblePartners.length === 0 ? (
                 <option value="">No matching Egg Group partner yet</option>
@@ -116,7 +115,7 @@ export function BreedingIncubatorPanel({
         </div>
 
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-          <div className="text-xs text-wood-700">
+          <div className="text-xs text-[#a8c4f0]">
             {compatiblePartners.length > 0 && resolvedA && resolvedB
               ? `Match ready! Baby inherits Cute/Comfort/Rarity from ${getSpecies(resolvedA.speciesId).name} & ${getSpecies(resolvedB.speciesId).name}.`
               : 'Welcome or rescue another companion sharing an Egg Group to pair!'}
@@ -125,7 +124,7 @@ export function BreedingIncubatorPanel({
             type="button"
             disabled={!canBreed}
             onClick={() => resolvedA && resolvedB && onStartBreeding(resolvedA.uid, resolvedB.uid)}
-            className="rounded-lg border-2 border-sage-800 bg-sage-600 px-3.5 py-1.5 text-xs font-extrabold text-cream-50 hover:bg-sage-800 disabled:cursor-not-allowed disabled:border-wood-300 disabled:bg-cream-200 disabled:text-wood-500"
+            className="pmd-btn-emerald px-3.5 py-1.5 text-xs font-bold"
           >
             Start Incubation ({eggs.length}/{incubatorCapacity})
           </button>
@@ -134,11 +133,11 @@ export function BreedingIncubatorPanel({
 
       {/* Incubator Slots */}
       <div>
-        <h3 className="mb-2 text-sm font-extrabold text-wood-900">
+        <h3 className="mb-2 text-sm font-bold text-[#ffd84d]">
           Warm Incubators ({eggs.length}/{incubatorCapacity} active)
         </h3>
         {eggs.length === 0 ? (
-          <p className="rounded-lg border border-wood-300 bg-cream-100/40 px-3 py-2.5 text-xs text-wood-700">
+          <p className="pmd-inset px-3 py-2.5 text-xs text-[#a8c4f0]">
             No eggs incubating yet. Pair compatible Pokémon above or adopt a Mystery Egg from Wholesale.
           </p>
         ) : (
@@ -146,28 +145,28 @@ export function BreedingIncubatorPanel({
             {eggs.map((egg) => {
               const babySpecies = getSpecies(egg.speciesId);
               return (
-                <article key={egg.uid} className="ds-inset rounded-xl p-3">
+                <article key={egg.uid} className="pmd-inset p-3">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-wood-300 bg-cream-50">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center border border-[#78a8f0] bg-[#0a1430]">
                       <ItemIcon slug="egg" name="Incubating Egg" size={34} />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
-                        <h4 className="truncate text-sm font-extrabold text-wood-900">
+                        <h4 className="truncate text-sm font-bold text-white">
                           {egg.readyToHatch ? `Ready: ${babySpecies.name} Egg!` : 'Warming Egg'}
                         </h4>
-                        <span className="font-mono text-xs font-bold text-sage-800">
+                        <span className="font-mono text-xs font-bold text-[#6ee7a0]">
                           {Math.round(egg.progress)}%
                         </span>
                       </div>
-                      <div className="text-[11px] text-wood-700">
+                      <div className="text-[11px] text-[#a8c4f0]">
                         Parents: {egg.parentNames[0]} &amp; {egg.parentNames[1]} • {egg.trait}
                       </div>
                       <progress
                         aria-label={`Egg incubation progress for ${babySpecies.name}`}
                         max={100}
                         value={egg.progress}
-                        className="mt-1.5 h-2 w-full"
+                        className="mt-1.5 h-2 w-full accent-[#ffd84d]"
                       />
                     </div>
                   </div>
@@ -177,7 +176,7 @@ export function BreedingIncubatorPanel({
                       <button
                         type="button"
                         onClick={() => onClaimEgg(egg.uid)}
-                        className="rounded-lg border-2 border-honey-600 bg-honey-100 px-3 py-1 text-xs font-extrabold text-wood-900 hover:bg-honey-400/60"
+                        className="pmd-btn-gold px-3 py-1 text-xs font-bold"
                       >
                         Hatch Egg!
                       </button>

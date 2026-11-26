@@ -1,18 +1,25 @@
 /**
- * Inspect Pokémon Modal: shows Platinum sprite, Cute/Comfort/Rarity stats,
- * transparent market valuation breakdown, location controls, and active Item Bag usage
- * (Evolution Stones, Care Berries/Drinks, and Rare Candy).
+ * Inspect & Care Modal in PMD Navy & Gold:
+ * Displays PMD portrait, stats, market appraisal breakdown, Set as Shop Mascot action,
+ * location controls, Bag item usage (9 Stones, Care Berries/Drinks, Rare Candy), and
+ * 2-click Emergency Liquidation (50% base value).
  */
+import { useEffect, useState } from 'react';
 import { ITEMS_CATALOG } from '../data/items';
 import { getSpecies } from '../data/species';
 import type { EvolutionStoneSlug, ItemSlug, MarketTrend, PokemonInstance } from '../data/types';
-import { calculatePokemonValuation, getEffectiveMarkup } from '../engine/economy';
+import {
+  calculatePokemonValuation,
+  getEffectiveMarkup,
+  getLiquidationValue,
+} from '../engine/economy';
 import { canUseItemOnPokemon, getEvolutionTarget } from '../engine/items';
 import { CozyDialog } from './CozyDialog';
 import { ItemIcon, PokemonSprite } from './PokemonSprite';
 
 export interface InspectPokemonModalProps {
   pokemon: PokemonInstance | null;
+  isMascot: boolean;
   globalMarkup: number;
   penMarkups: Record<number, number | null>;
   trend: MarketTrend;
@@ -21,10 +28,13 @@ export interface InspectPokemonModalProps {
   onClose: () => void;
   onUseItem: (pokemonUid: string, itemSlug: ItemSlug) => void;
   onMovePokemon: (uid: string, dest: 'pen' | 'reserve' | 'healing') => void;
+  onSetMascot: (uid: string) => void;
+  onLiquidatePokemon: (uid: string) => void;
 }
 
 export function InspectPokemonModal({
   pokemon,
+  isMascot,
   globalMarkup,
   penMarkups,
   trend,
@@ -33,7 +43,15 @@ export function InspectPokemonModal({
   onClose,
   onUseItem,
   onMovePokemon,
+  onSetMascot,
+  onLiquidatePokemon,
 }: InspectPokemonModalProps) {
+  const [confirmLiquidate, setConfirmLiquidate] = useState(false);
+
+  useEffect(() => {
+    setConfirmLiquidate(false);
+  }, [pokemon?.uid]);
+
   if (!pokemon) {
     return (
       <CozyDialog open={false} onClose={onClose} title="Inspect Companion">
@@ -59,6 +77,7 @@ export function InspectPokemonModal({
     recentSales,
     markup,
   );
+  const liquidationPayout = getLiquidationValue(pokemon);
 
   const usableItems = ITEMS_CATALOG.filter(
     (item) =>
@@ -72,10 +91,10 @@ export function InspectPokemonModal({
       onClose={onClose}
       title={`${pokemon.isShiny ? '✨ Shiny ' : ''}${species.name} — Companion Care`}
     >
-      <div className="space-y-4">
-        {/* Profile Header */}
-        <div className="ds-inset flex flex-col gap-4 rounded-xl p-3 sm:flex-row sm:items-center">
-          <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-xl border-2 border-wood-500 bg-cream-50">
+      <div className="space-y-4 text-[#e2eeff]">
+        {/* Profile Header + Set Mascot */}
+        <div className="pmd-inset flex flex-col gap-3 p-3 sm:flex-row sm:items-center">
+          <div className="flex h-24 w-24 shrink-0 items-center justify-center border-2 border-[#78a8f0] bg-[#0b1634]">
             <PokemonSprite
               speciesId={pokemon.speciesId}
               name={species.name}
@@ -83,37 +102,60 @@ export function InspectPokemonModal({
               size={80}
             />
           </div>
-          <div className="min-w-0 flex-1 space-y-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded border border-sage-600 bg-sage-100 px-2 py-0.5 text-xs font-bold text-sage-800">
-                Trait: {pokemon.trait}
-              </span>
-              <span className="rounded border border-wood-500 bg-cream-50 px-2 py-0.5 text-xs font-bold text-wood-800">
-                Types: {species.types.join(' / ')}
-              </span>
-              <span className="rounded border border-wood-500 bg-cream-50 px-2 py-0.5 text-xs font-bold text-wood-800">
-                Egg: {species.eggGroups.join(' / ')}
-              </span>
+          <div className="min-w-0 flex-1 space-y-1.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="border border-[#6ee7a0] bg-[#14472c] px-2 py-0.5 text-[11px] font-bold text-[#9effc3]">
+                  Trait: {pokemon.trait}
+                </span>
+                <span className="border border-[#78a8f0] bg-[#142958] px-2 py-0.5 text-[11px] font-bold uppercase text-[#ffd84d]">
+                  {species.types.join(' / ')}
+                </span>
+                <span className="border border-[#4e78bd] bg-[#0c1b3e] px-2 py-0.5 text-[11px] font-bold text-[#cfe0ff]">
+                  Egg: {species.eggGroups.join(' / ')}
+                </span>
+              </div>
+
+              {isMascot ? (
+                <span className="border border-[#ffd84d] bg-[#5c3e00] px-2 py-0.5 text-[11px] font-bold text-[#ffd84d]">
+                  ★ Active Shop Mascot
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => onSetMascot(pokemon.uid)}
+                  className="pmd-btn-gold px-2.5 py-1 text-[11px] font-bold"
+                >
+                  Set as Shop Mascot
+                </button>
+              )}
             </div>
-            <p className="text-xs italic text-wood-700">{species.cozyNote}</p>
-            <div className="grid grid-cols-3 gap-2 pt-1 text-xs font-bold">
-              <div className="rounded bg-cream-50 px-2 py-1">Cute: {pokemon.stats.cute}</div>
-              <div className="rounded bg-cream-50 px-2 py-1">Comfort: {pokemon.stats.comfort}</div>
-              <div className="rounded bg-cream-50 px-2 py-1">Rarity: {pokemon.stats.rarity}</div>
+
+            <p className="text-xs italic text-[#a8c4f0]">{species.cozyNote}</p>
+            <div className="grid grid-cols-3 gap-2 pt-0.5 text-xs font-bold">
+              <div className="border border-[#3a61a3] bg-[#0a1430] px-2 py-1 text-[#ffd84d]">
+                Cute: {pokemon.stats.cute}
+              </div>
+              <div className="border border-[#3a61a3] bg-[#0a1430] px-2 py-1 text-[#9effc3]">
+                Comfort: {pokemon.stats.comfort}
+              </div>
+              <div className="border border-[#3a61a3] bg-[#0a1430] px-2 py-1 text-[#a8d0ff]">
+                Rarity: {pokemon.stats.rarity}
+              </div>
             </div>
           </div>
         </div>
 
         {/* Market Valuation Breakdown */}
-        <div className="ds-inset rounded-xl p-3 text-xs">
+        <div className="pmd-inset p-3 text-xs">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="font-extrabold text-wood-900">Adoption Appraisal Breakdown</h2>
-            <span className="font-mono text-sm font-extrabold text-sage-800">
+            <h2 className="font-bold text-[#ffd84d]">Adoption Appraisal Breakdown</h2>
+            <span className="font-mono text-sm font-bold text-[#6ee7a0]">
               Base Tag: ₽{baseValuation.askingPrice.toLocaleString()} (Collector up to ₽
               {collectorValuation.askingPrice.toLocaleString()})
             </span>
           </div>
-          <div className="mt-2 grid grid-cols-2 gap-1.5 text-[11px] text-wood-800 sm:grid-cols-3">
+          <div className="mt-2 grid grid-cols-2 gap-1.5 text-[11px] text-[#cfe0ff] sm:grid-cols-3">
             <div>Base Species: ₽{baseValuation.breakdown.basePrice}</div>
             <div>Stats Mult: {baseValuation.breakdown.statMultiplier}×</div>
             <div>Shiny Mult: {baseValuation.breakdown.shinyMultiplier}×</div>
@@ -128,9 +170,9 @@ export function InspectPokemonModal({
           </div>
         </div>
 
-        {/* Move Location Controls */}
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-wood-300 bg-cream-100/60 px-3 py-2 text-xs">
-          <span className="font-bold text-wood-900">
+        {/* Location Controls & Emergency Liquidate */}
+        <div className="pmd-inset flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-xs">
+          <span className="font-bold text-white">
             Location:{' '}
             {pokemon.location === 'pen'
               ? `Display Pen #${(pokemon.penIndex ?? 0) + 1}`
@@ -138,12 +180,12 @@ export function InspectPokemonModal({
                 ? `Nap Bed (${pokemon.healingProgress}% rested)`
                 : 'Reserve Kennel'}
           </span>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             {pokemon.location !== 'pen' && !pokemon.needsRecovery && (
               <button
                 type="button"
                 onClick={() => onMovePokemon(pokemon.uid, 'pen')}
-                className="rounded border border-sage-800 bg-sage-600 px-2.5 py-1 font-bold text-cream-50 hover:bg-sage-800"
+                className="pmd-btn-emerald px-2.5 py-1 font-bold"
               >
                 Move to Pen
               </button>
@@ -152,7 +194,7 @@ export function InspectPokemonModal({
               <button
                 type="button"
                 onClick={() => onMovePokemon(pokemon.uid, 'reserve')}
-                className="rounded border border-wood-500 bg-cream-50 px-2.5 py-1 font-bold text-wood-900"
+                className="pmd-btn px-2.5 py-1 font-bold"
               >
                 Move to Reserve
               </button>
@@ -161,22 +203,52 @@ export function InspectPokemonModal({
               <button
                 type="button"
                 onClick={() => onMovePokemon(pokemon.uid, 'healing')}
-                className="rounded border border-wood-500 bg-cream-50 px-2.5 py-1 font-bold text-wood-900"
+                className="pmd-btn px-2.5 py-1 font-bold"
               >
                 Nap Bed
               </button>
+            )}
+            {pokemon.location !== 'breeding' && !confirmLiquidate && (
+              <button
+                type="button"
+                onClick={() => setConfirmLiquidate(true)}
+                className="pmd-btn-danger px-2.5 py-1 font-bold"
+              >
+                Liquidate (+₽{liquidationPayout.toLocaleString()})
+              </button>
+            )}
+            {confirmLiquidate && (
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onLiquidatePokemon(pokemon.uid);
+                    onClose();
+                  }}
+                  className="pmd-btn-danger px-2.5 py-1 font-bold"
+                >
+                  Confirm Liquidate (+₽{liquidationPayout.toLocaleString()})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmLiquidate(false)}
+                  className="pmd-btn px-2 py-1 font-bold"
+                >
+                  Cancel
+                </button>
+              </div>
             )}
           </div>
         </div>
 
         {/* Active Item Bag */}
         <div>
-          <h2 className="mb-2 text-xs font-extrabold uppercase tracking-wider text-wood-700">
+          <h2 className="mb-2 text-xs font-bold uppercase tracking-wider text-[#ffd84d]">
             Use Item from Bag
           </h2>
           {usableItems.length === 0 ? (
-            <p className="text-xs text-wood-700">
-              No stones, berries, or candies in your bag right now. Stock up in Wholesale &amp; Supplies!
+            <p className="text-xs text-[#a8c4f0]">
+              No stones, berries, or candies in your bag right now. Visit Wholesale PC → Supplies!
             </p>
           ) : (
             <div className="grid gap-2 sm:grid-cols-2">
@@ -194,15 +266,15 @@ export function InspectPokemonModal({
                 return (
                   <div
                     key={item.slug}
-                    className="ds-inset flex items-center justify-between gap-2 rounded-lg p-2"
+                    className="pmd-inset flex items-center justify-between gap-2 p-2"
                   >
                     <div className="flex items-center gap-2">
                       <ItemIcon slug={item.slug} name={item.name} size={24} />
                       <div>
-                        <div className="text-xs font-extrabold text-wood-900">
+                        <div className="text-xs font-bold text-white">
                           {item.name} (×{count})
                         </div>
-                        <div className="text-[11px] text-wood-700">
+                        <div className="text-[11px] text-[#a8c4f0]">
                           {evoTargetName
                             ? `Evolves → ${evoTargetName}`
                             : check.ok
@@ -216,7 +288,7 @@ export function InspectPokemonModal({
                       type="button"
                       disabled={!check.ok}
                       onClick={() => onUseItem(pokemon.uid, item.slug)}
-                      className="shrink-0 rounded border-2 border-sage-800 bg-sage-600 px-2.5 py-1 text-xs font-bold text-cream-50 hover:bg-sage-800 disabled:cursor-not-allowed disabled:border-wood-300 disabled:bg-cream-200 disabled:text-wood-500"
+                      className="pmd-btn-emerald shrink-0 px-2.5 py-1 text-xs font-bold"
                     >
                       {evoTargetName ? 'Evolve' : 'Use'}
                     </button>

@@ -1,16 +1,12 @@
 /**
- * Display Pens & Reserve Kennel management panel:
+ * Display Pens & Reserve Kennel management panel in PMD Navy & Gold:
  * Controls global & per-pen markup sliders, active checkout gift-wrap Poké Ball,
- * detailed Platinum cards, and moving Pokémon between Reserve Kennel and Pens.
+ * Pokémon cards, and moving Pokémon between Reserve Kennel and Pens.
  */
 import type { CSSProperties } from 'react';
 import { getItemDefinition } from '../data/items';
 import { getSpecies } from '../data/species';
-import type {
-  GiftBallSlug,
-  MarketTrend,
-  PokemonInstance,
-} from '../data/types';
+import type { GiftBallSlug, MarketTrend, PokemonInstance } from '../data/types';
 import { calculatePokemonValuation, getEffectiveMarkup } from '../engine/economy';
 import { ItemIcon, PokemonSprite } from './PokemonSprite';
 
@@ -57,13 +53,15 @@ export function DisplayPensPanel({
   const reserveMons = pokemon.filter((p) => p.location === 'reserve');
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 text-[#e2eeff]">
       {/* Global Pricing & Checkout Ribbon Bar */}
-      <div className="ds-inset grid gap-4 rounded-xl p-3 sm:grid-cols-2">
+      <div className="pmd-inset grid gap-4 p-3 sm:grid-cols-2">
         <div>
-          <div className="flex items-center justify-between text-xs font-bold text-wood-900">
-            <label htmlFor="global-markup-slider">Global Shop Markup</label>
-            <span className="font-mono text-sm text-sage-800">{globalMarkup}%</span>
+          <div className="flex items-center justify-between text-xs font-bold">
+            <label htmlFor="global-markup-slider" className="text-[#ffd84d]">
+              Global Shop Markup
+            </label>
+            <span className="font-mono text-sm text-[#6ee7a0]">{globalMarkup}%</span>
           </div>
           <input
             id="global-markup-slider"
@@ -75,15 +73,15 @@ export function DisplayPensPanel({
             aria-valuetext={`${globalMarkup} percent markup`}
             style={{ '--control-value': String(globalMarkup) } as CSSProperties}
             onChange={(e) => onChangeGlobalMarkup(Number(e.target.value))}
-            className="cozy-slider mt-1"
+            className="pmd-slider mt-1"
           />
-          <p className="text-[11px] text-wood-700">
+          <p className="text-[11px] text-[#a8c4f0]">
             80%–105% delights Bargain Browsers; 125%+ suits Collectors &amp; Shiny Seekers.
           </p>
         </div>
 
         <div>
-          <div className="text-xs font-bold text-wood-900">Checkout Gift-Wrap Ribbon</div>
+          <div className="text-xs font-bold text-[#ffd84d]">Checkout Gift-Wrap Ribbon</div>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {GIFT_BALL_OPTIONS.map((slug) => {
               const def = getItemDefinition(slug);
@@ -97,11 +95,9 @@ export function DisplayPensPanel({
                   disabled={disabled}
                   onClick={() => onSelectGiftBall(slug)}
                   title={def.description}
-                  className={`inline-flex items-center gap-1 rounded-md border-2 px-2 py-1 text-[11px] font-bold transition ${
-                    selected
-                      ? 'border-sage-800 bg-sage-100 text-sage-800'
-                      : 'border-wood-300 bg-cream-50 text-wood-900 hover:bg-cream-200'
-                  } disabled:cursor-not-allowed disabled:opacity-45`}
+                  className={`inline-flex items-center gap-1 px-2 py-1 text-[11px] font-bold ${
+                    selected ? 'pmd-btn-gold' : 'pmd-btn'
+                  }`}
                 >
                   <ItemIcon slug={slug} name={def.name} size={18} />
                   <span>{def.name.replace(' Wrap', '')}</span>
@@ -115,7 +111,7 @@ export function DisplayPensPanel({
 
       {/* Display Pen Grid */}
       <div>
-        <h3 className="mb-2 text-sm font-extrabold text-wood-900">
+        <h3 className="mb-2 text-sm font-bold text-[#ffd84d]">
           Display Pens ({penMons.length}/{penCapacity})
         </h3>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -128,9 +124,9 @@ export function DisplayPensPanel({
               return (
                 <div
                   key={penIndex}
-                  className="flex min-h-[150px] flex-col items-center justify-center rounded-xl border-2 border-dashed border-wood-300 bg-cream-100/50 p-3 text-center text-xs text-wood-500"
+                  className="pmd-inset flex min-h-[140px] flex-col items-center justify-center border-dashed border-[#4e78bd] p-3 text-center text-xs text-[#a8c4f0]"
                 >
-                  <div className="font-bold">Display Pen #{penIndex + 1}</div>
+                  <div className="font-bold text-white">Display Pen #{penIndex + 1}</div>
                   <div className="mt-1">Empty — move a companion from Reserve or Wholesale!</div>
                 </div>
               );
@@ -147,43 +143,39 @@ export function DisplayPensPanel({
             const trendMatch = valuation.breakdown.trendMatched;
 
             return (
-              <article
-                key={mon.uid}
-                className="ds-inset flex flex-col justify-between rounded-xl p-3"
-              >
+              <article key={mon.uid} className="pmd-inset flex flex-col justify-between p-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <PokemonSprite
                       speciesId={mon.speciesId}
                       name={species.name}
                       isShiny={mon.isShiny}
-                      size={64}
+                      size={56}
                     />
                     <div>
-                      <div className="text-xs font-bold text-wood-500">Pen #{penIndex + 1}</div>
-                      <h4 className="text-sm font-extrabold text-wood-900">
+                      <div className="text-[10px] font-bold text-[#a8c4f0]">Pen #{penIndex + 1}</div>
+                      <h4 className="text-sm font-bold text-white">
                         {mon.isShiny ? '✨ ' : ''}
                         {species.name}
                       </h4>
-                      <div className="text-[11px] font-semibold text-sage-800">{mon.trait}</div>
+                      <div className="text-[11px] font-bold text-[#6ee7a0]">{mon.trait}</div>
                       {trendMatch && (
-                        <span className="mt-0.5 inline-block rounded bg-honey-100 px-1.5 py-0.5 text-[10px] font-bold text-wood-900">
+                        <span className="mt-0.5 inline-block border border-[#ffd84d] bg-[#5c3e00] px-1.5 py-0.5 text-[10px] font-bold text-[#ffd84d]">
                           Trend Boost!
                         </span>
                       )}
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-mono text-sm font-extrabold text-sage-800">
+                    <div className="font-mono text-sm font-bold text-[#ffd84d]">
                       ~₽{valuation.askingPrice.toLocaleString()}
                     </div>
-                    <div className="text-[10px] text-wood-500">{effectiveMarkup}% tag</div>
+                    <div className="text-[10px] text-[#a8c4f0]">{effectiveMarkup}% tag</div>
                   </div>
                 </div>
 
-                {/* Per-pen markup override mini control */}
-                <div className="mt-2 flex items-center justify-between gap-2 border-t border-wood-300/60 pt-2 text-[11px]">
-                  <label className="flex items-center gap-1 font-semibold text-wood-700">
+                <div className="mt-2 flex items-center justify-between gap-2 border-t border-[#3b60a0] pt-2 text-[11px]">
+                  <label className="flex items-center gap-1 font-bold text-[#a8c4f0]">
                     <span>Tag:</span>
                     <select
                       aria-label={`Pen ${penIndex + 1} markup`}
@@ -194,7 +186,7 @@ export function DisplayPensPanel({
                           e.target.value === 'global' ? null : Number(e.target.value),
                         )
                       }
-                      className="rounded border border-wood-500 bg-cream-50 px-1.5 py-0.5 text-[11px] font-bold"
+                      className="border border-[#78a8f0] bg-[#0a1430] px-1.5 py-0.5 text-[11px] font-bold text-white"
                     >
                       <option value="global">Global ({globalMarkup}%)</option>
                       <option value="90">90% Quick</option>
@@ -208,14 +200,14 @@ export function DisplayPensPanel({
                     <button
                       type="button"
                       onClick={() => onMovePokemon(mon.uid, 'reserve')}
-                      className="rounded border border-wood-500 bg-cream-50 px-2 py-0.5 font-bold text-wood-900 hover:bg-cream-200"
+                      className="pmd-btn px-2 py-0.5 font-bold"
                     >
                       Rest
                     </button>
                     <button
                       type="button"
                       onClick={() => onInspectPokemon(mon.uid)}
-                      className="rounded border border-sage-800 bg-sage-600 px-2.5 py-0.5 font-bold text-cream-50 hover:bg-sage-800"
+                      className="pmd-btn-emerald px-2.5 py-0.5 font-bold"
                     >
                       Inspect
                     </button>
@@ -229,11 +221,11 @@ export function DisplayPensPanel({
 
       {/* Reserve Kennel */}
       <div>
-        <h3 className="mb-2 text-sm font-extrabold text-wood-900">
+        <h3 className="mb-2 text-sm font-bold text-[#ffd84d]">
           Reserve Kennel ({reserveMons.length})
         </h3>
         {reserveMons.length === 0 ? (
-          <p className="rounded-lg border border-wood-300 bg-cream-100/40 px-3 py-2 text-xs text-wood-700">
+          <p className="pmd-inset px-3 py-2.5 text-xs text-[#a8c4f0]">
             No Pokémon waiting in the back kennel. Extra hatches or rested strays wait here.
           </p>
         ) : (
@@ -243,21 +235,21 @@ export function DisplayPensPanel({
               return (
                 <div
                   key={mon.uid}
-                  className="ds-inset flex items-center justify-between gap-2 rounded-lg p-2.5"
+                  className="pmd-inset flex items-center justify-between gap-2 p-2.5"
                 >
                   <div className="flex items-center gap-2">
                     <PokemonSprite
                       speciesId={mon.speciesId}
                       name={species.name}
                       isShiny={mon.isShiny}
-                      size={48}
+                      size={44}
                     />
                     <div>
-                      <div className="text-xs font-extrabold text-wood-900">
+                      <div className="text-xs font-bold text-white">
                         {mon.isShiny ? '✨ ' : ''}
                         {species.name}
                       </div>
-                      <div className="text-[11px] text-wood-700">
+                      <div className="text-[11px] text-[#a8c4f0]">
                         {mon.trait} • Cute {mon.stats.cute}
                       </div>
                     </div>
@@ -266,14 +258,14 @@ export function DisplayPensPanel({
                     <button
                       type="button"
                       onClick={() => onMovePokemon(mon.uid, 'pen')}
-                      className="rounded border border-sage-800 bg-sage-600 px-2 py-1 text-[11px] font-bold text-cream-50 hover:bg-sage-800"
+                      className="pmd-btn-emerald px-2 py-1 text-[11px] font-bold"
                     >
                       To Pen
                     </button>
                     <button
                       type="button"
                       onClick={() => onInspectPokemon(mon.uid)}
-                      className="rounded border border-wood-500 bg-cream-50 px-2 py-1 text-[11px] font-bold text-wood-900"
+                      className="pmd-btn px-2 py-1 text-[11px] font-bold"
                     >
                       Inspect
                     </button>
