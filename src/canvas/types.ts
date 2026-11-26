@@ -105,6 +105,7 @@ export interface FloorCustomer {
 /** Minimal queued register offer rendered in front of the PokéMart counter. */
 export interface FloorCounterOffer {
   uid: string;
+  customerUid?: string;
   npcId: string;
   customerName: string;
   archetypeId: CustomerArchetypeId;

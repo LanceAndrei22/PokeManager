@@ -22,7 +22,6 @@ import { preloadAllHumanNpcs } from './humanNpcAnimator';
 import { buildIndoorBackgroundLayer, renderIndoorScene } from './indoorRenderer';
 import { createPmdSpriteAdapter } from './pmdLoader';
 import { onTilesetUpdate, preloadTilesets } from './tilesetLoader';
-import { usePrefersReducedMotion } from './useReducedMotion';
 import type { CanvasHitTarget, ShopLayout } from './types';
 import {
   buildFloorSnapshot,
@@ -100,7 +99,6 @@ export function ShopCanvas({
   const hoverTargetRef = useRef<CanvasHitTarget | null>(null);
   const [hoverLabel, setHoverLabel] = useState<string | null>(null);
   const [size, setSize] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
-  const reducedMotion = usePrefersReducedMotion();
   const dpr = useDevicePixelRatio();
 
   const snapshot = useMemo(
@@ -124,9 +122,11 @@ export function ShopCanvas({
   }, [shiftRunning]);
 
   useEffect(() => {
-    world.reducedMotion = reducedMotion;
+    // Keep core gameplay animations (PMD sprite stepping & trainer pathing) active
+    // even when OS reduced-motion is enabled; only explicit `motionPaused` freezes the room.
+    world.reducedMotion = false;
     world.motionPaused = motionPaused;
-  }, [world, reducedMotion, motionPaused]);
+  }, [world, motionPaused]);
 
   // Preload GBA PokéMart tilesets + 16 Human Trainer sheets and refresh layer on decode
   useEffect(() => {

@@ -52,10 +52,12 @@ export function AudioControls({
     };
   }, [mixerOpen]);
 
-  const btnPad = compact ? 'px-2 py-0.5 text-xs font-semibold' : 'px-2.5 py-1 text-sm font-semibold';
+  const btnPad = compact
+    ? 'px-2 py-0.5 text-xs font-semibold whitespace-nowrap shrink-0'
+    : 'px-2.5 py-1 text-sm font-semibold whitespace-nowrap shrink-0';
 
   return (
-    <div ref={rootRef} className="relative inline-flex items-center gap-1">
+    <div ref={rootRef} className="relative inline-flex shrink-0 items-center gap-1 whitespace-nowrap">
       <button
         type="button"
         aria-pressed={!bgmMuted}

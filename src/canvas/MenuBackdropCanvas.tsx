@@ -289,9 +289,7 @@ export function MenuBackdropCanvas() {
     const frame = (now: number) => {
       const dt = last === 0 ? 0 : Math.min(Math.max(0, (now - last) / 1000), 0.05);
       last = now;
-      if (!reducedMotion) {
-        elapsed += dt;
-      }
+      elapsed += dt;
 
       const { w, h, dpr } = sizeRef.current;
       const u = Math.max(2, Math.round((w / dpr < 640 ? 1.5 : 2) * dpr));
@@ -307,7 +305,7 @@ export function MenuBackdropCanvas() {
         ctx.fillRect(0, 0, w, h);
       }
 
-      // Gentle drifting cloud shadow & pond sparkle highlights
+      // Gentle drifting cloud shadow & falling petals (disabled under prefers-reduced-motion)
       if (!reducedMotion) {
         ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
         for (let i = 0; i < 4; i += 1) {
@@ -317,7 +315,6 @@ export function MenuBackdropCanvas() {
           ctx.fillRect(Math.round(cx + u * 3), Math.round(cy - u * 2), u * 8, u * 2);
         }
 
-        // Floating meadow petals
         for (const p of petalsRef.current) {
           p.x = (p.x + p.vx * dt) % 1;
           p.y = (p.y + p.vy * dt) % 1;
@@ -329,49 +326,47 @@ export function MenuBackdropCanvas() {
       const pokemonList = pokemonRef.current;
       const trainerList = trainersRef.current;
 
-      if (!reducedMotion) {
-        for (const mon of pokemonList) {
-          if (mon.sleeper) {
-            mon.state = 'sleep';
-            mon.dir = 0;
-            continue;
-          }
-          mon.stateTimer -= dt;
-          if (mon.stateTimer <= 0) {
-            if (mon.state === 'walk') {
-              mon.state = 'hop';
-              mon.stateTimer = 0.9;
-            } else if (mon.state === 'hop') {
-              mon.state = 'idle';
-              mon.stateTimer = 0.7;
-            } else {
-              mon.state = 'walk';
-              mon.stateTimer = 2.6 + (mon.phase % 1.4);
-            }
-          }
-          if (mon.state !== 'idle') {
-            mon.x += mon.vx * dt;
-            mon.y += mon.vy * dt;
-            if (mon.x < 0.26 || mon.x > 0.92) mon.vx *= -1;
-            if (mon.y < 0.34 || mon.y > 0.88) mon.vy *= -1;
-            mon.x = Math.min(0.92, Math.max(0.26, mon.x));
-            mon.y = Math.min(0.88, Math.max(0.34, mon.y));
-            mon.dir = vectorToPmdDirection(mon.vx, mon.vy, mon.dir, 0.001);
+      for (const mon of pokemonList) {
+        if (mon.sleeper) {
+          mon.state = 'sleep';
+          mon.dir = 0;
+          continue;
+        }
+        mon.stateTimer -= dt;
+        if (mon.stateTimer <= 0) {
+          if (mon.state === 'walk') {
+            mon.state = 'hop';
+            mon.stateTimer = 0.9;
+          } else if (mon.state === 'hop') {
+            mon.state = 'idle';
+            mon.stateTimer = 0.7;
+          } else {
+            mon.state = 'walk';
+            mon.stateTimer = 2.6 + (mon.phase % 1.4);
           }
         }
+        if (mon.state !== 'idle') {
+          mon.x += mon.vx * dt;
+          mon.y += mon.vy * dt;
+          if (mon.x < 0.26 || mon.x > 0.92) mon.vx *= -1;
+          if (mon.y < 0.34 || mon.y > 0.88) mon.vy *= -1;
+          mon.x = Math.min(0.92, Math.max(0.26, mon.x));
+          mon.y = Math.min(0.88, Math.max(0.34, mon.y));
+          mon.dir = vectorToPmdDirection(mon.vx, mon.vy, mon.dir, 0.001);
+        }
+      }
 
-        for (const tr of trainerList) {
-          const prevX = tr.x * w;
-          tr.x += tr.dir * tr.speed * dt;
-          if (tr.x >= tr.maxX) {
-            tr.x = tr.maxX;
-            tr.dir = -1;
-          } else if (tr.x <= tr.minX) {
-            tr.x = tr.minX;
-            tr.dir = 1;
-          }
-          tr.distance += Math.abs(tr.x * w - prevX);
+      for (const tr of trainerList) {
+        const prevX = tr.x * w;
+        tr.x += tr.dir * tr.speed * dt;
+        if (tr.x >= tr.maxX) {
+          tr.x = tr.maxX;
+          tr.dir = -1;
+        } else if (tr.x <= tr.minX) {
+          tr.x = tr.minX;
+          tr.dir = 1;
         }
+        tr.distance += Math.abs(tr.x * w - prevX);
       }
 
       const drawQueue: Array<{ y: number; draw: () => void }> = [];
@@ -382,16 +377,16 @@ export function MenuBackdropCanvas() {
         drawQueue.push({
           y: py,
           draw: () => {
-            const activeState = reducedMotion ? (mon.sleeper ? 'sleep' : 'idle') : mon.state;
+            const activeState = mon.state;
             const hopLift =
-              activeState === 'hop' && !reducedMotion
+              activeState === 'hop'
                 ? -Math.round(Math.abs(Math.sin(elapsed * 7 + mon.phase)) * u * 3)
                 : 0;
             const frameRect = adapter.getFrame(
               mon.speciesId,
               false,
               activeState,
-              reducedMotion ? 0 : elapsed + mon.phase,
+              elapsed + mon.phase,
               mon.dir,
             );
             if (!frameRect) return;
@@ -440,7 +435,7 @@ export function MenuBackdropCanvas() {
           y: py,
           draw: () => {
             const cardinal: CardinalDirection = tr.dir > 0 ? 'right' : 'left';
-            const frame = getHumanNpcFrame(tr.npcId, cardinal, !reducedMotion, tr.distance);
+            const frame = getHumanNpcFrame(tr.npcId, cardinal, true, tr.distance);
             if (!frame) return;
             const scale = Math.max(1, Math.round(u * 1.15));
             const drawW = frame.sw * scale;

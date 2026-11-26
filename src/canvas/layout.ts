@@ -518,6 +518,33 @@ export function buildEntryRoute(layout: ShopLayout, penIndex: number, spot: Poin
   return dedupePath(route);
 }
 
+/** Walks cleanly from a pen browsing spot along side walkways up to a counter queue spot. */
+export function buildCounterRoute(
+  layout: ShopLayout,
+  penIndex: number,
+  from: Point,
+  to: Point,
+): Point[] {
+  const pen = layout.pens[penIndex];
+  const sideX = pen
+    ? Math.min(layout.width - layout.unit, pen.x + pen.w + Math.round(layout.unit * 3))
+    : from.x;
+  const route: Point[] =
+    pen && from.y > pen.y
+      ? [{ ...from }, { x: sideX, y: from.y }, { x: sideX, y: to.y }, { ...to }]
+      : [{ ...from }, { x: from.x, y: to.y }, { ...to }];
+  return dedupePath(route);
+}
+
+/** Walks cleanly from any floor/counter position via the top walkway back out the glass doors. */
+export function buildExitFromPointRoute(layout: ShopLayout, from: Point): Point[] {
+  return dedupePath([
+    { ...from },
+    { x: from.x, y: layout.aisleY },
+    { ...layout.doorSpot },
+  ]);
+}
+
 /** Removes consecutive duplicate points so zero-length segments never divide by zero. */
 export function dedupePath(path: Point[]): Point[] {
   return path.filter((p, i) => i === 0 || p.x !== path[i - 1].x || p.y !== path[i - 1].y);

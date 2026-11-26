@@ -80,6 +80,7 @@ const BUBBLE_ICONS: Record<CustomerArchetypeId, PixelBitmap> = {
 const HAIR_COLORS = ['#3c2918', '#7a4a2a', '#c27c3e', '#2f3a56', '#8e5b9a', '#d9a441'];
 const POKE_BALL: PixelBitmap = ['.rrrr.', 'rrrrrr', 'kkwwkk', 'wwwwww', '.wwww.'];
 const BALL_COLORS = { r: '#e04848', k: PALETTE.woodDeep, w: PALETTE.white };
+const HOVER_CARET: PixelBitmap = ['yyyyy', '.yyy.', '..y..'];
 
 function seam(unit: number): number {
   return Math.max(1, Math.round(unit / 2));
@@ -767,6 +768,12 @@ function drawPokemon(
 
   const animTime = world.reducedMotion || world.motionPaused ? 0 : world.time;
   const frame = adapter.getFrame(ent.speciesId, ent.isShiny, ent.state, animTime, ent.direction);
+  let drawnH = Math.max(u * 12, size * 0.45);
+
+  if (hovered) {
+    ctx.fillStyle = 'rgba(255, 216, 77, 0.55)';
+    ctx.fillRect(feetX - u * 6, feetY - seam(u), u * 12, u * 2);
+  }
 
   ctx.save();
   ctx.translate(feetX, Math.round(feetY + pose.offsetY));
@@ -774,6 +781,7 @@ function drawPokemon(
     const mirror = frame.usesDirectionRow ? 1 : frame.facesLeft ? ent.facing : -ent.facing;
     ctx.scale(mirror * pose.scaleX, pose.scaleY);
     const { drawW, drawH } = computeFrameDrawSize(frame, layout);
+    drawnH = drawH;
     const footPad = frame.usesDirectionRow ? u * 1.5 : 6 * layout.spriteScale;
     ctx.drawImage(
       frame.image,
@@ -794,13 +802,16 @@ function drawPokemon(
   ctx.restore();
 
   if (hovered) {
-    ctx.strokeStyle = '#ffd84d';
-    ctx.lineWidth = Math.max(2, u);
-    ctx.strokeRect(
-      Math.round(feetX - size * 0.35),
-      Math.round(feetY - size * 0.8),
-      Math.round(size * 0.7),
-      Math.round(size * 0.84),
+    const still = world.reducedMotion || world.motionPaused;
+    const bob = still ? 0 : Math.round(Math.sin(world.time * 6) * u);
+    const { w: cw } = bitmapSize(HOVER_CARET);
+    drawBitmap(
+      ctx,
+      HOVER_CARET,
+      Math.round(feetX - (cw * u) / 2),
+      Math.round(feetY - drawnH + pose.offsetY - u * 4 + bob),
+      u,
+      ICON_COLORS,
     );
   }
 }
@@ -851,9 +862,10 @@ function drawQueuedShopper(
 ): void {
   const u = layout.unit;
   const still = world.reducedMotion || world.motionPaused;
+  const walking = q.state === 'walking-to-counter' && !still;
   drawPixelShadow(ctx, q.x, q.y, u * 7, u, 0.25);
 
-  const drawnH = drawHumanSprite(ctx, q.npcId, 'up', false, 0, q.x, q.y, layout);
+  const drawnH = drawHumanSprite(ctx, q.npcId, q.cardinalDir, walking, q.distance, q.x, q.y, layout);
   let topY = q.y - (drawnH ?? u * 16);
   if (drawnH === null) {
     drawHumanFallback(
@@ -863,9 +875,9 @@ function drawQueuedShopper(
       u,
       ARCHETYPE_SHIRTS[q.archetypeId],
       '#3c2918',
-      false,
-      0,
-      false,
+      walking,
+      q.distance,
+      q.cardinalDir === 'left',
     );
     topY = q.y - u * 16;
   }
@@ -981,9 +993,28 @@ function drawHoverHighlight(
   }
 
   if (rect) {
+    const arm = Math.max(u * 4, Math.min(u * 8, Math.round(Math.min(rect.w, rect.h) * 0.22)));
+    const lw = Math.max(2, u);
     ctx.strokeStyle = '#ffd84d';
-    ctx.lineWidth = Math.max(2, u);
-    ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
+    ctx.lineWidth = lw;
+    ctx.beginPath();
+    // Top-left bracket
+    ctx.moveTo(rect.x, rect.y + arm);
+    ctx.lineTo(rect.x, rect.y);
+    ctx.lineTo(rect.x + arm, rect.y);
+    // Top-right bracket
+    ctx.moveTo(rect.x + rect.w - arm, rect.y);
+    ctx.lineTo(rect.x + rect.w, rect.y);
+    ctx.lineTo(rect.x + rect.w, rect.y + arm);
+    // Bottom-right bracket
+    ctx.moveTo(rect.x + rect.w, rect.y + rect.h - arm);
+    ctx.lineTo(rect.x + rect.w, rect.y + rect.h);
+    ctx.lineTo(rect.x + rect.w - arm, rect.y + rect.h);
+    // Bottom-left bracket
+    ctx.moveTo(rect.x + arm, rect.y + rect.h);
+    ctx.lineTo(rect.x, rect.y + rect.h);
+    ctx.lineTo(rect.x, rect.y + rect.h - arm);
+    ctx.stroke();
   }
 }
 

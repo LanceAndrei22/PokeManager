@@ -23,7 +23,9 @@ import { clamp, type RngFn } from '../engine/rng';
 import { HOP_DURATION, easeInOutSine, facingForDelta, lerp } from './animation';
 import { vectorToCardinalDirection, type CardinalDirection } from './humanNpcAnimator';
 import {
+  buildCounterRoute,
   buildEntryRoute,
+  buildExitFromPointRoute,
   dedupePath,
   getBedAnchor,
   getCounterQueueSpot,
@@ -105,9 +107,10 @@ export interface CustomerWalker {
   look: number;
 }
 
-/** Animated Human Trainer standing in front of the PokéMart counter waiting to haggle. */
+/** Animated Human Trainer standing at or walking toward the PokéMart counter. */
 export interface QueuedShopperEntity {
   offerUid: string;
+  customerUid?: string;
   npcId: string;
   customerName: string;
   archetypeId: CustomerArchetypeId;
@@ -117,6 +120,12 @@ export interface QueuedShopperEntity {
   isVip: boolean;
   penIndex: number;
   queueIndex: number;
+  state: 'walking-to-counter' | 'waiting';
+  path: Point[];
+  pathLength: number;
+  progress: number;
+  cardinalDir: CardinalDirection;
+  distance: number;
   x: number;
   y: number;
   time: number;
@@ -222,6 +231,7 @@ export function buildFloorSnapshot(
     })),
     counterQueue: counterQueue.map((q) => ({
       uid: q.uid,
+      customerUid: q.customerUid,
       npcId: q.npcId || resolveHumanNpcFallback(q.archetypeId).id,
       customerName: q.customerName,
       archetypeId: q.archetypeId,
@@ -256,7 +266,7 @@ function placeEntity(ent: PokemonEntity, layout: ShopLayout, rng: RngFn): boolea
   ent.y = ent.fromY = ent.toY = randomIn(bounds.y, bounds.y + bounds.h, rng);
   ent.state = 'idle';
   ent.stateTime = 0;
-  ent.stateDuration = 0.45 + rng() * 0.7;
+  ent.stateDuration = 0.2 + rng() * 0.5;
   ent.hopsRemaining = 0;
   ent.ambientTimer = 0.3 + rng() * 0.6;
   return true;
@@ -467,8 +477,19 @@ export function syncWorld(
     ent.needsRecovery = mon.needsRecovery;
   }
 
-  // 3. Browsing shoppers: new uids walk in; vanished uids walk out.
+  // 3. Browsing shoppers: new uids walk in; handed-off counter shoppers transition cleanly; others walk out.
   const customerUids = new Set(snapshot.customers.map((c) => c.uid));
+  const queuedByCustomerUid = new Map<string, Point>();
+  for (const q of snapshot.counterQueue ?? []) {
+    if (q.customerUid) {
+      const existingWalker = world.walkers.get(q.customerUid);
+      if (existingWalker) {
+        queuedByCustomerUid.set(q.customerUid, { x: existingWalker.x, y: existingWalker.y });
+        world.walkers.delete(q.customerUid);
+      }
+    }
+  }
+
   for (const c of snapshot.customers) {
     if (!world.walkers.has(c.uid)) {
       world.walkers.set(
@@ -490,13 +511,37 @@ export function syncWorld(
     }
   }
 
-  // 4. Queued counter shoppers in front of Clerk Leo's register.
+  // 4. Queued counter shoppers in front of Clerk Leo's register (walk cleanly from pen -> counter -> door).
   const queueUids = new Set((snapshot.counterQueue ?? []).map((q) => q.uid));
   for (const [uid, queued] of world.queuedShoppers) {
     if (!queueUids.has(uid)) {
-      if (!firstSync && cashDelta > 0) {
+      const soldHere = !firstSync && cashDelta > 0;
+      if (soldHere) {
         newParticles.push(spawnCoin(queued.x, queued.y - u * 8, u, `+₽${cashDelta.toLocaleString()}`));
         newParticles.push(...spawnHearts(queued.x, queued.y - u * 6, u, rng, 2));
+      }
+      if (!firstSync && !world.reducedMotion) {
+        const exitPath = buildExitFromPointRoute(layout, { x: queued.x, y: queued.y });
+        world.walkers.set(`exit-${queued.offerUid}`, {
+          uid: `exit-${queued.offerUid}`,
+          archetypeId: queued.archetypeId,
+          npcId: queued.npcId,
+          penIndex: queued.penIndex,
+          visitorIndex: 0,
+          state: 'leaving',
+          path: exitPath,
+          pathLength: pathLength(exitPath),
+          progress: 0,
+          x: queued.x,
+          y: queued.y,
+          facing: 1,
+          direction: 2,
+          cardinalDir: 'right',
+          distance: 0,
+          happy: soldHere,
+          time: 0,
+          look: rng(),
+        });
       }
       world.queuedShoppers.delete(uid);
     }
@@ -506,18 +551,36 @@ export function syncWorld(
     const spot = getCounterQueueSpot(layout, idx);
     const existing = world.queuedShoppers.get(q.uid);
     if (existing) {
+      const prevIdx = existing.queueIndex;
       existing.patience = q.patience;
       existing.maxPatience = q.maxPatience;
       existing.currentOffer = q.currentOffer;
       existing.queueIndex = idx;
-      existing.x = spot.x;
-      existing.y = spot.y;
+      if (world.reducedMotion) {
+        existing.x = spot.x;
+        existing.y = spot.y;
+        existing.state = 'waiting';
+        existing.progress = 1;
+        existing.cardinalDir = 'up';
+      } else if (prevIdx !== idx && Math.hypot(existing.x - spot.x, existing.y - spot.y) > u * 2) {
+        const slidePath = dedupePath([{ x: existing.x, y: existing.y }, { ...spot }]);
+        existing.path = slidePath;
+        existing.pathLength = pathLength(slidePath);
+        existing.progress = 0;
+        existing.state = 'walking-to-counter';
+      }
     } else {
       if (!firstSync) {
         world.clerkWaveTimer = 1.25;
       }
+      const instant = firstSync || world.reducedMotion;
+      const startPt =
+        (q.customerUid ? queuedByCustomerUid.get(q.customerUid) : undefined) ??
+        getCustomerSpot(layout, q.penIndex, 0);
+      const route = buildCounterRoute(layout, q.penIndex, startPt, spot);
       world.queuedShoppers.set(q.uid, {
         offerUid: q.uid,
+        customerUid: q.customerUid,
         npcId: q.npcId,
         customerName: q.customerName,
         archetypeId: q.archetypeId,
@@ -527,8 +590,14 @@ export function syncWorld(
         isVip: q.isVip,
         penIndex: q.penIndex,
         queueIndex: idx,
-        x: spot.x,
-        y: spot.y,
+        state: instant ? 'waiting' : 'walking-to-counter',
+        path: route,
+        pathLength: pathLength(route),
+        progress: instant ? 1 : 0,
+        cardinalDir: instant ? 'up' : 'right',
+        distance: 0,
+        x: instant ? spot.x : startPt.x,
+        y: instant ? spot.y : startPt.y,
         time: 0,
         sweatTimer: 0.25,
       });
@@ -562,6 +631,11 @@ export function relayoutWorld(world: ShopWorld, layout: ShopLayout, rng: RngFn):
   }
   for (const q of world.queuedShoppers.values()) {
     const spot = getCounterQueueSpot(layout, q.queueIndex);
+    q.path = [spot];
+    q.pathLength = 0;
+    q.progress = 1;
+    q.state = 'waiting';
+    q.cardinalDir = 'up';
     q.x = spot.x;
     q.y = spot.y;
   }
@@ -623,7 +697,7 @@ function stepPokemon(
       ent.y = ent.toY;
       ent.state = 'idle';
       ent.stateTime = 0;
-      ent.stateDuration = 0.55 + rng() * 0.8;
+      ent.stateDuration = 0.4 + rng() * 0.7;
     } else {
       const k = easeInOutSine(p);
       ent.x = lerp(ent.fromX, ent.toX, k);
@@ -640,7 +714,7 @@ function stepPokemon(
       } else {
         ent.state = 'idle';
         ent.stateTime = 0;
-        ent.stateDuration = 0.55 + rng() * 0.8;
+        ent.stateDuration = 0.4 + rng() * 0.7;
       }
     } else {
       const k = easeInOutSine(p);
@@ -709,6 +783,22 @@ export function stepWorld(
   }
   for (const q of world.queuedShoppers.values()) {
     q.time += dt;
+    if (q.state === 'walking-to-counter' && !world.reducedMotion) {
+      const prevX = q.x;
+      const prevY = q.y;
+      q.progress = Math.min(1, q.progress + (dt * world.shiftSpeed) / WALK_DURATION);
+      const pt = pointAlongPath(q.path, q.pathLength, q.progress);
+      q.x = pt.x;
+      q.y = pt.y;
+      const dx = q.x - prevX;
+      const dy = q.y - prevY;
+      q.cardinalDir = vectorToCardinalDirection(dx, dy, q.cardinalDir, 0.01);
+      q.distance += Math.hypot(dx, dy);
+      if (q.progress >= 1) {
+        q.state = 'waiting';
+        q.cardinalDir = 'up';
+      }
+    }
     const ratio = q.maxPatience > 0 ? q.patience / q.maxPatience : 1;
     if (!world.reducedMotion && ratio < 0.35) {
       q.sweatTimer -= dt;
@@ -725,6 +815,14 @@ export function stepWorld(
     if (Math.hypot(w.x - layout.doorSpot.x, w.y - layout.doorSpot.y) <= thresholdRadius) {
       doorTraffic = true;
       break;
+    }
+  }
+  if (!doorTraffic) {
+    for (const q of world.queuedShoppers.values()) {
+      if (Math.hypot(q.x - layout.doorSpot.x, q.y - layout.doorSpot.y) <= thresholdRadius) {
+        doorTraffic = true;
+        break;
+      }
     }
   }
   const targetDoor = doorTraffic ? 1 : 0;
@@ -753,14 +851,16 @@ export function hitTestPokemon(
   y: number,
 ): string | null {
   const s = layout.spriteSize;
+  const u = layout.unit;
   const sorted = [...world.pokemon.values()].sort((a, b) => b.y - a.y);
   for (const ent of sorted) {
-    const halfW = s * 0.34;
+    const halfW = Math.max(u * 14, s * 0.24);
+    const topH = Math.max(u * 28, s * 0.56);
     if (
       x >= ent.x - halfW &&
       x <= ent.x + halfW &&
-      y >= ent.y - s * 0.82 &&
-      y <= ent.y + layout.unit * 2
+      y >= ent.y - topH &&
+      y <= ent.y + u * 2
     ) {
       return ent.uid;
     }

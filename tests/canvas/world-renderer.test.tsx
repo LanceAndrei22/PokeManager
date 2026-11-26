@@ -90,6 +90,12 @@ function createMockContext(): CanvasRenderingContext2D {
     clearRect: vi.fn(),
     fillRect: vi.fn(),
     strokeRect: vi.fn(),
+    beginPath: vi.fn(),
+    moveTo: vi.fn(),
+    lineTo: vi.fn(),
+    stroke: vi.fn(),
+    rect: vi.fn(),
+    clip: vi.fn(),
     drawImage: vi.fn(),
     save: vi.fn(),
     restore: vi.fn(),
@@ -245,6 +251,56 @@ describe('Shop World State Machine', () => {
     expect(seenStates.size).toBeGreaterThanOrEqual(2);
     expect(world.eggWobblePhase).toBeGreaterThan(0);
   });
+
+  it('walks browsing shoppers smoothly from pen -> counter -> sliding door without teleporting or cloning', () => {
+    const rng = createSeededRng(77);
+    const layout = computeIndoorLayout(1280, 800, 3, 2, 1);
+    const world = createWorld();
+    const eevee = makePokemon({ uid: 'eevee-path', speciesId: 133, penIndex: 0 });
+    const visitor = makeCustomer({ uid: 'c-walk-1', targetPenIndex: 0 });
+
+    syncWorld(world, buildFloorSnapshot('p1', 1800, 1, [eevee], [visitor], []), layout, rng);
+    for (let i = 0; i < Math.ceil((WALK_DURATION + 0.2) / 0.05); i += 1) {
+      stepWorld(world, 0.05, layout, rng);
+    }
+    const browsingSpot = {
+      x: world.walkers.get('c-walk-1')!.x,
+      y: world.walkers.get('c-walk-1')!.y,
+    };
+
+    // Handoff from browsing pen -> counter queue: no leaving walker clone, starts near browsing spot
+    const queuedOffer = makeCounterOffer({
+      uid: 'offer-walk-1',
+      customerUid: 'c-walk-1',
+      penIndex: 0,
+    });
+    syncWorld(world, buildFloorSnapshot('p1', 1800, 1, [eevee], [], [queuedOffer]), layout, rng);
+    expect(world.walkers.size).toBe(0);
+    const qEnt = world.queuedShoppers.get('offer-walk-1')!;
+    expect(qEnt.state).toBe('walking-to-counter');
+    expect(Math.hypot(qEnt.x - browsingSpot.x, qEnt.y - browsingSpot.y)).toBeLessThan(2);
+
+    // Step world until shopper arrives at Counter queue spot #0 facing up
+    for (let i = 0; i < Math.ceil((WALK_DURATION + 0.2) / 0.05); i += 1) {
+      stepWorld(world, 0.05, layout, rng);
+    }
+    expect(qEnt.state).toBe('waiting');
+    expect(qEnt.cardinalDir).toBe('up');
+    expect(Math.hypot(qEnt.x - layout.counterQueueSpots[0].x, qEnt.y - layout.counterQueueSpots[0].y)).toBeLessThan(2);
+
+    // Resolve counter offer -> spawns exit walker from counter position to sliding door
+    syncWorld(world, buildFloorSnapshot('p1', 2600, 1, [], [], []), layout, rng);
+    expect(world.queuedShoppers.size).toBe(0);
+    const exiting = world.walkers.get('exit-offer-walk-1')!;
+    expect(exiting).toBeDefined();
+    expect(exiting.state).toBe('leaving');
+    expect(exiting.happy).toBe(true);
+
+    for (let i = 0; i < Math.ceil((WALK_DURATION + 0.2) / 0.05); i += 1) {
+      stepWorld(world, 0.05, layout, rng);
+    }
+    expect(world.walkers.size).toBe(0);
+  });
 });
 
 describe('2D Canvas Indoor Pixel Renderer & ShopCanvas UI', () => {
@@ -298,6 +354,26 @@ describe('2D Canvas Indoor Pixel Renderer & ShopCanvas UI', () => {
     expect(getFrame).toHaveBeenCalledWith(133, false, expect.any(String), expect.any(Number), expect.any(Number));
     expect(getFrame).toHaveBeenCalledWith(54, false, 'sleep', expect.any(Number), 0);
     expect(getFrame).not.toHaveBeenCalledWith(352, expect.anything(), expect.anything(), expect.anything(), expect.anything());
+
+    // Hovering a Pokémon renders a crisp pixel caret/shadow underline with zero extra strokeRect boxes
+    const noHoverCtx = createMockContext();
+    const hoverCtx = createMockContext();
+    const hoverWorld = createWorld();
+    syncWorld(hoverWorld, buildFloorSnapshot('p1', 1800, 1, [penMon], [], []), layout, rng);
+    renderIndoorScene(noHoverCtx, layout, hoverWorld, fakeImage, adapter, {
+      shiftRunning: false,
+      hoverTarget: null,
+    });
+    renderIndoorScene(hoverCtx, layout, hoverWorld, fakeImage, adapter, {
+      shiftRunning: false,
+      hoverTarget: { kind: 'pokemon', uid: 'eevee', label: 'Eevee — Inspect & Care' },
+    });
+    expect(vi.mocked(hoverCtx.strokeRect).mock.calls).toEqual(
+      vi.mocked(noHoverCtx.strokeRect).mock.calls,
+    );
+    expect(vi.mocked(hoverCtx.fillRect).mock.calls.length).toBeGreaterThan(
+      vi.mocked(noHoverCtx.fillRect).mock.calls.length,
+    );
 
     // Also confirm legacy renderer still honors reducedMotion static scale
     world.reducedMotion = true;
