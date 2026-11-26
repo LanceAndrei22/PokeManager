@@ -11,6 +11,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { clampDpr, computeDesktopResScale } from './layout';
+import { drawPixelShadow } from './pixelArt';
 import { vectorToPmdDirection } from './pmdAnimator';
 import { createPmdSpriteAdapter } from './pmdLoader';
 import { getTileImage, preloadTilesets } from './tilesetLoader';
@@ -250,14 +251,11 @@ export function MenuBackdropCanvas() {
         mon.stateTimer -= dt;
         if (mon.stateTimer <= 0) {
           if (mon.state === 'walk') {
-            mon.state = 'hop';
-            mon.stateTimer = 0.85 + (mon.phase % 0.5);
-          } else if (mon.state === 'hop') {
             mon.state = 'idle';
-            mon.stateTimer = 0.55;
+            mon.stateTimer = 0.8 + (mon.phase % 0.8);
           } else {
             mon.state = 'walk';
-            mon.stateTimer = 2.4 + (mon.phase % 1.8);
+            mon.stateTimer = 2.6 + (mon.phase % 1.8);
             // Gently vary heading on new walk stride so roamers weave organically
             const turnAngle = Math.sin(elapsed * 0.7 + mon.phase * 3.1) * 0.35;
             const speed = Math.hypot(mon.vx, mon.vy) || 0.018;
@@ -296,10 +294,6 @@ export function MenuBackdropCanvas() {
         drawQueue.push({
           y: py,
           draw: () => {
-            const hopLift =
-              monSnap.state === 'hop'
-                ? -Math.round(Math.abs(Math.sin(elapsed * 7.5 + monSnap.phase)) * u * 3.5)
-                : 0;
             const frameRect = adapter.getFrame(
               monSnap.speciesId,
               false,
@@ -310,14 +304,12 @@ export function MenuBackdropCanvas() {
             if (!frameRect) return;
             const drawW = frameRect.sw * u;
             const drawH = frameRect.sh * u;
-
-            ctx.fillStyle = 'rgba(7, 13, 31, 0.32)';
-            ctx.fillRect(
-              Math.round(px - drawW * 0.28),
-              Math.round(py - u),
-              Math.round(drawW * 0.56),
-              u * 2,
+            const visW = frameRect.visibleWidthPx ?? Math.round(frameRect.sw * 0.56);
+            const footPad = Math.round(
+              (frameRect.bottomPadPx ?? Math.round(frameRect.sh * 0.28)) * u,
             );
+
+            drawPixelShadow(ctx, px, py, Math.max(u * 6, Math.round(visW * u * 0.76)), u, 0.36);
             ctx.drawImage(
               frameRect.image,
               frameRect.sx,
@@ -325,7 +317,7 @@ export function MenuBackdropCanvas() {
               frameRect.sw,
               frameRect.sh,
               Math.round(px - drawW / 2),
-              Math.round(py - drawH + u + hopLift),
+              Math.round(py - drawH + footPad),
               drawW,
               drawH,
             );

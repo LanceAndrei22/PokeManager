@@ -31,16 +31,85 @@ interface CoreManifestEntry {
 
 const CORE_MANIFEST = rawCoreManifest as Record<string, CoreManifestEntry>;
 
-/** Maps entity animation state to preferred PMD sheet lookup order. */
+/** Maps grounded entity animation state to preferred PMD sheet lookup order (no Hop). */
 export const STATE_ANIM_PRIORITY: Record<PokemonAnimState, PmdAnimKey[]> = {
-  hop: ['Hop', 'Idle', 'Walk'],
   sleep: ['Sleep', 'Idle', 'Walk'],
   idle: ['Idle', 'Walk'],
   walk: ['Walk', 'Idle'],
 };
 
+/** Cached opaque-pixel bounds for a PMD animation sheet frame so feet plant cleanly on shadows. */
+export interface SpriteGroundMetrics {
+  bottomPadPx: number;
+  visibleWidthPx: number;
+  visibleHeightPx: number;
+}
+
+let measureCanvas: HTMLCanvasElement | null = null;
+let measureCtx: CanvasRenderingContext2D | null = null;
+
 /**
- * Selects the best available PMD sheet (`Walk` | `Idle` | `Sleep` | `Hop`) and
+ * Inspects frame `(0, 0)` of a decoded PMD spritesheet once to find its exact lowest opaque
+ * pixel (`bottomPadPx`) and visible body bounds. Falls back cleanly in jsdom/headless contexts.
+ */
+function measureSheetGroundMetrics(
+  img: HTMLImageElement,
+  sw: number,
+  sh: number,
+): SpriteGroundMetrics {
+  const fallback: SpriteGroundMetrics = {
+    bottomPadPx: Math.round(sh * 0.28),
+    visibleWidthPx: Math.max(12, Math.round(sw * 0.56)),
+    visibleHeightPx: Math.max(14, Math.round(sh * 0.56)),
+  };
+  if (typeof document === 'undefined' || sw <= 0 || sh <= 0) return fallback;
+
+  try {
+    if (!measureCanvas) {
+      measureCanvas = document.createElement('canvas');
+      measureCtx = measureCanvas.getContext('2d', { willReadFrequently: true });
+    }
+    if (!measureCanvas || !measureCtx) return fallback;
+    if (measureCanvas.width < sw || measureCanvas.height < sh) {
+      measureCanvas.width = Math.max(measureCanvas.width, sw);
+      measureCanvas.height = Math.max(measureCanvas.height, sh);
+    }
+    measureCtx.clearRect(0, 0, sw, sh);
+    measureCtx.drawImage(img, 0, 0, sw, sh, 0, 0, sw, sh);
+    const data = measureCtx.getImageData(0, 0, sw, sh).data;
+
+    let minX = sw;
+    let maxX = -1;
+    let minY = sh;
+    let maxY = -1;
+    for (let y = 0; y < sh; y += 1) {
+      const rowOff = y * sw * 4;
+      for (let x = 0; x < sw; x += 1) {
+        if (data[rowOff + x * 4 + 3] > 24) {
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+    if (maxX < minX || maxY < minY) return fallback;
+
+    // Cap bottomPad at 44% of frame height so standing Pokémon plant feet squarely on their
+    // shadow while naturally high-floating sprites (e.g. Gastly) keep subtle native levitation.
+    const rawBottomPad = sh - 1 - maxY;
+    return {
+      bottomPadPx: Math.min(rawBottomPad, Math.floor(sh * 0.44)),
+      visibleWidthPx: Math.max(10, maxX - minX + 1),
+      visibleHeightPx: Math.max(12, maxY - minY + 1),
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+/**
+ * Selects the best available grounded PMD sheet (`Walk` | `Idle` | `Sleep`) and
  * whether to pull from the shiny subfolder (`0000/0001/`) based on `tracker.json`
  * availability metadata, guaranteeing zero 404 requests.
  */
@@ -148,6 +217,7 @@ export function createPmdSpriteAdapter(): SpriteEntityAdapter {
   const animDataCache = new Map<number, ParsedAnimData>();
   const animLoading = new Set<number>();
   const sheetCache = new Map<string, HTMLImageElement>();
+  const metricsCache = new Map<string, SpriteGroundMetrics>();
   const failedUrls = new Set<string>();
 
   const ensureAnimData = (speciesId: number) => {
@@ -218,12 +288,22 @@ export function createPmdSpriteAdapter(): SpriteEntityAdapter {
         timeSec,
       );
 
+      const metricsKey = `${sheetUrl}:${slice.sw}x${slice.sh}`;
+      let metrics = metricsCache.get(metricsKey);
+      if (!metrics) {
+        metrics = measureSheetGroundMetrics(img, slice.sw, slice.sh);
+        metricsCache.set(metricsKey, metrics);
+      }
+
       return {
         image: img,
         sx: slice.sx,
         sy: slice.sy,
         sw: slice.sw,
         sh: slice.sh,
+        bottomPadPx: metrics.bottomPadPx,
+        visibleWidthPx: metrics.visibleWidthPx,
+        visibleHeightPx: metrics.visibleHeightPx,
         usesDirectionRow: true,
         facesLeft: true,
       };

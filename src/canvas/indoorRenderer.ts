@@ -11,11 +11,9 @@
  */
 import type { CustomerArchetypeId } from '../data/types';
 import {
-  HOP_DURATION,
   STATIC_POSE,
   STATIC_SLEEP_POSE,
   breathingPose,
-  hopPose,
   sleepPose,
   walkFrame,
   type Pose,
@@ -109,12 +107,12 @@ function computeFrameDrawSize(
   return { drawW: frame.sw * scale, drawH: frame.sh * scale };
 }
 
-function getPokemonPose(world: ShopWorld, ent: PokemonEntity, size: number, unit: number): Pose {
+function getPokemonPose(world: ShopWorld, ent: PokemonEntity): Pose {
   const still = world.reducedMotion || world.motionPaused;
   if (ent.state === 'sleep') return still ? STATIC_SLEEP_POSE : sleepPose(world.time, ent.phase);
-  if (ent.state === 'hop' && !still) return hopPose(ent.stateTime / HOP_DURATION, size * 0.14);
-  if (ent.state === 'walk' && !still) return breathingPose(world.time * 1.8, ent.phase, unit * 0.95);
-  return still ? STATIC_POSE : breathingPose(world.time, ent.phase, unit * 0.75);
+  // Keep walking Pokémon strictly un-distorted (native PMD Walk-Anim frames planted at feetY)
+  if (ent.state === 'walk' || still) return STATIC_POSE;
+  return breathingPose(world.time, ent.phase);
 }
 
 /** Tiles a sprite cleanly within `rect` clipping overflow pixels at boundaries. */
@@ -718,7 +716,7 @@ function getHumanSpriteScale(layout: ShopLayout): number {
  */
 export function getHumanHeadTopY(feetY: number, layout: ShopLayout): number {
   const scale = getHumanSpriteScale(layout);
-  return Math.round(feetY - 22 * scale + layout.unit * 2);
+  return Math.round(feetY - 21 * scale);
 }
 
 function drawHumanSprite(
@@ -736,6 +734,7 @@ function drawHumanSprite(
   const scale = getHumanSpriteScale(layout);
   const drawW = frame.sw * scale;
   const drawH = frame.sh * scale;
+  // Visible boots end at row 30 of 32 (1px bottom pad), so `+ scale` plants boots exactly at `y`.
   ctx.drawImage(
     frame.image,
     frame.sx,
@@ -743,7 +742,7 @@ function drawHumanSprite(
     frame.sw,
     frame.sh,
     Math.round(x - drawW / 2),
-    Math.round(y - drawH + layout.unit * 2),
+    Math.round(y - drawH + scale),
     drawW,
     drawH,
   );
@@ -776,33 +775,47 @@ function drawPokemon(
   adapter: SpriteEntityAdapter,
   hovered: boolean,
 ): void {
-  const size = layout.spriteSize;
   const u = layout.unit;
-  const pose = getPokemonPose(world, ent, size, u);
+  const pose = getPokemonPose(world, ent);
   const feetX = Math.round(ent.x);
   const feetY = Math.round(ent.y);
 
-  const lift = Math.max(0, -pose.offsetY);
-  const shadowScale = 1 - Math.min(0.45, lift / (size * 0.35));
-  drawPixelShadow(ctx, feetX, feetY, size * 0.42 * shadowScale * pose.scaleX, u, 0.24);
-
   const animTime = world.reducedMotion || world.motionPaused ? 0 : world.time;
   const frame = adapter.getFrame(ent.speciesId, ent.isShiny, ent.state, animTime, ent.direction);
-  let drawnH = Math.max(u * 12, size * 0.45);
+
+  let shadowW = u * 9;
+  let visibleH = u * 16;
+  let drawW = 0;
+  let drawH = 0;
+  let frameScale = u;
+  if (frame) {
+    const sized = computeFrameDrawSize(frame, layout);
+    drawW = sized.drawW;
+    drawH = sized.drawH;
+    frameScale = drawH / Math.max(1, frame.sh);
+    const visW = frame.visibleWidthPx ?? Math.round(frame.sw * 0.56);
+    const visH = frame.visibleHeightPx ?? Math.round(frame.sh * 0.56);
+    shadowW = Math.max(u * 6, Math.round(visW * frameScale * 0.78));
+    visibleH = Math.max(u * 10, Math.round(visH * frameScale));
+  }
+
+  // Tight grounded pixel-oval contact shadow directly beneath the Pokémon's feet
+  drawPixelShadow(ctx, feetX, feetY, shadowW * pose.scaleX, u, ent.state === 'sleep' ? 0.24 : 0.34);
 
   if (hovered) {
-    ctx.fillStyle = 'rgba(255, 216, 77, 0.55)';
-    ctx.fillRect(feetX - u * 6, feetY - seam(u), u * 12, u * 2);
+    ctx.fillStyle = 'rgba(255, 216, 77, 0.58)';
+    ctx.fillRect(Math.round(feetX - shadowW * 0.52), feetY - seam(u), Math.round(shadowW * 1.04), u * 2);
   }
 
   ctx.save();
-  ctx.translate(feetX, Math.round(feetY + pose.offsetY));
+  ctx.translate(feetX, feetY);
   if (frame) {
     const mirror = frame.usesDirectionRow ? 1 : frame.facesLeft ? ent.facing : -ent.facing;
     ctx.scale(mirror * pose.scaleX, pose.scaleY);
-    const { drawW, drawH } = computeFrameDrawSize(frame, layout);
-    drawnH = drawH;
-    const footPad = frame.usesDirectionRow ? u * 1.5 : 6 * layout.spriteScale;
+    // Align the lowest opaque pixel row directly onto feetY (eliminates PMD cell padding float)
+    const footPad = frame.usesDirectionRow
+      ? Math.round((frame.bottomPadPx ?? Math.round(frame.sh * 0.28)) * frameScale)
+      : 6 * layout.spriteScale;
     ctx.drawImage(
       frame.image,
       frame.sx,
@@ -829,7 +842,7 @@ function drawPokemon(
       ctx,
       HOVER_CARET,
       Math.round(feetX - (cw * u) / 2),
-      Math.round(feetY - drawnH + pose.offsetY - u * 4 + bob),
+      Math.round(feetY - visibleH - u * 4 + bob),
       u,
       ICON_COLORS,
     );
@@ -846,7 +859,7 @@ function drawWalker(
   const still = world.reducedMotion || world.motionPaused;
   const walking = walker.state !== 'browsing' && !still;
 
-  drawPixelShadow(ctx, walker.x, walker.y, u * 7, u, 0.24);
+  drawPixelShadow(ctx, walker.x, walker.y, getHumanSpriteScale(layout) * 10, u, 0.30);
 
   const drawnH = drawHumanSprite(
     ctx,
@@ -883,7 +896,7 @@ function drawQueuedShopper(
   const u = layout.unit;
   const still = world.reducedMotion || world.motionPaused;
   const walking = q.state === 'walking-to-counter' && !still;
-  drawPixelShadow(ctx, q.x, q.y, u * 7, u, 0.25);
+  drawPixelShadow(ctx, q.x, q.y, getHumanSpriteScale(layout) * 10, u, 0.32);
 
   const spriteHeadTop = drawHumanSprite(
     ctx,

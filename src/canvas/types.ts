@@ -131,16 +131,22 @@ export interface FloorSnapshot {
   hasVipContract?: boolean;
 }
 
-/** Animation state of a Pokémon entity on the floor. */
-export type PokemonAnimState = 'idle' | 'hop' | 'sleep' | 'walk';
+/** Grounded animation state of a Pokémon entity on the floor or meadow (no jumping). */
+export type PokemonAnimState = 'idle' | 'sleep' | 'walk';
 
-/** A drawable source rectangle returned by a sprite adapter. */
+/** A drawable source rectangle returned by a sprite adapter, with opaque-foot grounding metrics. */
 export interface SpriteFrame {
   image: CanvasImageSource;
   sx: number;
   sy: number;
   sw: number;
   sh: number;
+  /** Transparent source pixels below the lowest opaque pixel in the frame (`sh - 1 - maxY`). */
+  bottomPadPx?: number;
+  /** Width in source pixels of the visible opaque sprite silhouette (for tight contact shadows). */
+  visibleWidthPx?: number;
+  /** Height in source pixels of the visible opaque sprite silhouette (for head-anchored cues). */
+  visibleHeightPx?: number;
   /** True when the spritesheet already contains directional rows (PMD sheets). */
   usesDirectionRow?: boolean;
   /** Fallback hint for static left-facing sheets without directional rows. */

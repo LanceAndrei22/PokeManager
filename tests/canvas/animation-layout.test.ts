@@ -4,10 +4,8 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
-  HOP_DURATION,
   breathingPose,
   facingForDelta,
-  hopPose,
   sleepPose,
   walkFrame,
 } from '../../src/canvas/animation';
@@ -108,28 +106,16 @@ describe('Canvas Shop Floor & High-Res Desktop Indoor Geometry', () => {
 });
 
 describe('Sprite Animation Math', () => {
-  it('computes idle breathing bobs, 3-phase squash-and-stretch hops, and sleep squish', () => {
-    const breathPeak = breathingPose(0.6, 0, 2);
-    expect(breathPeak.offsetY).toBeLessThan(0);
+  it('computes grounded idle breathing and sleep squish with zero artificial vertical lift', () => {
+    const breathPeak = breathingPose(0.65, 0);
+    expect(breathPeak.offsetY).toBe(0);
     expect(breathPeak.scaleY).toBeGreaterThan(1);
-
-    const crouch = hopPose(0.075, 20);
-    expect(crouch.offsetY).toBe(0);
-    expect(crouch.scaleX).toBeGreaterThan(1);
-    expect(crouch.scaleY).toBeLessThan(1);
-
-    const apex = hopPose(0.5, 20);
-    expect(apex.offsetY).toBeLessThan(-18);
-
-    const landing = hopPose(0.925, 20);
-    expect(landing.offsetY).toBe(0);
-    expect(landing.scaleX).toBeGreaterThan(1);
-    expect(landing.scaleY).toBeLessThan(1);
-    expect(HOP_DURATION).toBeGreaterThan(0.2);
+    expect(breathPeak.scaleX).toBeLessThan(1);
 
     const sleep = sleepPose(0, 0);
-    expect(sleep.scaleX).toBeCloseTo(1.08, 2);
-    expect(sleep.scaleY).toBeCloseTo(0.88, 2);
+    expect(sleep.offsetY).toBe(0);
+    expect(sleep.scaleX).toBeCloseTo(1.06, 2);
+    expect(sleep.scaleY).toBeCloseTo(0.9, 2);
   });
 
   it('handles horizontal facing flips and 2-frame walk cadence', () => {

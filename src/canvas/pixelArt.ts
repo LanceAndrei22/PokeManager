@@ -171,20 +171,33 @@ export function fillPixelRoundRect(
   ctx.fillRect(rx, ry + unit, rw, rh - unit * 2);
 }
 
-/** Flat pixel shadow ellipse approximated with three stacked bars. */
+/**
+ * Crisp grounded pixel-oval contact shadow tucked tightly underneath a sprite's feet.
+ * Uses a dark translucent charcoal-olive tint (`#0b1610`) with a soft outer rim and
+ * denser inner core so characters look physically planted on both grass and floor tiles.
+ */
 export function drawPixelShadow(
   ctx: CanvasRenderingContext2D,
   cx: number,
   cy: number,
   width: number,
   unit: number,
-  alpha = 0.22,
+  alpha = 0.34,
 ): void {
-  const w = Math.max(unit * 2, Math.round(width / unit) * unit);
-  ctx.fillStyle = `rgba(60, 41, 24, ${alpha})`;
+  const u = Math.max(1, Math.round(unit));
+  const w = Math.max(u * 5, Math.round(width / u) * u);
   const x = Math.round(cx - w / 2);
-  const y = Math.round(cy - unit);
-  ctx.fillRect(x + unit, y - unit, w - unit * 2, unit);
-  ctx.fillRect(x, y, w, unit);
-  ctx.fillRect(x + unit, y + unit, w - unit * 2, unit);
+  // Anchor the oval centered directly at feetY (`cy`) with zero vertical float gap
+  const y = Math.round(cy - u);
+
+  // Soft outer pixel oval (4 art-pixel rows tall)
+  ctx.fillStyle = `rgba(10, 18, 14, ${(alpha * 0.62).toFixed(3)})`;
+  ctx.fillRect(x + u * 2, y - u, Math.max(u, w - u * 4), u);
+  ctx.fillRect(x + u, y, Math.max(u, w - u * 2), u);
+  ctx.fillRect(x, y + u, w, u);
+  ctx.fillRect(x + u * 2, y + u * 2, Math.max(u, w - u * 4), u);
+
+  // Denser inner contact core directly beneath the feet
+  ctx.fillStyle = `rgba(8, 14, 10, ${(alpha * 0.58).toFixed(3)})`;
+  ctx.fillRect(x + u * 2, y, Math.max(u, w - u * 4), u * 2);
 }

@@ -116,8 +116,8 @@ describe('Hybrid PMD SpriteCollab Loader & Zero-404 URLs', () => {
     );
     expect(getPmdAnimXmlUrl(493)).toBe(`${SPRITECOLLAB_RAW_BASE}/sprite/0493/AnimData.xml`);
 
-    const spec = resolvePmdSheetSpec(493, true, 'hop');
+    const spec = resolvePmdSheetSpec(493, true, 'walk');
     expect(spec.useShinyFolder).toBe(true);
-    expect(spec.animKey).toBe('Hop');
+    expect(spec.animKey).toBe('Walk');
   });
 });

@@ -6,11 +6,9 @@
  */
 import type { CustomerArchetypeId } from '../data/types';
 import {
-  HOP_DURATION,
   STATIC_POSE,
   STATIC_SLEEP_POSE,
   breathingPose,
-  hopPose,
   sleepPose,
   walkFrame,
   type Pose,
@@ -64,17 +62,12 @@ const BUBBLE_ICONS: Record<CustomerArchetypeId, PixelBitmap> = {
 const HAIR_COLORS = ['#3c2918', '#7a4a2a', '#c27c3e', '#2f3a56', '#8e5b9a', '#d9a441'];
 const HOVER_CARET: PixelBitmap = ['yyyyy', '.yyy.', '..y..'];
 
-/** Resolves the current pose for a Pokémon entity (static when motion is reduced/paused). */
-export function getPokemonPose(
-  world: ShopWorld,
-  ent: PokemonEntity,
-  size: number,
-  unit: number,
-): Pose {
+/** Resolves the grounded pose for a Pokémon entity (static when motion is reduced/paused). */
+export function getPokemonPose(world: ShopWorld, ent: PokemonEntity): Pose {
   const still = world.reducedMotion || world.motionPaused;
   if (ent.state === 'sleep') return still ? STATIC_SLEEP_POSE : sleepPose(world.time, ent.phase);
-  if (ent.state === 'hop' && !still) return hopPose(ent.stateTime / HOP_DURATION, size * 0.14);
-  return still ? STATIC_POSE : breathingPose(world.time, ent.phase, unit * 0.75);
+  if (ent.state === 'walk' || still) return STATIC_POSE;
+  return breathingPose(world.time, ent.phase);
 }
 
 /**
@@ -152,33 +145,45 @@ function drawPokemon(
 ): void {
   const size = layout.spriteSize;
   const u = layout.unit;
-  const pose = getPokemonPose(world, ent, size, u);
+  const pose = getPokemonPose(world, ent);
   const feetX = Math.round(ent.x);
   const feetY = Math.round(ent.y);
-
-  const lift = Math.max(0, -pose.offsetY);
-  const shadowScale = 1 - Math.min(0.45, lift / (size * 0.35));
-  drawPixelShadow(
-    ctx,
-    feetX,
-    feetY,
-    size * 0.44 * shadowScale * pose.scaleX,
-    u,
-    ent.state === 'sleep' ? 0.16 : 0.22,
-  );
 
   const animTime = world.reducedMotion || world.motionPaused ? 0 : world.time;
   const frame = adapter.getFrame(ent.speciesId, ent.isShiny, ent.state, animTime, ent.direction);
 
+  let shadowW = u * 9;
+  let drawW = size;
+  let drawH = size;
+  let frameScale = u;
+  if (frame) {
+    const sized = computeFrameDrawSize(frame, layout);
+    drawW = sized.drawW;
+    drawH = sized.drawH;
+    frameScale = drawH / Math.max(1, frame.sh);
+    const visW = frame.visibleWidthPx ?? Math.round(frame.sw * 0.56);
+    shadowW = Math.max(u * 6, Math.round(visW * frameScale * 0.78));
+  }
+
+  drawPixelShadow(
+    ctx,
+    feetX,
+    feetY,
+    shadowW * pose.scaleX,
+    u,
+    ent.state === 'sleep' ? 0.24 : 0.34,
+  );
+
   ctx.save();
-  ctx.translate(feetX, Math.round(feetY + pose.offsetY));
+  ctx.translate(feetX, feetY);
 
   if (frame) {
     // PMD 8-directional sheets already provide each facing row; static sheets flip via scaleX(-1).
     const mirror = frame.usesDirectionRow ? 1 : frame.facesLeft ? ent.facing : -ent.facing;
     ctx.scale(mirror * pose.scaleX, pose.scaleY);
-    const { drawW, drawH } = computeFrameDrawSize(frame, layout);
-    const footPad = frame.usesDirectionRow ? u * 1.5 : 6 * layout.spriteScale;
+    const footPad = frame.usesDirectionRow
+      ? Math.round((frame.bottomPadPx ?? Math.round(frame.sh * 0.28)) * frameScale)
+      : 6 * layout.spriteScale;
     ctx.drawImage(
       frame.image,
       frame.sx,

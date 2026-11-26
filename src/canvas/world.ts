@@ -1,9 +1,10 @@
 /**
  * Canvas world state machine for the full-screen Indoor PokéMart shop floor.
  *
- * The world mirrors simulation snapshots into lively animated entities:
- * - Store Pokémon in pens (100% PMD SpriteCollab): cycle smoothly between `walk`,
- *   `hop` (`Hop-Anim.png`), `idle`, and curious turns toward visiting shoppers.
+ * The world mirrors simulation snapshots into grounded animated entities:
+ * - Store Pokémon in pens (100% PMD SpriteCollab): cycle smoothly between grounded
+ *   `walk` (`Walk-Anim.png`), calm `idle` (`Idle-Anim.png`), and curious turns toward
+ *   visiting shoppers (zero jumping/hopping arcs).
  * - Store Pokémon in nap beds (100% PMD SpriteCollab): `sleep` (`Sleep-Anim.png` + `Zzz`).
  * - Human Trainer shoppers (`npcId`): walk 4-directionally from sliding glass doors
  *   → pens → exit, while queued buyers wait in front of Clerk Leo's counter with
@@ -20,7 +21,7 @@ import type {
 import { resolveHumanNpcFallback } from '../data/npcs';
 import { getSpecies } from '../data/species';
 import { clamp, type RngFn } from '../engine/rng';
-import { HOP_DURATION, easeInOutSine, facingForDelta, lerp } from './animation';
+import { easeInOutSine, facingForDelta, lerp } from './animation';
 import { vectorToCardinalDirection, type CardinalDirection } from './humanNpcAnimator';
 import {
   buildCounterRoute,
@@ -75,7 +76,6 @@ export interface PokemonEntity {
   state: PokemonAnimState;
   stateTime: number;
   stateDuration: number;
-  hopsRemaining: number;
   facing: 1 | -1;
   direction: PmdDirection;
   phase: number;
@@ -266,20 +266,19 @@ function placeEntity(ent: PokemonEntity, layout: ShopLayout, rng: RngFn): boolea
   ent.y = ent.fromY = ent.toY = randomIn(bounds.y, bounds.y + bounds.h, rng);
   ent.state = 'idle';
   ent.stateTime = 0;
-  ent.stateDuration = 0.2 + rng() * 0.5;
-  ent.hopsRemaining = 0;
+  ent.stateDuration = 0.5 + rng() * 0.9;
   ent.ambientTimer = 0.3 + rng() * 0.6;
   return true;
 }
 
 function spriteCenter(ent: PokemonEntity, layout: ShopLayout): Point {
-  return { x: ent.x, y: ent.y - layout.spriteSize * 0.4 };
+  return { x: ent.x, y: ent.y - layout.unit * 10 };
 }
 
 function startWalk(ent: PokemonEntity, layout: ShopLayout, rng: RngFn): void {
   const bounds = getPenWanderBounds(layout, ent.slot);
   if (!bounds) return;
-  const maxStep = Math.max(layout.unit * 12, layout.spriteSize * 0.9);
+  const maxStep = Math.max(layout.unit * 14, layout.spriteSize * 0.85);
   const tx = clamp(ent.x + (rng() * 2 - 1) * maxStep, bounds.x, bounds.x + bounds.w);
   const ty = clamp(ent.y + (rng() * 2 - 1) * maxStep * 0.45, bounds.y, bounds.y + bounds.h);
   ent.fromX = ent.x;
@@ -293,26 +292,7 @@ function startWalk(ent: PokemonEntity, layout: ShopLayout, rng: RngFn): void {
   ent.direction = vectorToPmdDirection(dx, dy, ent.direction, layout.unit * 0.35);
   ent.state = 'walk';
   ent.stateTime = 0;
-  ent.stateDuration = clamp(dist / Math.max(24, layout.spriteSize * 0.7), 0.65, 1.45);
-}
-
-function startHop(ent: PokemonEntity, layout: ShopLayout, rng: RngFn): void {
-  const bounds = getPenWanderBounds(layout, ent.slot);
-  if (!bounds) return;
-  const maxStep = Math.max(layout.unit * 6, layout.spriteSize * 0.48);
-  const tx = clamp(ent.x + (rng() * 2 - 1) * maxStep, bounds.x, bounds.x + bounds.w);
-  const ty = clamp(ent.y + (rng() * 2 - 1) * maxStep * 0.42, bounds.y, bounds.y + bounds.h);
-  ent.fromX = ent.x;
-  ent.fromY = ent.y;
-  ent.toX = tx;
-  ent.toY = ty;
-  const dx = tx - ent.x;
-  const dy = ty - ent.y;
-  ent.facing = facingForDelta(dx, ent.facing, layout.unit);
-  ent.direction = vectorToPmdDirection(dx, dy, ent.direction, layout.unit * 0.4);
-  ent.state = 'hop';
-  ent.stateTime = 0;
-  ent.stateDuration = HOP_DURATION;
+  ent.stateDuration = clamp(dist / Math.max(22, layout.spriteSize * 0.55), 0.8, 1.75);
 }
 
 function createWalker(
@@ -436,7 +416,6 @@ export function syncWorld(
         state: 'idle',
         stateTime: 0,
         stateDuration: 1,
-        hopsRemaining: 0,
         facing: rng() < 0.5 ? 1 : -1,
         direction: rng() < 0.5 ? 0 : rng() < 0.5 ? 1 : 7,
         phase: rng() * Math.PI * 2,
@@ -683,12 +662,7 @@ function stepPokemon(
       }
     }
     if (ent.stateTime >= ent.stateDuration) {
-      if (rng() < 0.55) {
-        startWalk(ent, layout, rng);
-      } else {
-        ent.hopsRemaining = 1 + Math.floor(rng() * 3);
-        startHop(ent, layout, rng);
-      }
+      startWalk(ent, layout, rng);
     }
   } else if (ent.state === 'walk') {
     const p = ent.stateTime / Math.max(0.05, ent.stateDuration);
@@ -697,25 +671,7 @@ function stepPokemon(
       ent.y = ent.toY;
       ent.state = 'idle';
       ent.stateTime = 0;
-      ent.stateDuration = 0.4 + rng() * 0.7;
-    } else {
-      const k = easeInOutSine(p);
-      ent.x = lerp(ent.fromX, ent.toX, k);
-      ent.y = lerp(ent.fromY, ent.toY, k);
-    }
-  } else if (ent.state === 'hop') {
-    const p = ent.stateTime / HOP_DURATION;
-    if (p >= 1) {
-      ent.x = ent.toX;
-      ent.y = ent.toY;
-      ent.hopsRemaining -= 1;
-      if (ent.hopsRemaining > 0) {
-        startHop(ent, layout, rng);
-      } else {
-        ent.state = 'idle';
-        ent.stateTime = 0;
-        ent.stateDuration = 0.4 + rng() * 0.7;
-      }
+      ent.stateDuration = 0.7 + rng() * 1.1;
     } else {
       const k = easeInOutSine(p);
       ent.x = lerp(ent.fromX, ent.toX, k);

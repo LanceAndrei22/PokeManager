@@ -233,10 +233,10 @@ describe('Shop World State Machine', () => {
     );
     // Visible head anchor clears ~10px transparent top cell padding in 16x32 Human Trainer sprites
     const headTop = getHumanHeadTopY(fhdLayout.counterQueueSpots[0].y, fhdLayout);
-    expect(fhdLayout.counterQueueSpots[0].y - headTop).toBe(20 * fhdLayout.unit);
+    expect(fhdLayout.counterQueueSpots[0].y - headTop).toBe(21 * fhdLayout.unit);
   });
 
-  it('cycles store Pokémon across walk/hop/idle and eases sliding doors on entry', () => {
+  it('cycles store Pokémon strictly across grounded walk and idle (never hopping) and eases doors', () => {
     const rng = createSeededRng(99);
     const layout = computeIndoorLayout(1280, 800, 3, 2, 1);
     const world = createWorld();
@@ -251,7 +251,9 @@ describe('Shop World State Machine', () => {
       stepWorld(world, 0.1, layout, rng);
       seenStates.add(ent.state);
     }
-    expect(seenStates.size).toBeGreaterThanOrEqual(2);
+    expect(seenStates.has('walk')).toBe(true);
+    expect(seenStates.has('idle')).toBe(true);
+    expect(seenStates.has('hop')).toBe(false);
     expect(world.eggWobblePhase).toBeGreaterThan(0);
   });
 
