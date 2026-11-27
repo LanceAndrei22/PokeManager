@@ -647,22 +647,6 @@ export function App() {
             open={game.isBankrupt}
             summary={game.bankruptcySummary}
             profileName={game.profileName}
-            bgmMuted={Boolean(game.bgmMuted)}
-            sfxMuted={Boolean(game.muted)}
-            bgmVolume={game.bgmVolume ?? 0.35}
-            sfxVolume={game.sfxVolume ?? 0.65}
-            onToggleBgmMute={() =>
-              setStore((prev) => ({ ...prev, game: toggleBgmMuteAction(prev.game) }))
-            }
-            onToggleSfxMute={() =>
-              setStore((prev) => ({ ...prev, game: toggleMuteAction(prev.game) }))
-            }
-            onChangeBgmVolume={(volume) =>
-              setStore((prev) => ({ ...prev, game: setBgmVolumeAction(prev.game, volume) }))
-            }
-            onChangeSfxVolume={(volume) =>
-              setStore((prev) => ({ ...prev, game: setSfxVolumeAction(prev.game, volume) }))
-            }
             onResetRun={() => handleResetProfile(game.profileId)}
             onReturnToMenu={handleReturnToMenu}
           />

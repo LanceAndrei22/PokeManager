@@ -4,21 +4,12 @@
  */
 import { DIFFICULTIES } from '../data/difficulties';
 import type { BankruptcySummary } from '../data/types';
-import { AudioControls } from './AudioControls';
 import { CozyDialog } from './CozyDialog';
 
 export interface BankruptcyModalProps {
   open: boolean;
   summary: BankruptcySummary | null;
   profileName: string;
-  bgmMuted?: boolean;
-  sfxMuted?: boolean;
-  bgmVolume?: number;
-  sfxVolume?: number;
-  onToggleBgmMute?: () => void;
-  onToggleSfxMute?: () => void;
-  onChangeBgmVolume?: (volume: number) => void;
-  onChangeSfxVolume?: (volume: number) => void;
   onResetRun: () => void;
   onReturnToMenu: () => void;
 }
@@ -27,14 +18,6 @@ export function BankruptcyModal({
   open,
   summary,
   profileName,
-  bgmMuted = false,
-  sfxMuted = false,
-  bgmVolume = 0.35,
-  sfxVolume = 0.65,
-  onToggleBgmMute,
-  onToggleSfxMute,
-  onChangeBgmVolume,
-  onChangeSfxVolume,
   onResetRun,
   onReturnToMenu,
 }: BankruptcyModalProps) {
@@ -99,37 +82,21 @@ export function BankruptcyModal({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#4e78bd] pt-3">
-          {onToggleBgmMute && onToggleSfxMute && onChangeBgmVolume && onChangeSfxVolume ? (
-            <AudioControls
-              bgmMuted={bgmMuted}
-              sfxMuted={sfxMuted}
-              bgmVolume={bgmVolume}
-              sfxVolume={sfxVolume}
-              onToggleBgmMute={onToggleBgmMute}
-              onToggleSfxMute={onToggleSfxMute}
-              onChangeBgmVolume={onChangeBgmVolume}
-              onChangeSfxVolume={onChangeSfxVolume}
-            />
-          ) : (
-            <span />
-          )}
-          <div className="flex flex-wrap justify-end gap-2">
-            <button
-              type="button"
-              onClick={onReturnToMenu}
-              className="pmd-btn px-4 py-2 text-sm font-semibold"
-            >
-              Return to Main Menu
-            </button>
-            <button
-              type="button"
-              onClick={onResetRun}
-              className="pmd-btn-gold px-4 py-2 text-sm font-semibold"
-            >
-              Start Fresh Shift #1
-            </button>
-          </div>
+        <div className="flex flex-wrap justify-end gap-2 border-t border-[#4e78bd] pt-3">
+          <button
+            type="button"
+            onClick={onReturnToMenu}
+            className="pmd-btn px-4 py-2 text-sm font-semibold"
+          >
+            Return to Main Menu
+          </button>
+          <button
+            type="button"
+            onClick={onResetRun}
+            className="pmd-btn-gold px-4 py-2 text-sm font-semibold"
+          >
+            Start Fresh Shift #1
+          </button>
         </div>
       </div>
     </CozyDialog>

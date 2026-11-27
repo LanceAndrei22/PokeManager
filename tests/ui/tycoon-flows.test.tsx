@@ -144,14 +144,9 @@ describe('Checkpoint 2 Counter Haggling, Debt Liquidation & Bankruptcy UI', () =
       within(bankruptDialog).getByRole('heading', { name: /Store Foreclosed/i }),
     ).toBeInTheDocument();
     expect(getCurrentBgmTrack()).toBe('bankrupt');
-
-    // Volume button inside BankruptcyModal controls BGM mute cleanly while bankrupt
-    await user.click(within(bankruptDialog).getByRole('button', { name: /Volume settings/i }));
-    const mixer = within(bankruptDialog).getByRole('region', { name: 'Audio Mixer' });
-    await user.click(within(mixer).getByRole('button', { name: /Mute background music/i }));
-    expect(within(mixer).getByRole('button', { name: /Unmute background music/i })).toHaveTextContent('BGM: Off');
-    await user.click(within(mixer).getByRole('button', { name: /Unmute background music/i }));
-    await user.click(within(mixer).getByRole('button', { name: 'Done' }));
+    expect(
+      within(bankruptDialog).queryByRole('button', { name: /Volume settings/i }),
+    ).not.toBeInTheDocument();
 
     await user.click(within(bankruptDialog).getByRole('button', { name: /Start Fresh Shift #1/i }));
     expect(screen.getByText('₽1,200')).toBeInTheDocument();
