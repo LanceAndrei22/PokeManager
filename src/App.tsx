@@ -10,6 +10,7 @@ import { preloadPmdPokemon } from './canvas/pmdLoader';
 import { ShopCanvas } from './canvas/ShopCanvas';
 import type { CanvasHitTarget } from './canvas/types';
 import { getDifficultyConfig } from './data/difficulties';
+import { markReleaseNotesSeen, shouldShowReleaseNotes } from './data/releaseNotes';
 import { getMarketTrend } from './data/trends';
 import type {
   DifficultyId,
@@ -84,6 +85,7 @@ import { GameGuideModal } from './components/GameGuideModal';
 import { HealingStationPanel } from './components/HealingStationPanel';
 import { InspectPokemonModal } from './components/InspectPokemonModal';
 import { MainMenu } from './components/MainMenu';
+import { ReleaseNotesModal } from './components/ReleaseNotesModal';
 import { SaveTransferModal } from './components/SaveTransferModal';
 import { ShiftSummaryModal } from './components/ShiftSummaryModal';
 import { TopHudBar } from './components/TopHudBar';
@@ -105,6 +107,7 @@ export function App() {
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [guideModalOpen, setGuideModalOpen] = useState(false);
   const [creditsModalOpen, setCreditsModalOpen] = useState(false);
+  const [releaseNotesOpen, setReleaseNotesOpen] = useState<boolean>(() => shouldShowReleaseNotes());
   const [toast, setToast] = useState<string | null>(null);
 
   const game = store.game;
@@ -356,6 +359,7 @@ export function App() {
           onOpenSaveModal={() => setSaveModalOpen(true)}
           onOpenGuide={() => setGuideModalOpen(true)}
           onOpenCredits={() => setCreditsModalOpen(true)}
+          onOpenReleaseNotes={() => setReleaseNotesOpen(true)}
         />
       ) : (
         <>
@@ -669,6 +673,14 @@ export function App() {
       <GameGuideModal open={guideModalOpen} onClose={() => setGuideModalOpen(false)} />
 
       <CreditsModal open={creditsModalOpen} onClose={() => setCreditsModalOpen(false)} />
+
+      <ReleaseNotesModal
+        open={releaseNotesOpen}
+        onDismiss={() => {
+          markReleaseNotesSeen();
+          setReleaseNotesOpen(false);
+        }}
+      />
 
       {/* Lightweight Desktop-Only Notice when browser viewport is narrower than 960px */}
       <div

@@ -9,10 +9,13 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { App } from '../../src/App';
+import { markReleaseNotesSeen } from '../../src/data/releaseNotes';
 
 describe('PokéMart: Low Cortisol Shift Full-Screen PMD UI Integration', () => {
   beforeEach(() => {
     window.localStorage.clear();
+    // Skip first-launch playtest notice here (dedicated release-notes suite tests auto-open)
+    markReleaseNotesSeen();
   });
 
   it('navigates Main Menu, trainer creation, indoor store dock, evolution/mascot, breeding, settlement, 493-Dex, and Save Transfer', async () => {
@@ -50,7 +53,7 @@ describe('PokéMart: Low Cortisol Shift Full-Screen PMD UI Integration', () => {
     expect(screen.getByLabelText('Shift Manager Profile')).toHaveDisplayValue(/Dawn/i);
 
     // 2. Click PLAY tile to enter full-screen Indoor PokéMart canvas
-    await user.click(screen.getByRole('button', { name: /PLAY/i }));
+    await user.click(screen.getByRole('button', { name: /PLAY/ }));
     expect(screen.getByTestId('shop-floor-canvas')).toBeInTheDocument();
 
     // 3. Toggle Open Shop / Pause Shift in Floating Top HUD Bar & verify Anim / separate BGM/SFX buttons are absent
@@ -167,7 +170,7 @@ describe('PokéMart: Low Cortisol Shift Full-Screen PMD UI Integration', () => {
     await user.click(within(menuGuide).getByRole('button', { name: 'Close' }));
 
     // Enter Indoor Store, confirm accessible Rank & Trend toggletip triggers, and open Guide from Top HUD pill
-    await user.click(screen.getByRole('button', { name: /PLAY/i }));
+    await user.click(screen.getByRole('button', { name: /PLAY/ }));
     expect(screen.getByRole('button', { name: /Shop Rank 1 details/i })).toHaveAttribute(
       'popovertargetaction',
       'show',

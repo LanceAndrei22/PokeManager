@@ -9,6 +9,7 @@ import { useState, type FormEvent } from 'react';
 import { MenuBackdropCanvas } from '../canvas/MenuBackdropCanvas';
 import { DIFFICULTIES, DIFFICULTY_LIST } from '../data/difficulties';
 import { CLERK_ROSTER, DEFAULT_CLERK_ID } from '../data/npcs';
+import { APP_VERSION } from '../data/releaseNotes';
 import { getSpecies } from '../data/species';
 import {
   STARTER_MASCOT_IDS,
@@ -38,6 +39,7 @@ export interface MainMenuProps {
   onOpenSaveModal: () => void;
   onOpenGuide: () => void;
   onOpenCredits: () => void;
+  onOpenReleaseNotes?: () => void;
 }
 
 const SPLASH_LINES = [
@@ -59,6 +61,7 @@ export function MainMenu({
   onOpenSaveModal,
   onOpenGuide,
   onOpenCredits,
+  onOpenReleaseNotes,
 }: MainMenuProps) {
   const [creatorOpen, setCreatorOpen] = useState(false);
   const [trainerName, setTrainerName] = useState('');
@@ -445,13 +448,22 @@ export function MainMenu({
           </aside>
         </main>
 
-        {/* Quiet Bottom-Left Fan Credits */}
-        <footer className="pt-2 text-left text-xs text-[#dbe8ff]/90">
+        {/* Quiet Bottom Fan Credits + Subtle Version / Patch Notes Pill */}
+        <footer className="flex flex-wrap items-center justify-between gap-2 pt-2 text-left text-xs text-[#dbe8ff]/90">
           <div className="inline-block border border-[#3a61a3]/70 bg-[#0c1733]/80 px-2.5 py-1">
             <strong>PokéMart: Low Cortisol Shift</strong> — Simple, completely free fan project made
             for entertainment only • Sprites: PMDCollab/SpriteCollab (CC BY-NC 4.0) • Pokémon ©
             Nintendo, Creatures Inc., GAME FREAK.
           </div>
+          {onOpenReleaseNotes && (
+            <button
+              type="button"
+              onClick={onOpenReleaseNotes}
+              className="pmd-btn pmd-num shrink-0 whitespace-nowrap px-2.5 py-1 text-xs font-semibold text-[#ffd84d]"
+            >
+              v{APP_VERSION} · Patch Notes
+            </button>
+          )}
         </footer>
       </div>
     </div>

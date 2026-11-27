@@ -9,6 +9,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { App } from '../../src/App';
+import { markReleaseNotesSeen } from '../../src/data/releaseNotes';
 import type { CounterOffer, ProfileIndex } from '../../src/data/types';
 import { getCurrentBgmTrack } from '../../src/engine/bgm';
 import { createInitialGameState } from '../../src/engine/simulation';
@@ -46,6 +47,7 @@ function makeQueuedCounterOffer(): CounterOffer {
 describe('Checkpoint 2 Counter Haggling, Debt Liquidation & Bankruptcy UI', () => {
   beforeEach(() => {
     window.localStorage.clear();
+    markReleaseNotesSeen();
   });
 
   it('negotiates live offers in the non-blocking Counter-Offer Panel and promotes a Shop Mascot', async () => {
@@ -72,7 +74,7 @@ describe('Checkpoint 2 Counter Haggling, Debt Liquidation & Bankruptcy UI', () =
     saveProfileIndex(index);
 
     render(<App />);
-    await user.click(screen.getByRole('button', { name: /PLAY/i }));
+    await user.click(screen.getByRole('button', { name: /PLAY/ }));
 
     // Open live counter queue from Top HUD alert pill
     await user.click(screen.getByRole('button', { name: /Counter: 1 waiting/i }));
@@ -125,7 +127,7 @@ describe('Checkpoint 2 Counter Haggling, Debt Liquidation & Bankruptcy UI', () =
     expect(window.localStorage.getItem(PROFILE_INDEX_KEY)).not.toBeNull();
 
     render(<App />);
-    await user.click(screen.getByRole('button', { name: /PLAY/i }));
+    await user.click(screen.getByRole('button', { name: /PLAY/ }));
 
     // Closing shift with insufficient cash triggers Debt Warning & Emergency Liquidation modal
     await user.click(screen.getByRole('button', { name: 'Close Shift' }));
