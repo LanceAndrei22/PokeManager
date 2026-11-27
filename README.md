@@ -21,7 +21,7 @@
   <img src="https://img.shields.io/badge/Vite-8-a87dff?style=for-the-badge&logo=vite&logoColor=white&labelColor=13244b" alt="Vite 8" />
   <img src="https://img.shields.io/badge/TypeScript-5.9-78a8f0?style=for-the-badge&logo=typescript&logoColor=white&labelColor=13244b" alt="TypeScript 5.9" />
   <img src="https://img.shields.io/badge/Tailwind%20CSS-v4-38bdf8?style=for-the-badge&logo=tailwindcss&logoColor=white&labelColor=13244b" alt="Tailwind CSS v4" />
-  <img src="https://img.shields.io/badge/Vitest-68%20Passing-2ecc71?style=for-the-badge&logo=vitest&logoColor=white&labelColor=13244b" alt="Vitest 68 Passing" />
+  <img src="https://img.shields.io/badge/Vitest-73%20Passing-2ecc71?style=for-the-badge&logo=vitest&logoColor=white&labelColor=13244b" alt="Vitest 73 Passing" />
 </p>
 
 <p>
@@ -101,7 +101,7 @@ flowchart LR
       <ul>
         <li><strong>Built-In Manager's Guide &amp; Release Notes:</strong> 5-tab interactive Guide accessible from Main Menu and Top HUD, plus a version-gated <strong>What's New / Patch Notes</strong> modal reopenable anytime from the Main Menu footer.</li>
         <li><strong>Consolidated Volume &amp; 3-Track Web Audio BGM:</strong> Zero-KB synthesized SFX plus polyphonic <em>Menu (~80 BPM)</em>, <em>Shop (~100 BPM)</em>, and bittersweet D-minor <em>Bankruptcy (~77 BPM)</em> tracks controlled from a single <strong>Volume</strong> popover (BGM/SFX mute toggles &amp; volume sliders persisted per profile).</li>
-        <li><strong>Multi-Profile Local Storage:</strong> Isolated browser save slots auto-saving on every action + 15s interval, with FNV-1a checksum-verified UTF-8 Base64 Save Export/Import.</li>
+        <li><strong>Multi-Profile Local Storage:</strong> Isolated browser save slots auto-saving on every action + 15s interval, with hardened FNV-1a checksum-verified UTF-8 Base64 Save Export/Import (256 KB cap, prototype-pollution guard &amp; strict field bounds clamping).</li>
       </ul>
     </td>
   </tr>
@@ -154,8 +154,8 @@ flowchart TD
 | **Rendering** | Plain HTML5 2D Canvas (`imageSmoothingEnabled = false`) · PMD `AnimData.xml` 60 fps slicer · 4-dir Human overworld animator |
 | **Typography** | Self-hosted **Chakra Petch** (`500/600/700` Latin + `₽` Latin-Ext) & **Silkscreen** (`400` headings/logo) WOFF2 (`SIL OFL 1.1`) |
 | **Audio** | Pure browser **Web Audio API** chiptune SFX & 3-track polyphonic BGM sequencer (`menu`, `shop`, `bankrupt`) |
-| **Testing** | Vitest 4 + React Testing Library (`jsdom`) — **17 test suites, 68 passing tests** |
-| **Deployment** | Static relative-path build (`base: './'`) ready for GitHub Pages (`.github/workflows/deploy.yml`) or Cloudflare Pages |
+| **Testing** | Vitest 4 + React Testing Library (`jsdom`) — **17 test suites, 73 passing tests** |
+| **CI &amp; Deployment** | Static relative-path build (`base: './'`) deployed on **Cloudflare Pages** (`.node-version`) with GitHub Actions CI (`.github/workflows/ci.yml`) |
 
 ---
 
@@ -163,7 +163,8 @@ flowchart TD
 
 ```text
 PokeManager/
-├── .github/workflows/deploy.yml       # Automated typecheck, test, build & GitHub Pages deploy
+├── .github/workflows/ci.yml           # Automated typecheck, test & production build CI
+├── .node-version                      # Pins Node.js 26.13.1 for Cloudflare Pages & local parity
 ├── public/assets/
 │   ├── fonts/                         # Self-hosted Chakra Petch & Silkscreen WOFF2 fonts
 │   ├── npcs/                          # 16 pret/pokeemerald Human overworlds + Showdown portraits
@@ -193,14 +194,14 @@ PokeManager/
 │   │   ├── menuRoamers.ts             # Randomized left-to-right 493-species meadow roamer engine
 │   │   └── ShopCanvas.tsx / world.ts / layout.ts / organicTerrain.ts / pmdLoader.ts / pmdAnimator.ts / humanNpcAnimator.ts
 │   └── components/                    # Main Menu, Top HUD, AudioControls, DS Dock, Counter, Guide, ReleaseNotes & modals
-└── tests/                             # Engine, audio, canvas/roamer/PMD/Human & React UI suites (68 tests)
+└── tests/                             # Engine, audio, canvas/roamer/PMD/Human & React UI suites (73 tests)
 ```
 
 ---
 
 ## 🚀 Quick Start & Deployment
 
-Requires **Node.js** (project targets Node `26.13.1`; works cleanly on modern Node 22+ LTS as well).
+Requires **Node.js** (pinned to `26.13.1` via `.node-version`; works cleanly on modern Node 22+ LTS as well).
 
 ```bash
 # 1. Install dependencies
@@ -209,7 +210,7 @@ npm install
 # 2. Start local Vite dev server (http://localhost:5173)
 npm run dev
 
-# 3. Run full verification suite (typecheck, 68 unit/UI tests, production build)
+# 3. Run full verification suite (typecheck, 73 unit/UI tests, production build)
 npm run typecheck
 npm test
 npm run build
@@ -218,10 +219,10 @@ npm run build
 npm run preview
 ```
 
-### Static Hosting (GitHub Pages / Cloudflare Pages)
-- **`base: './'` Static Build:** All bundled JS/CSS chunks and `./assets/...` sprites, tilesets, icons, and fonts resolve relatively so the `dist/` output works seamlessly at root domains and nested repository subpaths (`https://<user>.github.io/<repo>/`).
-- **GitHub Pages:** Enable **Settings → Pages → Source: GitHub Actions** to publish automatically via [`.github/workflows/deploy.yml`](./.github/workflows/deploy.yml) (runs `npm ci`, `npm run typecheck`, `npm test`, `npm run build`, and deploys `dist/`).
-- **Cloudflare Pages / Static Hosts:** Set build command to `npm run build` and publish directory to `dist`.
+### Deployment (Cloudflare Pages & GitHub Actions CI)
+- **`base: './'` Static Build:** All bundled JS/CSS chunks and `./assets/...` sprites, tilesets, icons, and fonts resolve relatively so the `dist/` output works seamlessly at root domains or nested subpaths.
+- **Cloudflare Pages (Primary Deployment):** Connect the public GitHub repository in Cloudflare Pages with build command `npm run build` and build output directory `dist`. Node `26.13.1` is detected automatically from [`.node-version`](./.node-version).
+- **GitHub Actions CI:** Every push to `main` and pull request runs [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) (`npm ci`, `npm run typecheck`, `npm test`, and `npm run build` on Node `26.13.1`).
 
 <details>
 <summary><strong>Optional Asset Regeneration Scripts</strong></summary>
