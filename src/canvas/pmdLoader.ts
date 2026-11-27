@@ -214,13 +214,42 @@ const FALLBACK_IDLE_ANIM: PmdAnimDefinition = {
  * species portrait if a remote sheet ever fails to load (e.g. strict firewall/VPN).
  */
 export function createPmdSpriteAdapter(): SpriteEntityAdapter & {
-  preloadSpecies: (speciesId: number, isShiny?: boolean) => void;
+  preloadSpecies: (
+    speciesId: number,
+    isShiny?: boolean,
+    states?: readonly PokemonAnimState[],
+  ) => void;
 } {
   const animDataCache = new Map<number, ParsedAnimData>();
   const animLoading = new Set<number>();
+  const pendingPreloads = new Map<
+    number,
+    Array<{ isShiny: boolean; states: readonly PokemonAnimState[] }>
+  >();
   const sheetCache = new Map<string, HTMLImageElement>();
   const metricsCache = new Map<string, SpriteGroundMetrics>();
   const failedUrls = new Set<string>();
+
+  const preloadResolvedStates = (
+    speciesId: number,
+    parsed: ParsedAnimData,
+    isShiny: boolean,
+    states: readonly PokemonAnimState[],
+  ) => {
+    const queuedUrls = new Set<string>();
+    for (const st of states) {
+      const { animKey, useShinyFolder } = resolvePmdSheetSpec(speciesId, isShiny, st);
+      const animDef = parsed.anims[animKey] ?? parsed.anims.Idle ?? parsed.anims.Walk;
+      if (!animDef) continue;
+      // Follow `<CopyOf>` via `animDef.sourceAnim` so virtual aliases (e.g. #0148 Dragonair
+      // Idle -> CopyOf Walk) never fetch a non-existent `Idle-Anim.png` (0 404s).
+      const url = getPmdSheetUrl(speciesId, animDef.sourceAnim, useShinyFolder);
+      if (!queuedUrls.has(url)) {
+        queuedUrls.add(url);
+        ensureSheetImage(url);
+      }
+    }
+  };
 
   const ensureAnimData = (speciesId: number) => {
     if (animDataCache.has(speciesId) || animLoading.has(speciesId)) return;
@@ -231,11 +260,20 @@ export function createPmdSpriteAdapter(): SpriteEntityAdapter & {
     fetchWithCache(url)
       .then((res) => (res.ok ? res.text() : Promise.reject(new Error(`HTTP ${res.status}`))))
       .then((xml) => {
-        animDataCache.set(speciesId, parseAnimDataXml(xml));
+        const parsed = parseAnimDataXml(xml);
+        animDataCache.set(speciesId, parsed);
+        const queued = pendingPreloads.get(speciesId);
+        if (queued) {
+          pendingPreloads.delete(speciesId);
+          for (const req of queued) {
+            preloadResolvedStates(speciesId, parsed, req.isShiny, req.states);
+          }
+        }
       })
       .catch(() => {
         // Fallback so we don't retry failing XML fetches in a tight loop
         animDataCache.set(speciesId, { shadowSize: 1, anims: {} });
+        pendingPreloads.delete(speciesId);
       })
       .finally(() => {
         animLoading.delete(speciesId);
@@ -259,19 +297,33 @@ export function createPmdSpriteAdapter(): SpriteEntityAdapter & {
     return img;
   };
 
-  /** Eagerly fetches `AnimData.xml` and primary grounded sheets in parallel. */
-  const preloadSpecies = (speciesId: number, isShiny = false): void => {
-    ensureAnimData(speciesId);
-    const states: PokemonAnimState[] = ['idle', 'walk', 'sleep'];
-    const queuedUrls = new Set<string>();
-    for (const st of states) {
-      const { animKey, useShinyFolder } = resolvePmdSheetSpec(speciesId, isShiny, st);
-      const url = getPmdSheetUrl(speciesId, animKey, useShinyFolder);
-      if (!queuedUrls.has(url)) {
-        queuedUrls.add(url);
-        ensureSheetImage(url);
+  /**
+   * Eagerly fetches `AnimData.xml` and primary grounded sheets.
+   * Only speculatively prefetches `Walk-Anim.png` before XML resolves; `Idle` and `Sleep`
+   * wait for `AnimData.xml` so `<CopyOf>` aliases never trigger 404 requests.
+   */
+  const preloadSpecies = (
+    speciesId: number,
+    isShiny = false,
+    states: readonly PokemonAnimState[] = ['idle', 'walk', 'sleep'],
+  ): void => {
+    const parsed = animDataCache.get(speciesId);
+    if (parsed) {
+      preloadResolvedStates(speciesId, parsed, isShiny, states);
+      return;
+    }
+
+    if (states.includes('walk')) {
+      const { animKey, useShinyFolder } = resolvePmdSheetSpec(speciesId, isShiny, 'walk');
+      if (animKey === 'Walk') {
+        ensureSheetImage(getPmdSheetUrl(speciesId, 'Walk', useShinyFolder));
       }
     }
+
+    const list = pendingPreloads.get(speciesId) ?? [];
+    list.push({ isShiny, states });
+    pendingPreloads.set(speciesId, list);
+    ensureAnimData(speciesId);
   };
 
   return {
@@ -284,12 +336,13 @@ export function createPmdSpriteAdapter(): SpriteEntityAdapter & {
       timeSec: number,
       direction: PmdDirection = 0,
     ): SpriteFrame | null {
-      // Kick off AnimData.xml AND the expected spritesheet PNG in parallel so cold loads
-      // never pay two sequential network round-trips.
+      // Kick off AnimData.xml AND (for Walk only) the spritesheet PNG in parallel.
+      // Secondary states (Idle/Sleep) wait for AnimData.xml so `<CopyOf>` aliases never 404.
       ensureAnimData(speciesId);
       const { animKey, useShinyFolder } = resolvePmdSheetSpec(speciesId, isShiny, state);
-      const predictedUrl = getPmdSheetUrl(speciesId, animKey, useShinyFolder);
-      ensureSheetImage(predictedUrl);
+      if (animKey === 'Walk') {
+        ensureSheetImage(getPmdSheetUrl(speciesId, 'Walk', useShinyFolder));
+      }
 
       const parsed = animDataCache.get(speciesId);
       if (!parsed) return null;
@@ -357,7 +410,11 @@ export function createPmdSpriteAdapter(): SpriteEntityAdapter & {
 }
 
 let sharedAdapter: (SpriteEntityAdapter & {
-  preloadSpecies: (speciesId: number, isShiny?: boolean) => void;
+  preloadSpecies: (
+    speciesId: number,
+    isShiny?: boolean,
+    states?: readonly PokemonAnimState[],
+  ) => void;
 }) | null = null;
 
 /**
@@ -365,7 +422,11 @@ let sharedAdapter: (SpriteEntityAdapter & {
  * Indoor Shop canvases so decoded sprites never reset or flicker across screen switches.
  */
 export function getSharedPmdSpriteAdapter(): SpriteEntityAdapter & {
-  preloadSpecies: (speciesId: number, isShiny?: boolean) => void;
+  preloadSpecies: (
+    speciesId: number,
+    isShiny?: boolean,
+    states?: readonly PokemonAnimState[],
+  ) => void;
 } {
   if (!sharedAdapter) {
     sharedAdapter = createPmdSpriteAdapter();
@@ -373,9 +434,10 @@ export function getSharedPmdSpriteAdapter(): SpriteEntityAdapter & {
   return sharedAdapter;
 }
 
-/** Eagerly preloads PMD XML and grounded sheets in parallel for a list of owned Pokémon. */
+/** Eagerly preloads PMD XML and grounded sheets in parallel for a list of Pokémon. */
 export function preloadPmdPokemon(
   list: ReadonlyArray<{ speciesId: number; isShiny?: boolean }>,
+  states: readonly PokemonAnimState[] = ['idle', 'walk', 'sleep'],
 ): void {
   const adapter = getSharedPmdSpriteAdapter();
   const seen = new Set<string>();
@@ -383,6 +445,6 @@ export function preloadPmdPokemon(
     const key = `${item.speciesId}:${item.isShiny ? 1 : 0}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    adapter.preloadSpecies(item.speciesId, Boolean(item.isShiny));
+    adapter.preloadSpecies(item.speciesId, Boolean(item.isShiny), states);
   }
 }

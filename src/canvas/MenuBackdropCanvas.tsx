@@ -6,35 +6,40 @@
  *   subtly mottled grass, Bayer-dithered irregular dirt clearings/trails, and scattered
  *   2–3px wildflowers — scrolling smoothly with zero grid seams or popping tiles.
  * - Y-depth-sorts dark-outlined tall grass clusters, nestled slate boulders, corner tree
- *   canopies, and 12 grounded PMD SpriteCollab Pokémon (walking & idling only, zero jumping)
- *   with tight pixel-oval contact shadows directly beneath every sprite's feet.
+ *   canopies, and 12 randomized grounded PMD SpriteCollab Pokémon walking strictly
+ *   left-to-right across staggered lanes with tight pixel-oval contact shadows directly
+ *   beneath every sprite's feet (zero jumping/hopping, zero pop-in, zero 404s).
  */
 import { useEffect, useRef, useState } from 'react';
 import { clampDpr, computeDesktopResScale } from './layout';
+import {
+  BUNDLED_WALK_SPECIES_POOL,
+  MEADOW_ROAMER_COUNT,
+  MEADOW_WALK_SPECIES_POOL,
+  MEADOW_WRAP_LEFT_X,
+  createInitialMeadowRoamers,
+  stepMeadowRoamers,
+  wrapMeadowRoamer,
+  type RollingMeadowPokemon,
+} from './menuRoamers';
 import {
   buildOrganicMeadowStrip,
   drawMeadowProp,
   type OrganicMeadowStrip,
 } from './organicTerrain';
 import { drawPixelShadow } from './pixelArt';
-import { vectorToPmdDirection } from './pmdAnimator';
-import { getSharedPmdSpriteAdapter } from './pmdLoader';
+import { getSharedPmdSpriteAdapter, preloadPmdPokemon } from './pmdLoader';
 import { getTileImage, preloadTilesets } from './tilesetLoader';
-import type { PmdDirection, PokemonAnimState } from './types';
 
-interface RollingMeadowPokemon {
-  speciesId: number;
-  /** Normalized viewport X in [0.05, 0.96]. */
-  x: number;
-  /** Normalized viewport Y in [0.20, 0.88]. */
-  y: number;
-  vx: number;
-  vy: number;
-  dir: PmdDirection;
-  state: PokemonAnimState;
-  stateTimer: number;
-  phase: number;
-}
+export type { RollingMeadowPokemon };
+export {
+  BUNDLED_WALK_SPECIES_POOL,
+  MEADOW_ROAMER_COUNT,
+  MEADOW_WALK_SPECIES_POOL,
+  createInitialMeadowRoamers,
+  stepMeadowRoamers,
+  wrapMeadowRoamer,
+};
 
 interface PetalParticle {
   x: number;
@@ -43,22 +48,6 @@ interface PetalParticle {
   vy: number;
   color: string;
 }
-
-/** 12 locally bundled PMD SpriteCollab species (zero network latency, 0 404s). */
-const INITIAL_ROAMERS: Omit<RollingMeadowPokemon, 'dir' | 'state' | 'stateTimer'>[] = [
-  { speciesId: 133, x: 0.44, y: 0.34, vx: 0.028, vy: 0.006, phase: 0.2 }, // Eevee
-  { speciesId: 25, x: 0.62, y: 0.56, vx: 0.032, vy: -0.007, phase: 0.9 }, // Pikachu
-  { speciesId: 1, x: 0.24, y: 0.28, vx: 0.022, vy: 0.006, phase: 1.6 }, // Bulbasaur
-  { speciesId: 4, x: 0.74, y: 0.38, vx: -0.022, vy: 0.007, phase: 2.3 }, // Charmander
-  { speciesId: 7, x: 0.52, y: 0.78, vx: 0.025, vy: -0.005, phase: 3.1 }, // Squirtle
-  { speciesId: 393, x: 0.85, y: 0.66, vx: -0.020, vy: -0.007, phase: 3.8 }, // Piplup
-  { speciesId: 54, x: 0.34, y: 0.74, vx: 0.020, vy: 0.005, phase: 4.4 }, // Psyduck
-  { speciesId: 79, x: 0.69, y: 0.82, vx: 0.016, vy: -0.004, phase: 5.0 }, // Slowpoke
-  { speciesId: 40, x: 0.14, y: 0.48, vx: 0.024, vy: 0.006, phase: 0.6 }, // Wigglytuff
-  { speciesId: 263, x: 0.88, y: 0.32, vx: -0.028, vy: 0.008, phase: 1.9 }, // Zigzagoon
-  { speciesId: 399, x: 0.56, y: 0.26, vx: 0.020, vy: 0.007, phase: 2.7 }, // Bidoof
-  { speciesId: 417, x: 0.79, y: 0.52, vx: 0.030, vy: -0.005, phase: 4.1 }, // Pachirisu
-];
 
 const INITIAL_PETALS: PetalParticle[] = Array.from({ length: 18 }, (_, idx) => ({
   x: ((idx * 37) % 100) / 100,
@@ -73,14 +62,11 @@ export function MenuBackdropCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [adapter] = useState(getSharedPmdSpriteAdapter);
 
-  const pokemonRef = useRef<RollingMeadowPokemon[]>(
-    INITIAL_ROAMERS.map((e) => ({
-      ...e,
-      dir: vectorToPmdDirection(e.vx, e.vy, 2, 0.001),
-      state: 'walk',
-      stateTimer: 1.8 + (e.phase % 2.2),
-    })),
-  );
+  const pokemonRef = useRef<RollingMeadowPokemon[] | null>(null);
+  if (pokemonRef.current === null) {
+    pokemonRef.current = createInitialMeadowRoamers();
+  }
+
   const petalsRef = useRef<PetalParticle[]>(INITIAL_PETALS.map((p) => ({ ...p })));
   const stripRef = useRef<OrganicMeadowStrip | null>(null);
   const scaledStripRef = useRef<HTMLCanvasElement | null>(null);
@@ -103,8 +89,17 @@ export function MenuBackdropCanvas() {
     resScale: 1,
   });
 
+  // Preload tilesets, initial random roamer roster (Walk sheets only), and local fallbacks
   useEffect(() => {
     void preloadTilesets();
+    const initial = pokemonRef.current ?? [];
+    preloadPmdPokemon(
+      [
+        ...initial.map((mon) => ({ speciesId: mon.speciesId, isShiny: false })),
+        ...BUNDLED_WALK_SPECIES_POOL.slice(0, 6).map((speciesId) => ({ speciesId, isShiny: false })),
+      ],
+      ['walk'],
+    );
   }, []);
 
   useEffect(() => {
@@ -112,6 +107,18 @@ export function MenuBackdropCanvas() {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+
+    const syncRoamerDataset = (roamers: readonly RollingMeadowPokemon[]) => {
+      canvas.dataset.roamerSpecies = roamers.map((r) => r.speciesId).join(',');
+    };
+    syncRoamerDataset(pokemonRef.current ?? []);
+
+    const isSpriteReady = (speciesId: number): boolean =>
+      adapter.getFrame(speciesId, false, 'walk', 0, 2) !== null;
+
+    const onPreloadSpecies = (speciesId: number): void => {
+      preloadPmdPokemon([{ speciesId, isShiny: false }], ['walk']);
+    };
 
     const resize = () => {
       const dpr = clampDpr(window.devicePixelRatio || 1);
@@ -180,7 +187,6 @@ export function MenuBackdropCanvas() {
       ctx.imageSmoothingEnabled = false;
 
       // Smooth 60/144 FPS pan in backing pixels (~52 px/s @ 1280x800, ~74 px/s @ 1920x1080)
-      // Steps cleanly by 1 physical pixel per frame instead of coarse multi-pixel art jumps.
       const scrollSpeedPx = 52 * resScale * dpr;
       scrollPx += scrollSpeedPx * dt;
 
@@ -214,43 +220,21 @@ export function MenuBackdropCanvas() {
           });
         }
 
-        // Step & queue 12 grounded PMD Pokémon (Walk & Idle only — zero jumping)
-        const worldDriftNorm = (scrollSpeedPx * dt) / Math.max(1, w);
-        for (const mon of pokemonRef.current) {
-          mon.stateTimer -= dt;
-          if (mon.stateTimer <= 0) {
-            if (mon.state === 'walk') {
-              mon.state = 'idle';
-              mon.stateTimer = 0.8 + (mon.phase % 0.75);
-            } else {
-              mon.state = 'walk';
-              mon.stateTimer = 2.6 + (mon.phase % 1.8);
-              const turnAngle = Math.sin(elapsed * 0.65 + mon.phase * 3.1) * 0.35;
-              const speed = Math.hypot(mon.vx, mon.vy) || 0.024;
-              const baseAngle = Math.atan2(mon.vy, mon.vx) + turnAngle;
-              mon.vx = Math.cos(baseAngle) * speed;
-              mon.vy = Math.sin(baseAngle) * speed * 0.55;
-            }
-          }
+        // Step & queue 12 randomized grounded PMD Pokémon walking strictly left-to-right
+        const roamers = pokemonRef.current ?? [];
+        const rosterChanged = stepMeadowRoamers(roamers, dt, {
+          pool: MEADOW_WALK_SPECIES_POOL,
+          fallbackPool: BUNDLED_WALK_SPECIES_POOL,
+          isSpriteReady,
+          onPreloadSpecies,
+        });
+        if (rosterChanged) {
+          syncRoamerDataset(roamers);
+        }
 
-          if (mon.state === 'walk') {
-            mon.x += mon.vx * dt;
-            mon.y += mon.vy * dt;
-            mon.dir = vectorToPmdDirection(mon.vx, mon.vy, mon.dir, 0.001);
-          } else {
-            // Stay locked to the exact rolling ground spot during calm idle pauses
-            mon.x -= worldDriftNorm;
-          }
-
-          if (mon.x < -0.05) mon.x = 1.04;
-          else if (mon.x > 1.05) mon.x = -0.04;
-          if (mon.y < 0.18) {
-            mon.y = 0.18;
-            mon.vy = Math.abs(mon.vy);
-          } else if (mon.y > 0.89) {
-            mon.y = 0.89;
-            mon.vy = -Math.abs(mon.vy);
-          }
+        for (const mon of roamers) {
+          // Never draw a roamer parked off-screen awaiting preload (prevents pop-in)
+          if (mon.awaitingPreload || mon.x < MEADOW_WRAP_LEFT_X - 0.04) continue;
 
           const px = Math.round(mon.x * w);
           const py = Math.round(mon.y * h);
@@ -261,7 +245,7 @@ export function MenuBackdropCanvas() {
               const frameRect = adapter.getFrame(
                 monSnap.speciesId,
                 false,
-                monSnap.state,
+                'walk',
                 elapsed + monSnap.phase,
                 monSnap.dir,
               );
