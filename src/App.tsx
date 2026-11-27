@@ -100,7 +100,6 @@ export function App() {
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [guideModalOpen, setGuideModalOpen] = useState(false);
   const [creditsModalOpen, setCreditsModalOpen] = useState(false);
-  const [motionPaused, setMotionPaused] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   const game = store.game;
@@ -371,7 +370,6 @@ export function App() {
             wholesaleCatalog={game.wholesaleCatalog}
             penCapacity={penCapacity}
             napBedCapacity={napBedCapacity}
-            motionPaused={motionPaused}
             onSelectTarget={handleCanvasTarget}
           />
 
@@ -397,7 +395,6 @@ export function App() {
             bgmMuted={Boolean(game.bgmMuted)}
             sfxVolume={game.sfxVolume ?? 0.65}
             bgmVolume={game.bgmVolume ?? 0.35}
-            motionPaused={motionPaused}
             onToggleRunning={() => applyAction(toggleShiftRunning)}
             onChangeSpeed={(speed) =>
               setStore((prev) => ({ ...prev, game: setShiftSpeed(prev.game, speed) }))
@@ -414,7 +411,6 @@ export function App() {
               setActiveDialog((prev) => (prev === 'log' ? null : 'log'))
             }
             onOpenGuide={() => setGuideModalOpen(true)}
-            onToggleMotionPaused={() => setMotionPaused((prev) => !prev)}
             onToggleBgmMute={() =>
               setStore((prev) => ({ ...prev, game: toggleBgmMuteAction(prev.game) }))
             }

@@ -285,7 +285,7 @@ export function toggleShiftRunning(state: GameState): ActionResult {
     ok: true,
     message: nextRunning
       ? 'Shop doors opened! Human trainers will browse pens and queue at the PokéMart counter.'
-      : 'Shop paused cleanly.',
+      : 'The Shop is Closed',
     sfx: nextRunning ? 'bell' : 'click',
   };
 }

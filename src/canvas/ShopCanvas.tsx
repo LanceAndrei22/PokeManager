@@ -4,7 +4,7 @@
  * Responsibilities:
  * - Fills the full PC desktop viewport (`100vw × 100dvh`, `1280×720` → `2560×1440+`).
  * - Observes resize & `devicePixelRatio` changes and caches static indoor floor art.
- * - Runs a clamped `requestAnimationFrame` loop obeying the in-HUD motion Pause toggle.
+ * - Runs a clamped `requestAnimationFrame` loop keeping store animations running smoothly.
  * - Hit-tests clicks on Pokémon, queued counter shoppers (`!`), empty pens, and stations
  *   (Wholesale PC, Egg Incubator, Healing Corner, Upgrades Board).
  */
@@ -47,7 +47,6 @@ export interface ShopCanvasProps {
   wholesaleCatalog: WholesaleOffer[];
   penCapacity: number;
   napBedCapacity: number;
-  motionPaused: boolean;
   onSelectTarget: (target: CanvasHitTarget) => void;
 }
 
@@ -92,7 +91,6 @@ export function ShopCanvas({
   wholesaleCatalog,
   penCapacity,
   napBedCapacity,
-  motionPaused,
   onSelectTarget,
 }: ShopCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -135,13 +133,6 @@ export function ShopCanvas({
     shopkeepersRef.current =
       shopkeepers && shopkeepers.length > 0 ? shopkeepers : ['mart_employee'];
   }, [shiftRunning, shiftTick, shiftDurationTicks, shopkeepers]);
-
-  useEffect(() => {
-    // Keep core gameplay animations (PMD sprite stepping & trainer pathing) active
-    // even when OS reduced-motion is enabled; only explicit `motionPaused` freezes the room.
-    world.reducedMotion = false;
-    world.motionPaused = motionPaused;
-  }, [world, motionPaused]);
 
   // Preload GBA PokéMart tilesets + 16 Human Trainer sheets and refresh layer on decode
   useEffect(() => {

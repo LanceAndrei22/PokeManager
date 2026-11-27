@@ -2,7 +2,7 @@
  * Floating PMD Navy & Gold Top Pill HUD Bar.
  * Displays funds, upcoming shift Rent/Upkeep dues, shift timer & controls (Open/Pause,
  * 1x/2x speed, Close Shift), Shop Rank + XP, daily Market Trend, clickable Counter
- * Queue alert pill, and quick utilities (Journal, Motion Toggle, SFX, Main Menu).
+ * Queue alert pill, and quick utilities (Journal, Volume, Guide, Main Menu).
  */
 import { useEffect, useId, useRef, useState } from 'react';
 import type { CounterOffer, DifficultyConfig, MarketTrend } from '../data/types';
@@ -28,14 +28,12 @@ export interface TopHudBarProps {
   bgmMuted: boolean;
   sfxVolume: number;
   bgmVolume: number;
-  motionPaused: boolean;
   onToggleRunning: () => void;
   onChangeSpeed: (speed: 1 | 2) => void;
   onCloseShiftEarly: () => void;
   onOpenCounterQueue: () => void;
   onOpenLog: () => void;
   onOpenGuide: () => void;
-  onToggleMotionPaused: () => void;
   onToggleBgmMute: () => void;
   onToggleMute: () => void;
   onChangeBgmVolume: (volume: number) => void;
@@ -62,14 +60,12 @@ export function TopHudBar({
   bgmMuted,
   sfxVolume,
   bgmVolume,
-  motionPaused,
   onToggleRunning,
   onChangeSpeed,
   onCloseShiftEarly,
   onOpenCounterQueue,
   onOpenLog,
   onOpenGuide,
-  onToggleMotionPaused,
   onToggleBgmMute,
   onToggleMute,
   onChangeBgmVolume,
@@ -172,10 +168,10 @@ export function TopHudBar({
       aria-label="Shop Top HUD"
       className="pointer-events-none fixed inset-x-0 top-0 z-20 px-3 pt-2"
     >
-      <div className="mx-auto flex w-full max-w-[1840px] items-center justify-between gap-2">
+      <div className="mx-auto flex w-full max-w-[1840px] items-stretch justify-between gap-2">
         {/* Left: Funds + Rent Due + Shift Timer & Controls */}
-        <div className="pointer-events-auto flex min-w-0 items-center gap-1.5">
-          <div className="pmd-pill pmd-num flex min-h-[36px] shrink-0 items-center gap-1.5 whitespace-nowrap px-2.5 py-1.5 text-xs font-semibold min-[1536px]:text-sm">
+        <div className="pointer-events-auto flex min-w-0 items-stretch gap-1.5">
+          <div className="pmd-pill pmd-num flex min-h-[40px] shrink-0 items-center gap-1.5 whitespace-nowrap px-2.5 py-1.5 text-xs font-semibold min-[1536px]:text-sm">
             <span className="text-[#ffd84d]" title={`${profileName} • ${difficulty.name}`}>
               ₽{cash.toLocaleString()}
             </span>
@@ -188,7 +184,7 @@ export function TopHudBar({
             </span>
           </div>
 
-          <div className="pmd-pill flex min-h-[36px] shrink-0 items-center gap-1.5 px-2.5 py-1.5 text-xs">
+          <div className="pmd-pill flex min-h-[40px] shrink-0 items-center gap-1.5 px-2.5 py-1.5 text-xs">
             <span className="pmd-num whitespace-nowrap text-xs font-semibold text-[#ffd84d] min-[1536px]:text-sm">
               Shift #{shiftNumber}
             </span>
@@ -247,20 +243,20 @@ export function TopHudBar({
           </div>
         </div>
 
-        {/* Right: Counter Queue Alert + Rank/Trend + Audio & Utilities */}
-        <div className="pointer-events-auto flex shrink-0 items-center gap-1.5">
+        {/* Right: Counter Queue Alert + Rank/Trend + Utilities */}
+        <div className="pointer-events-auto flex shrink-0 items-stretch gap-1.5">
           {counterQueue.length > 0 && (
             <button
               type="button"
               onClick={onOpenCounterQueue}
-              className="pmd-btn-gold flex min-h-[34px] shrink-0 items-center gap-1 whitespace-nowrap px-2.5 py-1 text-xs font-semibold"
+              className="pmd-btn-gold flex min-h-[40px] shrink-0 items-center gap-1 whitespace-nowrap px-2.5 py-1 text-xs font-semibold"
             >
               <span>!</span>
               <span>Counter: {counterQueue.length} waiting</span>
             </button>
           )}
 
-          <div className="pmd-pill hidden min-h-[38px] shrink-0 items-center gap-2 whitespace-nowrap px-2.5 py-1.5 text-xs min-[1440px]:flex">
+          <div className="pmd-pill hidden min-h-[40px] shrink-0 items-center gap-2 whitespace-nowrap px-2.5 py-1.5 text-xs min-[1440px]:flex">
             <button
               type="button"
               aria-expanded={rankTipOpen}
@@ -338,7 +334,7 @@ export function TopHudBar({
             </div>
           </div>
 
-          <div className="pmd-pill flex min-h-[36px] shrink-0 items-center gap-1.5 px-2.5 py-1.5 text-xs">
+          <div className="pmd-pill flex min-h-[40px] shrink-0 items-center gap-1.5 px-2.5 py-1.5 text-xs">
             <button
               type="button"
               onClick={onOpenLog}
@@ -346,14 +342,6 @@ export function TopHudBar({
               title="Open Shift Journal"
             >
               Log
-            </button>
-            <button
-              type="button"
-              onClick={onToggleMotionPaused}
-              aria-label={motionPaused ? 'Play animation' : 'Pause animation'}
-              className="pmd-btn inline-flex shrink-0 whitespace-nowrap px-2 py-0.5 font-semibold"
-            >
-              {motionPaused ? 'Play' : 'Anim'}
             </button>
             <AudioControls
               compact

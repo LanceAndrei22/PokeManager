@@ -109,7 +109,6 @@ export function MainMenu({
               <span>{activeState.cash.toLocaleString()}</span>
             </div>
             <AudioControls
-              compact
               bgmMuted={Boolean(activeState.bgmMuted)}
               sfxMuted={Boolean(activeState.muted)}
               bgmVolume={activeState.bgmVolume ?? 0.35}

@@ -203,7 +203,7 @@ describe('Shop World State Machine', () => {
     expect(world.walkers.size).toBe(0);
   });
 
-  it('honors motionPaused, reducedMotion, relayoutWorld, and hitTestPokemon', () => {
+  it('honors reducedMotion, relayoutWorld, and hitTestPokemon', () => {
     const rng = createSeededRng(22);
     const layout = computeIndoorLayout(1280, 800, 3, 2, 1);
     const world = createWorld();
@@ -218,12 +218,6 @@ describe('Shop World State Machine', () => {
       hitTestIndoorScene(world, layout, layout.pens[2].x + 12, layout.pens[2].y + 12),
     ).toEqual(expect.objectContaining({ kind: 'empty-pen', penIndex: 2 }));
 
-    world.motionPaused = true;
-    const prevTime = world.time;
-    stepWorld(world, 0.05, layout, rng);
-    expect(world.time).toBe(prevTime);
-
-    world.motionPaused = false;
     world.reducedMotion = true;
     stepWorld(world, 5.0, layout, rng);
     expect(ent.state).toBe('idle');
@@ -435,7 +429,6 @@ describe('2D Canvas Indoor Pixel Renderer & ShopCanvas UI', () => {
         wholesaleCatalog={[]}
         penCapacity={3}
         napBedCapacity={2}
-        motionPaused={false}
         onSelectTarget={onSelectTarget}
       />,
     );

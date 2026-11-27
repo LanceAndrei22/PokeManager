@@ -19,14 +19,24 @@ describe('PokéMart: Low Cortisol Shift Full-Screen PMD UI Integration', () => {
     const user = userEvent.setup();
     render(<App />);
 
-    // 1. Main Menu renders chunky title, AudioControls (BGM/SFX/Vol), mascot spotlight, and New Trainer Creator
+    // 1. Main Menu renders chunky title, consolidated Volume popover (BGM/SFX toggles + sliders), mascot spotlight, and New Trainer Creator
     expect(screen.getByRole('heading', { name: /PokéMart: Low Cortisol Shift/i })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /Mute background music/i }));
-    expect(screen.getByRole('button', { name: /Unmute background music/i })).toHaveTextContent('BGM: Off');
-    await user.click(screen.getByRole('button', { name: /Unmute background music/i }));
+    expect(screen.queryByRole('button', { name: /Mute background music/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Mute sound effects/i })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: /Audio volume mixer/i }));
+    const volumeBtn = screen.getByRole('button', { name: /Volume settings/i });
+    expect(volumeBtn).toHaveTextContent('Volume');
+    await user.click(volumeBtn);
+
     const mixerRegion = screen.getByRole('region', { name: 'Audio Mixer' });
+    await user.click(within(mixerRegion).getByRole('button', { name: /Mute background music/i }));
+    expect(within(mixerRegion).getByRole('button', { name: /Unmute background music/i })).toHaveTextContent('BGM: Off');
+    await user.click(within(mixerRegion).getByRole('button', { name: /Unmute background music/i }));
+
+    await user.click(within(mixerRegion).getByRole('button', { name: /Mute sound effects/i }));
+    expect(within(mixerRegion).getByRole('button', { name: /Unmute sound effects/i })).toHaveTextContent('SFX: Off');
+    await user.click(within(mixerRegion).getByRole('button', { name: /Unmute sound effects/i }));
+
     expect(within(mixerRegion).getByLabelText(/Music \(BGM\)/i)).toBeInTheDocument();
     expect(within(mixerRegion).getByLabelText(/Effects \(SFX\)/i)).toBeInTheDocument();
     await user.click(within(mixerRegion).getByRole('button', { name: 'Done' }));
@@ -43,11 +53,17 @@ describe('PokéMart: Low Cortisol Shift Full-Screen PMD UI Integration', () => {
     await user.click(screen.getByRole('button', { name: /PLAY/i }));
     expect(screen.getByTestId('shop-floor-canvas')).toBeInTheDocument();
 
-    // 3. Toggle Open Shop / Pause Shift in Floating Top HUD Bar
+    // 3. Toggle Open Shop / Pause Shift in Floating Top HUD Bar & verify Anim / separate BGM/SFX buttons are absent
+    expect(screen.queryByRole('button', { name: /Anim/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Mute background music/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Mute sound effects/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Volume settings/i })).toHaveTextContent('Volume');
+
     await user.click(screen.getByRole('button', { name: 'Open Shop' }));
     expect(screen.getByRole('button', { name: 'Pause Shift' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Pause Shift' }));
     expect(screen.getByRole('button', { name: 'Open Shop' })).toBeInTheDocument();
+    expect(screen.getByText('The Shop is Closed')).toBeInTheDocument();
 
     // 4. Open Wholesale PC from Bottom DS Action Dock & welcome first offer
     await user.click(screen.getByRole('button', { name: /Wholesale/i }));

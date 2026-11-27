@@ -158,7 +158,7 @@ function computeFrameDrawSize(
 }
 
 function getPokemonPose(world: ShopWorld, ent: PokemonEntity): Pose {
-  const still = world.reducedMotion || world.motionPaused;
+  const still = world.reducedMotion;
   if (ent.state === 'sleep') return still ? STATIC_SLEEP_POSE : sleepPose(world.time, ent.phase);
   // Keep walking Pokémon strictly un-distorted (native PMD Walk-Anim frames planted at feetY)
   if (ent.state === 'walk' || still) return STATIC_POSE;
@@ -1154,7 +1154,7 @@ function drawIncubatorPedestal(
 ): void {
   const inc = layout.incubatorStation;
   const u = layout.unit;
-  const still = world.reducedMotion || world.motionPaused;
+  const still = world.reducedMotion;
   const incImg = getTileImage('indoor', 'incubator-pod');
 
   // Grounded floor contact shadow directly beneath the oak care table
@@ -1244,7 +1244,7 @@ function drawDynamicStations(
   layout: ShopLayout,
   world: ShopWorld,
 ): void {
-  const still = world.reducedMotion || world.motionPaused;
+  const still = world.reducedMotion;
   const pulse = still ? false : Math.floor(world.time * 2) % 2 === 0;
   drawWholesalePcKiosk(ctx, layout, world, pulse);
   drawIncubatorPedestal(ctx, layout, world, pulse);
@@ -1354,7 +1354,7 @@ function drawShopkeepers(
       drawHumanFallback(ctx, cx, cy, u, '#2d5ca8', HAIR_COLORS[idx % HAIR_COLORS.length], false, 0, false);
     }
     // Subtle welcoming wave sparkle/nod timer on the primary register clerk
-    if (idx === 0 && world.clerkWaveTimer > 0 && !world.reducedMotion && !world.motionPaused) {
+    if (idx === 0 && world.clerkWaveTimer > 0 && !world.reducedMotion) {
       const headY = drawnH ?? cy - u * 15;
       drawBitmap(
         ctx,
@@ -1381,7 +1381,7 @@ function drawPokemon(
   const feetX = Math.round(ent.x);
   const feetY = Math.round(ent.y);
 
-  const animTime = world.reducedMotion || world.motionPaused ? 0 : world.time;
+  const animTime = world.reducedMotion ? 0 : world.time;
   const frame = adapter.getFrame(ent.speciesId, ent.isShiny, ent.state, animTime, ent.direction);
 
   let shadowW = u * 9;
@@ -1430,7 +1430,7 @@ function drawPokemon(
     );
   } else {
     // Crisp pixel Poké Ball placeholder with gentle wobble while a remote sheet decodes
-    const still = world.reducedMotion || world.motionPaused;
+    const still = world.reducedMotion;
     const wobble = still ? 0 : Math.round(Math.sin(world.time * 6 + ent.phase) * seam(u));
     const ballU = Math.max(2, Math.round(u * 1.4));
     const { w: bw, h: bh } = bitmapSize(POKE_BALL);
@@ -1446,7 +1446,7 @@ function drawPokemon(
   ctx.restore();
 
   if (hovered) {
-    const still = world.reducedMotion || world.motionPaused;
+    const still = world.reducedMotion;
     const bob = still ? 0 : Math.round(Math.sin(world.time * 6) * u);
     const { w: cw } = bitmapSize(HOVER_CARET);
     drawBitmap(
@@ -1467,7 +1467,7 @@ function drawWalker(
   walker: CustomerWalker,
 ): void {
   const u = layout.unit;
-  const still = world.reducedMotion || world.motionPaused;
+  const still = world.reducedMotion;
   const walking = walker.state !== 'browsing' && !still;
 
   drawPixelShadow(ctx, walker.x, walker.y, getHumanSpriteScale(layout) * 10, u, 0.32);
@@ -1505,7 +1505,7 @@ function drawQueuedShopper(
   hovered: boolean,
 ): void {
   const u = layout.unit;
-  const still = world.reducedMotion || world.motionPaused;
+  const still = world.reducedMotion;
   const walking = q.state === 'walking-to-counter' && !still;
   drawPixelShadow(ctx, q.x, q.y, getHumanSpriteScale(layout) * 10, u, 0.34);
 
@@ -1586,7 +1586,7 @@ function drawWalkerBubble(
   const { w: iw, h: ih } = bitmapSize(icon);
   const bw = (iw + 4) * u;
   const bh = (ih + 4) * u;
-  const still = world.reducedMotion || world.motionPaused;
+  const still = world.reducedMotion;
   const float = still ? 0 : Math.round(Math.sin(walker.time * 3) * 0.6 * u);
   const headTopY = getHumanHeadTopY(walker.y, layout);
   const x = Math.round(walker.x - bw / 2);

@@ -149,7 +149,6 @@ export interface ShopWorld {
   clerkWaveTimer: number;
   eggWobblePhase: number;
   reducedMotion: boolean;
-  motionPaused: boolean;
 }
 
 /** Counts of feedback events detected during one `syncWorld` call. */
@@ -178,7 +177,6 @@ export function createWorld(): ShopWorld {
     clerkWaveTimer: 0,
     eggWobblePhase: 0,
     reducedMotion: false,
-    motionPaused: false,
   };
 }
 
@@ -715,14 +713,13 @@ function stepWalker(world: ShopWorld, walker: CustomerWalker, dt: number): boole
   return true;
 }
 
-/** Advances the world by `dt` seconds unless `motionPaused` is true. */
+/** Advances the world by `dt` seconds. */
 export function stepWorld(
   world: ShopWorld,
   dt: number,
   layout: ShopLayout,
   rng: RngFn,
 ): void {
-  if (world.motionPaused) return;
   world.time += dt;
   world.clerkWaveTimer = Math.max(0, world.clerkWaveTimer - dt);
   if (!world.reducedMotion) {
