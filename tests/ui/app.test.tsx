@@ -117,10 +117,19 @@ describe('PokéMart: Low Cortisol Shift Full-Screen PMD UI Integration', () => {
     // Open Guide from Main Menu top-right bar
     await user.click(screen.getByRole('button', { name: 'Guide' }));
     const menuGuide = screen.getByRole('dialog');
+    const coreLoopTab = within(menuGuide).getByRole('tab', { name: /Core Loop/i });
+    expect(coreLoopTab).toHaveAttribute('aria-selected', 'true');
     expect(within(menuGuide).getByText(/The 4-Step Shift Loop/i)).toBeInTheDocument();
 
-    // Switch through all handbook sections
-    await user.click(within(menuGuide).getByRole('tab', { name: /Shoppers & Haggling/i }));
+    // Arrow-key selection-follows-focus across single-row tablist + hidden="until-found" inactive panels
+    coreLoopTab.focus();
+    await user.keyboard('{ArrowRight}');
+    const hagglingTab = within(menuGuide).getByRole('tab', { name: /Shoppers & Haggling/i });
+    expect(hagglingTab).toHaveAttribute('aria-selected', 'true');
+    const allPanels = menuGuide.querySelectorAll('[role="tabpanel"]');
+    expect(allPanels).toHaveLength(5);
+    expect(allPanels[0]).toHaveAttribute('hidden', 'until-found');
+    expect(allPanels[1]).not.toHaveAttribute('hidden');
     expect(within(menuGuide).getByText(/6 Human Trainer Archetypes/i)).toBeInTheDocument();
     expect(within(menuGuide).getByText(/Haggle \+15%/i)).toBeInTheDocument();
 
@@ -132,11 +141,25 @@ describe('PokéMart: Low Cortisol Shift Full-Screen PMD UI Integration', () => {
 
     await user.click(within(menuGuide).getByRole('tab', { name: /Rent, Stakes & Saves/i }));
     expect(within(menuGuide).getByText(/3 Difficulty Modes & Daily Dues/i)).toBeInTheDocument();
+    // Semantic responsive table region with row headers
+    const tableRegion = within(menuGuide).getByRole('region', {
+      name: /3 Difficulty Modes and Daily Dues Comparison/i,
+    });
+    expect(tableRegion).toHaveAttribute('tabindex', '0');
+    expect(within(tableRegion).getByRole('rowheader', { name: 'Standard' })).toBeInTheDocument();
 
     await user.click(within(menuGuide).getByRole('button', { name: 'Close' }));
 
-    // Enter Indoor Store and open Guide from Top HUD pill
+    // Enter Indoor Store, confirm accessible Rank & Trend toggletip triggers, and open Guide from Top HUD pill
     await user.click(screen.getByRole('button', { name: /PLAY/i }));
+    expect(screen.getByRole('button', { name: /Shop Rank 1 details/i })).toHaveAttribute(
+      'popovertargetaction',
+      'show',
+    );
+    expect(screen.getByRole('button', { name: /Today's Market Trend:/i })).toHaveAttribute(
+      'popovertargetaction',
+      'show',
+    );
     await user.click(screen.getByRole('button', { name: 'Guide' }));
     const storeGuide = screen.getByRole('dialog');
     expect(within(storeGuide).getByRole('heading', { name: /PokéMart Manager's Guide/i })).toBeInTheDocument();
