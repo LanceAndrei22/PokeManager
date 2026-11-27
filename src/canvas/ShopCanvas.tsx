@@ -198,6 +198,11 @@ export function ShopCanvas({
 
     const frame = (now: number) => {
       if (!mounted) return;
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+        last = 0;
+        frameId = requestAnimationFrame(frame);
+        return;
+      }
       const dt = last === 0 ? 0 : Math.min(Math.max(0, (now - last) / 1000), 0.05);
       last = now;
       const layout = layoutRef.current;
@@ -214,10 +219,18 @@ export function ShopCanvas({
       frameId = requestAnimationFrame(frame);
     };
 
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        last = 0;
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
     frameId = requestAnimationFrame(frame);
     return () => {
       mounted = false;
       cancelAnimationFrame(frameId);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
     };
   }, [world, adapter]);
 

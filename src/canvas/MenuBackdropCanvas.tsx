@@ -175,6 +175,11 @@ export function MenuBackdropCanvas() {
     let scrollPx = 0;
 
     const frame = (now: number) => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+        last = 0;
+        rafId = requestAnimationFrame(frame);
+        return;
+      }
       const dt = last === 0 ? 0 : Math.min(Math.max(0, (now - last) / 1000), 0.05);
       last = now;
       elapsed += dt;
@@ -310,10 +315,18 @@ export function MenuBackdropCanvas() {
       rafId = requestAnimationFrame(frame);
     };
 
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        last = 0;
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
     rafId = requestAnimationFrame(frame);
     return () => {
       cancelAnimationFrame(rafId);
       window.removeEventListener('resize', resize);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
     };
   }, [adapter]);
 

@@ -4,7 +4,7 @@
  * beside the PMD Pokémon portrait they wish to adopt while the shop ticks live.
  */
 import { CUSTOMER_ARCHETYPES } from '../data/customers';
-import { getItemDefinition } from '../data/items';
+import { GIFT_BALL_OPTIONS, getItemDefinition } from '../data/items';
 import { getHumanNpcById } from '../data/npcs';
 import { getSpecies } from '../data/species';
 import type { CounterOffer, GiftBallSlug } from '../data/types';
@@ -22,14 +22,6 @@ export interface CounterOfferPanelProps {
   onDecline: (offerUid: string) => void;
   onMinimize: () => void;
 }
-
-const GIFT_BALL_OPTIONS: GiftBallSlug[] = [
-  'poke-ball',
-  'heal-ball',
-  'friend-ball',
-  'luxury-ball',
-  'cherish-ball',
-];
 
 export function CounterOfferPanel({
   queue,

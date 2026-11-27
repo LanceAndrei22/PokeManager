@@ -3,7 +3,16 @@
  * Includes all 9 Gen 1–4 Evolution Stones, Rare Candy level-up evolution/boosts,
  * Care Drinks/Berries, and 5 checkout Gift-Wrap Poké Balls.
  */
-import type { ItemDefinition, ItemSlug } from './types';
+import type { GiftBallSlug, ItemDefinition, ItemSlug } from './types';
+
+/** Ordered list of checkout Gift-Wrap Poké Balls shared across Display Pens and Counter panels. */
+export const GIFT_BALL_OPTIONS: readonly GiftBallSlug[] = [
+  'poke-ball',
+  'heal-ball',
+  'friend-ball',
+  'luxury-ball',
+  'cherish-ball',
+];
 
 export const ITEMS_CATALOG: ItemDefinition[] = [
   // All 9 Gen 1–4 Evolution Stones

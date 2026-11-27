@@ -4,7 +4,7 @@
  * Pokémon cards, and moving Pokémon between Reserve Kennel and Pens.
  */
 import type { CSSProperties } from 'react';
-import { getItemDefinition } from '../data/items';
+import { GIFT_BALL_OPTIONS, getItemDefinition } from '../data/items';
 import { getSpecies } from '../data/species';
 import type { GiftBallSlug, MarketTrend, PokemonInstance } from '../data/types';
 import { calculatePokemonValuation, getEffectiveMarkup } from '../engine/economy';
@@ -25,14 +25,6 @@ export interface DisplayPensPanelProps {
   onInspectPokemon: (uid: string) => void;
   onMovePokemon: (uid: string, dest: 'pen' | 'reserve' | 'healing', targetPenIndex?: number) => void;
 }
-
-const GIFT_BALL_OPTIONS: GiftBallSlug[] = [
-  'poke-ball',
-  'heal-ball',
-  'friend-ball',
-  'luxury-ball',
-  'cherish-ball',
-];
 
 export function DisplayPensPanel({
   penCapacity,
