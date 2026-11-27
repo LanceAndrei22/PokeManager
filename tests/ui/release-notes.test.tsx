@@ -67,7 +67,14 @@ describe('Release Notes Version Gating & Modal', () => {
       within(dialog).getByText(/trainer profiles and saved progress may be modified or deleted/i),
     ).toBeInTheDocument();
 
-    await user.click(within(dialog).getByRole('button', { name: /Got It — Start Playing/i }));
+    // Verify single inner .pmd-scroll container is keyboard-focusable and pinned footer stays outside it
+    const scrollers = dialog.querySelectorAll('.pmd-scroll');
+    expect(scrollers).toHaveLength(1);
+    expect(scrollers[0]).toHaveAttribute('tabindex', '0');
+    const dismissButton = within(dialog).getByRole('button', { name: /Got It — Start Playing/i });
+    expect(scrollers[0].contains(dismissButton)).toBe(false);
+
+    await user.click(dismissButton);
     expect(dismissed).toBe(true);
   });
 
