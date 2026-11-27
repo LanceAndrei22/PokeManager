@@ -10,6 +10,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { App } from '../../src/App';
 import type { CounterOffer, ProfileIndex } from '../../src/data/types';
+import { getCurrentBgmTrack } from '../../src/engine/bgm';
 import { createInitialGameState } from '../../src/engine/simulation';
 import {
   PROFILE_INDEX_KEY,
@@ -136,14 +137,24 @@ describe('Checkpoint 2 Counter Haggling, Debt Liquidation & Bankruptcy UI', () =
     const liqButtons = within(debtDialog).getAllByRole('button', { name: /Liquidate/i });
     await user.click(liqButtons[0]);
 
-    // Still short -> Declare Bankruptcy -> Foreclosure scorecard modal -> Start Fresh Shift #1
+    // Still short -> Declare Bankruptcy -> Foreclosure scorecard modal -> dedicated 'bankrupt' BGM
     await user.click(within(debtDialog).getByRole('button', { name: /Declare Bankruptcy/i }));
     const bankruptDialog = screen.getByRole('dialog');
     expect(
       within(bankruptDialog).getByRole('heading', { name: /Store Foreclosed/i }),
     ).toBeInTheDocument();
+    expect(getCurrentBgmTrack()).toBe('bankrupt');
+
+    // Volume button inside BankruptcyModal controls BGM mute cleanly while bankrupt
+    await user.click(within(bankruptDialog).getByRole('button', { name: /Volume settings/i }));
+    const mixer = within(bankruptDialog).getByRole('region', { name: 'Audio Mixer' });
+    await user.click(within(mixer).getByRole('button', { name: /Mute background music/i }));
+    expect(within(mixer).getByRole('button', { name: /Unmute background music/i })).toHaveTextContent('BGM: Off');
+    await user.click(within(mixer).getByRole('button', { name: /Unmute background music/i }));
+    await user.click(within(mixer).getByRole('button', { name: 'Done' }));
 
     await user.click(within(bankruptDialog).getByRole('button', { name: /Start Fresh Shift #1/i }));
     expect(screen.getByText('₽1,200')).toBeInTheDocument();
+    expect(getCurrentBgmTrack()).toBe('shop');
   });
 });

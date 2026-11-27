@@ -20,7 +20,12 @@ import type {
   ShopUpgradeId,
 } from './data/types';
 import { initAudioUnlockListeners, playSfx, setSfxMuted, setSfxVolume } from './engine/audio';
-import { setBgmMuted, setBgmTrack, setBgmVolume } from './engine/bgm';
+import {
+  resolveActiveBgmTrack,
+  setBgmMuted,
+  setBgmTrack,
+  setBgmVolume,
+} from './engine/bgm';
 import { getDexSummary, getShopRankInfo } from './engine/dex';
 import { calculateShiftDues } from './engine/economy';
 import {
@@ -129,16 +134,12 @@ export function App() {
     setBgmVolume(game.bgmVolume ?? 0.35);
   }, [game.muted, game.sfxVolume, game.bgmMuted, game.bgmVolume]);
 
-  // Crossfade BGM between relaxed Menu theme, cozy PokéMart groove, and Bankruptcy silence
+  const activeBgmTrack = resolveActiveBgmTrack(screen, game.isBankrupt);
+
+  // Crossfade BGM between relaxed Menu theme, cozy PokéMart groove, and bittersweet Bankruptcy ballad
   useEffect(() => {
-    if (game.isBankrupt) {
-      setBgmTrack('quiet');
-    } else if (screen === 'menu') {
-      setBgmTrack('menu');
-    } else {
-      setBgmTrack('shop');
-    }
-  }, [screen, game.isBankrupt]);
+    setBgmTrack(activeBgmTrack);
+  }, [activeBgmTrack]);
 
   // Persist immediately whenever active profile GameState changes
   useEffect(() => {
@@ -325,7 +326,11 @@ export function App() {
   };
 
   return (
-    <div className="relative h-dvh w-screen overflow-hidden bg-[#0c1733] text-[#eef5ff]">
+    <div
+      data-bgm-track={activeBgmTrack}
+      data-bgm-muted={String(Boolean(game.bgmMuted))}
+      className="relative h-dvh w-screen overflow-hidden bg-[#0c1733] text-[#eef5ff]"
+    >
       {screen === 'menu' ? (
         <MainMenu
           profileIndex={store.index}
@@ -642,6 +647,22 @@ export function App() {
             open={game.isBankrupt}
             summary={game.bankruptcySummary}
             profileName={game.profileName}
+            bgmMuted={Boolean(game.bgmMuted)}
+            sfxMuted={Boolean(game.muted)}
+            bgmVolume={game.bgmVolume ?? 0.35}
+            sfxVolume={game.sfxVolume ?? 0.65}
+            onToggleBgmMute={() =>
+              setStore((prev) => ({ ...prev, game: toggleBgmMuteAction(prev.game) }))
+            }
+            onToggleSfxMute={() =>
+              setStore((prev) => ({ ...prev, game: toggleMuteAction(prev.game) }))
+            }
+            onChangeBgmVolume={(volume) =>
+              setStore((prev) => ({ ...prev, game: setBgmVolumeAction(prev.game, volume) }))
+            }
+            onChangeSfxVolume={(volume) =>
+              setStore((prev) => ({ ...prev, game: setSfxVolumeAction(prev.game, volume) }))
+            }
             onResetRun={() => handleResetProfile(game.profileId)}
             onReturnToMenu={handleReturnToMenu}
           />
