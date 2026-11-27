@@ -119,7 +119,7 @@ export function DebtLiquidationModal({
               No eligible Pokémon left to liquidate.
             </p>
           ) : (
-            <div className="grid max-h-56 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+            <div className="grid gap-2 sm:grid-cols-2">
               {liquidatable.map((mon) => {
                 const sp = getSpecies(mon.speciesId);
                 const payout = getLiquidationValue(mon);

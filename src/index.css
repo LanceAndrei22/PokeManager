@@ -266,7 +266,9 @@ li {
 dialog.pmd-dialog {
   margin: auto;
   width: min(92vw, 64rem);
-  max-height: 90dvh;
+  max-height: 85dvh;
+  overflow: hidden;
+  box-sizing: border-box;
   background: linear-gradient(180deg, rgba(28, 55, 110, 0.97) 0%, rgba(16, 33, 72, 0.98) 100%);
   border: 3px solid #070d1f;
   box-shadow:
@@ -274,6 +276,11 @@ dialog.pmd-dialog {
     0 14px 36px rgba(5, 10, 24, 0.72);
   color: #eef5ff;
   padding: 0;
+}
+
+dialog.pmd-dialog[open] {
+  display: flex;
+  flex-direction: column;
 }
 
 dialog.pmd-dialog:modal {
@@ -285,6 +292,101 @@ dialog.pmd-dialog::backdrop {
   backdrop-filter: blur(2px);
   overflow: hidden;
   overscroll-behavior: contain;
+}
+
+/* DS-era Royal Navy & Cobalt scrollbars (WCAG 1.4.11 >= 3:1 non-text contrast) */
+.pmd-scroll {
+  --scrollbar-thumb: #5b8ee0;
+  --scrollbar-thumb-hover: #89b8ff;
+  --scrollbar-thumb-active: #ffd84d;
+  --scrollbar-track: #0a1533;
+
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+.pmd-scroll:focus-visible {
+  outline: 2px solid #ffd84d;
+  outline-offset: -2px;
+}
+
+.pmd-scroll-themed {
+  --scrollbar-thumb: #5b8ee0;
+  --scrollbar-thumb-hover: #89b8ff;
+  --scrollbar-thumb-active: #ffd84d;
+  --scrollbar-track: #0a1533;
+
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+@media (prefers-contrast: more) {
+  .pmd-scroll,
+  .pmd-scroll-themed,
+  .pmd-table-wrapper {
+    --scrollbar-thumb: #ffd84d;
+    --scrollbar-thumb-hover: #fff1a8;
+    --scrollbar-thumb-active: #ffffff;
+    --scrollbar-track: #050a18;
+  }
+}
+
+/* Legacy WebKit scrollbar fallback isolated behind @supports not (scrollbar-color: auto) */
+@supports not (scrollbar-color: auto) {
+  .pmd-scroll,
+  .pmd-scroll-themed,
+  .pmd-table-wrapper {
+    scrollbar-width: auto;
+  }
+
+  .pmd-scroll::-webkit-scrollbar,
+  .pmd-scroll-themed::-webkit-scrollbar,
+  .pmd-table-wrapper::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  .pmd-scroll::-webkit-scrollbar-button,
+  .pmd-scroll-themed::-webkit-scrollbar-button,
+  .pmd-table-wrapper::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+
+  .pmd-scroll::-webkit-scrollbar-track,
+  .pmd-scroll-themed::-webkit-scrollbar-track,
+  .pmd-table-wrapper::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+  }
+
+  .pmd-scroll::-webkit-scrollbar-thumb,
+  .pmd-scroll-themed::-webkit-scrollbar-thumb,
+  .pmd-table-wrapper::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border: 2px solid var(--scrollbar-track);
+  }
+
+  .pmd-scroll::-webkit-scrollbar-thumb:hover,
+  .pmd-scroll-themed::-webkit-scrollbar-thumb:hover,
+  .pmd-table-wrapper::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+  }
+
+  .pmd-scroll::-webkit-scrollbar-thumb:active,
+  .pmd-scroll-themed::-webkit-scrollbar-thumb:active,
+  .pmd-table-wrapper::-webkit-scrollbar-thumb:active {
+    background: var(--scrollbar-thumb-active);
+  }
+
+  .pmd-scroll::-webkit-scrollbar-corner,
+  .pmd-scroll-themed::-webkit-scrollbar-corner,
+  .pmd-table-wrapper::-webkit-scrollbar-corner {
+    background: var(--scrollbar-track);
+  }
 }
 
 /* Active tab indicator using crisp gold bottom border (not color alone) */
@@ -302,9 +404,17 @@ dialog.pmd-dialog::backdrop {
 
 /* Responsive table scroll wrapper with container query context */
 .pmd-table-wrapper {
+  --scrollbar-thumb: #5b8ee0;
+  --scrollbar-thumb-hover: #89b8ff;
+  --scrollbar-thumb-active: #ffd84d;
+  --scrollbar-track: #0a1533;
+
   overflow: auto;
   max-inline-size: 100%;
   container-type: inline-size;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
 .pmd-table-wrapper:focus-visible {

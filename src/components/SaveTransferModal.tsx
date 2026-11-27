@@ -264,7 +264,7 @@ export function SaveTransferModal({
             readOnly
             rows={3}
             value={exportCode}
-            className="w-full border-2 border-[#4e78bd] bg-[#091229] p-2.5 font-mono text-xs text-[#cfe0ff]"
+            className="pmd-scroll-themed w-full border-2 border-[#4e78bd] bg-[#091229] p-2.5 font-mono text-xs text-[#cfe0ff]"
           />
 
           <label className="block pt-1 text-sm font-semibold text-[#e2eeff]">
@@ -275,7 +275,7 @@ export function SaveTransferModal({
               placeholder="Paste Base64 save code here..."
               value={importInput}
               onChange={(e) => setImportInput(e.target.value)}
-              className="mt-1 w-full border-2 border-[#4e78bd] bg-[#091229] p-2.5 font-mono text-xs text-white placeholder:text-[#6f8ec2]"
+              className="pmd-scroll-themed mt-1 w-full border-2 border-[#4e78bd] bg-[#091229] p-2.5 font-mono text-xs text-white placeholder:text-[#6f8ec2]"
             />
           </label>
           <div className="flex justify-end">

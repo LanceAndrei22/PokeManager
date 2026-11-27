@@ -102,13 +102,13 @@ export function GameGuideModal({ open, onClose }: GameGuideModalProps) {
   const tabId = (id: GuideTabId) => `${idPrefix}-tab-${id}`;
 
   return (
-    <CozyDialog open={open} onClose={onClose} title="PokéMart Manager's Guide">
-      <div className="space-y-4 text-sm leading-relaxed text-[#dbe8ff]">
-        {/* Single-row scrollable accessible tablist (never wraps; arrow keys select & focus) */}
+    <CozyDialog open={open} onClose={onClose} scrollBody={false} title="PokéMart Manager's Guide">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden text-sm leading-relaxed text-[#dbe8ff]">
+        {/* Pinned single-row scrollable accessible tablist (never wraps; arrow keys select & focus) */}
         <div
           role="tablist"
           aria-label="Game Guide Sections"
-          className="flex flex-nowrap gap-1.5 overflow-x-auto border-b-2 border-[#3b60a0] pb-2"
+          className="pmd-scroll-themed flex shrink-0 flex-nowrap gap-1.5 overflow-x-auto border-b-2 border-[#3b60a0] pb-2"
           {...({ focusgroup: 'tablist nomemory' } as Record<string, string>)}
         >
           {GUIDE_TABS.map((tab, index) => {
@@ -139,8 +139,8 @@ export function GameGuideModal({ open, onClose }: GameGuideModalProps) {
           })}
         </div>
 
-        {/* All panels stay mounted in one block container (no flex/grid gap between hidden="until-found" panels) */}
-        <div>
+        {/* Single scrollable panel body (all panels stay mounted in one block container for hidden="until-found") */}
+        <div className="pmd-scroll min-h-0 flex-1 overflow-y-auto pr-1">
           {/* TAB 1: CORE LOOP & CONTROLS */}
           <div
             ref={(el) => {

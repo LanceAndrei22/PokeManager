@@ -33,9 +33,9 @@ export function WholesaleCatalogPanel({
   const purchasableItems = ITEMS_CATALOG.filter((item) => item.cost > 0);
 
   return (
-    <div className="space-y-3 text-[#e2eeff]">
+    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden text-[#e2eeff]">
       <div
-        className="flex flex-wrap items-center gap-2 border-b-2 border-[#4e78bd] pb-1"
+        className="flex shrink-0 flex-wrap items-center gap-2 border-b-2 border-[#4e78bd] pb-1"
         role="tablist"
         aria-label="Wholesale Shelf Sections"
       >
@@ -59,7 +59,8 @@ export function WholesaleCatalogPanel({
         </button>
       </div>
 
-      {subTab === 'pokemon' ? (
+      <div tabIndex={0} className="pmd-scroll min-h-0 flex-1 overflow-y-auto pr-1">
+        {subTab === 'pokemon' ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {offers.map((offer) => {
             const species = getSpecies(offer.speciesId);
@@ -182,6 +183,7 @@ export function WholesaleCatalogPanel({
           })}
         </div>
       )}
+      </div>
     </div>
   );
 }

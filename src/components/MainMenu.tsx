@@ -84,7 +84,7 @@ export function MainMenu({
   };
 
   return (
-    <div className="relative h-dvh w-screen overflow-y-auto overflow-x-hidden">
+    <div className="pmd-scroll-themed relative h-dvh w-screen overflow-y-auto overflow-x-hidden">
       <MenuBackdropCanvas />
 
       <div className="relative z-10 mx-auto flex min-h-dvh max-w-[1440px] flex-col justify-between px-8 py-6">

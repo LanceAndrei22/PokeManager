@@ -19,7 +19,7 @@ const TONE_BADGE: Record<ActivityEntry['tone'], string> = {
 export function ActivityLog({ entries }: ActivityLogProps) {
   return (
     <section aria-label="Shift Activity Journal" className="space-y-2 text-sm text-[#e2eeff]">
-      <ul className="max-h-80 space-y-1.5 overflow-y-auto pr-1">
+      <ul className="space-y-1.5">
         {entries.map((entry) => (
           <li
             key={entry.id}

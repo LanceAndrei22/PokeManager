@@ -481,6 +481,7 @@ export function App() {
           <CozyDialog
             open={Boolean(activeDialog && activeDialog !== 'dex')}
             onClose={() => setActiveDialog(null)}
+            scrollBody={activeDialog !== 'wholesale' && activeDialog !== 'bag'}
             title={
               activeDialog && activeDialog !== 'dex' ? stationDialogTitle[activeDialog] : ''
             }

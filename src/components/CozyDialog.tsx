@@ -11,6 +11,12 @@ export interface CozyDialogProps {
   onClose: () => void;
   title: string;
   allowLightDismiss?: boolean;
+  /**
+   * When `true` (default), the dialog body itself is the single vertical scroll container.
+   * Set to `false` for modals that pin top controls (tabs/search/filters) and manage their
+   * own single inner `flex-1 min-h-0 overflow-y-auto` scroll region.
+   */
+  scrollBody?: boolean;
   children: ReactNode;
 }
 
@@ -19,6 +25,7 @@ export function CozyDialog({
   onClose,
   title,
   allowLightDismiss = true,
+  scrollBody = true,
   children,
 }: CozyDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -106,21 +113,25 @@ export function CozyDialog({
       className="pmd-dialog"
       {...(closedByProp as Record<string, string>)}
     >
-      <div className="flex max-h-[90dvh] flex-col">
-        <header className="flex items-center justify-between gap-3 border-b-2 border-[#78a8f0] bg-[#11234d] px-4 py-3">
-          <h1 id={titleId} className="pmd-heading-display pmd-text-shadow text-[#ffd84d]">
-            {title}
-          </h1>
-          <button
-            type="button"
-            onClick={() => dialogRef.current?.close()}
-            className="pmd-btn shrink-0 px-3 py-1 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-[#ffd84d]"
-          >
-            Close
-          </button>
-        </header>
-        <div className="overflow-y-auto p-4">{children}</div>
-      </div>
+      <header className="flex shrink-0 items-center justify-between gap-3 border-b-2 border-[#78a8f0] bg-[#11234d] px-4 py-3">
+        <h1 id={titleId} className="pmd-heading-display pmd-text-shadow text-[#ffd84d]">
+          {title}
+        </h1>
+        <button
+          type="button"
+          onClick={() => dialogRef.current?.close()}
+          className="pmd-btn shrink-0 px-3 py-1 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-[#ffd84d]"
+        >
+          Close
+        </button>
+      </header>
+      {scrollBody ? (
+        <div tabIndex={0} className="pmd-scroll min-h-0 flex-1 overflow-y-auto p-4">
+          {children}
+        </div>
+      ) : (
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-4">{children}</div>
+      )}
     </dialog>
   );
 }
