@@ -4,11 +4,9 @@
  * straw-bedded display pens with wooden fences, and the plush nap corner.
  * Drawn once per layout into an offscreen layer, then blitted every frame.
  */
-import { PALETTE, drawBitmap, fillPixelRoundRect, type PixelBitmap } from './pixelArt';
+import { BALL_COLORS, POKE_BALL } from './indoorConstants';
+import { PALETTE, drawBitmap, fillPixelRoundRect } from './pixelArt';
 import type { PenRect, Rect, ShopLayout } from './types';
-
-const POKE_BALL: PixelBitmap = ['.rrrr.', 'rrrrrr', 'kkwwkk', 'wwwwww', '.wwww.'];
-const BALL_COLORS = { r: '#e04848', k: PALETTE.woodDeep, w: PALETTE.white };
 
 /** Thin seam/line thickness (half an art pixel, at least 1 backing px). */
 function seam(unit: number): number {
