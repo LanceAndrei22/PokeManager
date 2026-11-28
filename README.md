@@ -15,6 +15,17 @@
 **A Gen 4 DS / Pokémon Mystery Dungeon pixel-art pet shop, healing center, breeding & live counter-haggling tycoon for PC desktop web browsers.**
 
 <p>
+  <a href="https://pokemanager.pages.dev/">
+    <img src="https://img.shields.io/badge/%E2%96%B6%20Play%20%2F%20Test%20Live-pokemanager.pages.dev-2ecc71?style=for-the-badge&labelColor=13244b" alt="Play / Test Live at pokemanager.pages.dev" />
+  </a>
+</p>
+
+<p>
+  <strong>Play / Test Live:</strong> <a href="https://pokemanager.pages.dev/"><strong>https://pokemanager.pages.dev/</strong></a><br />
+  <sub>PC desktop browsers only (<code>1280×720+</code>, optimized for <code>1920×1080+</code>) • Initial Playtest Release (features &amp; local saves may change between updates)</sub>
+</p>
+
+<p>
   <img src="https://img.shields.io/badge/Release-v0.1.0--playtest%20(Initial%20Playtest)-f59e0b?style=for-the-badge&labelColor=13244b" alt="Initial Playtest Release v0.1.0-playtest" />
   <img src="https://img.shields.io/badge/Gen%201--4%20Pok%C3%A9dex-493%20Species-ffd84d?style=for-the-badge&labelColor=13244b" alt="493 Gen 1–4 Species" />
   <img src="https://img.shields.io/badge/React-19-61dafb?style=for-the-badge&logo=react&logoColor=white&labelColor=13244b" alt="React 19" />
@@ -155,7 +166,7 @@ flowchart TD
 | **Typography** | Self-hosted **Chakra Petch** (`500/600/700` Latin + `₽` Latin-Ext) & **Silkscreen** (`400` headings/logo) WOFF2 (`SIL OFL 1.1`) |
 | **Audio** | Pure browser **Web Audio API** chiptune SFX & 3-track polyphonic BGM sequencer (`menu`, `shop`, `bankrupt`) |
 | **Testing** | Vitest 4 + React Testing Library (`jsdom`) — **17 test suites, 73 passing tests** |
-| **CI &amp; Deployment** | Static relative-path build (`base: './'`) deployed on **Cloudflare Pages** (`.node-version`) with GitHub Actions CI (`.github/workflows/ci.yml`) |
+| **CI &amp; Deployment** | Static relative-path build (`base: './'`) live at [pokemanager.pages.dev](https://pokemanager.pages.dev/) on **Cloudflare Pages** (`.node-version`) with GitHub Actions CI (`.github/workflows/ci.yml`) |
 
 ---
 
@@ -220,8 +231,9 @@ npm run preview
 ```
 
 ### Deployment (Cloudflare Pages & GitHub Actions CI)
+- **Live Playtest URL:** [https://pokemanager.pages.dev/](https://pokemanager.pages.dev/) (PC desktop browsers only; auto-deployed from `main` via Cloudflare Pages).
 - **`base: './'` Static Build:** All bundled JS/CSS chunks and `./assets/...` sprites, tilesets, icons, and fonts resolve relatively so the `dist/` output works seamlessly at root domains or nested subpaths.
-- **Cloudflare Pages (Primary Deployment):** Connect the public GitHub repository in Cloudflare Pages with build command `npm run build` and build output directory `dist`. Node `26.13.1` is detected automatically from [`.node-version`](./.node-version).
+- **Cloudflare Pages (Primary Deployment):** Connected to the public GitHub repository with build command `npm run build` and build output directory `dist`. Node `26.13.1` is detected automatically from [`.node-version`](./.node-version).
 - **GitHub Actions CI:** Every push to `main` and pull request runs [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) (`npm ci`, `npm run typecheck`, `npm test`, and `npm run build` on Node `26.13.1`).
 
 <details>

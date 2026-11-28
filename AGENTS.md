@@ -12,7 +12,7 @@
 - Every file, script, downloaded sprite, npm cache (`.npm-cache/`), `.npmrc`, test artifact, Git config, and build output MUST remain strictly inside `D:\PokeManager`.
 - Never write, edit, or delete files outside `D:\PokeManager`.
 - Never install global npm packages or run `git config --global`. Use repo-local `.npmrc` (`cache=.npm-cache`) and `NPM_CONFIG_CACHE=D:\PokeManager\.npm-cache`.
-- Target **Node.js 26.13.1** and relative `./assets/...` paths (`base: './'` in `vite.config.ts`) for static GitHub Pages compatibility.
+- Target **Node.js 26.13.1** (pinned via `.node-version`) and relative `./assets/...` paths (`base: './'` in `vite.config.ts`) for static Cloudflare Pages and nested-path hosting compatibility.
 
 ## 3. PMD SpriteCollab Store Pokémon, Human NPCs & GBA Tilesets (v2.1)
 - **Store Pokémon Sprites (100% PMDCollab / SpriteCollab, `CC BY-NC 4.0`):** Multi-frame grounded spritesheets (`Walk-Anim.png`, `Idle-Anim.png`, `Sleep-Anim.png` — no jumping/hopping), `AnimData.xml`, and `portrait/{paddedId}/Normal.png` (plus shiny `0000/0001/` subfolders) covering **all 493 Gen 1–4 (`#001–#493`)** species (including Legendaries and Mythicals), automatically foot-grounded via opaque-bound measurement onto snug pixel-oval contact shadows.
@@ -26,15 +26,20 @@
 - Add brief inline comments explaining PMD `AnimData.xml` frame-slicing math, haggle probability curves, rent/upkeep/debt formulas, VIP Legendary contracts, and storage serialization/checksums.
 - Keep `D:\PokeManager\README.md` synchronized with shipped mechanics, controls, scripts, and credits, and always preserve the prominent disclaimer that **PokéMart: Low Cortisol Shift** is a **simple, completely free fan project made for entertainment purposes only** (non-commercial; Pokémon IP belongs to Nintendo, Creatures Inc., and Game Freak).
 
-## 5. Local-Only Git & Commit Hygiene
+## 5. Live Deployment, Git & Release Hygiene
+- **Live Deployment & CI:**
+  - **GitHub Repository:** `LanceAndrei22/PokeManager` (public, `main` protected by ruleset)
+  - **Live Playtest URL:** `https://pokemanager.pages.dev/` (Cloudflare Pages, auto-deploying from `main` via `npm run build` → `dist/`)
+  - **CI Check:** `.github/workflows/ci.yml` (`check` job running `npm ci`, `npm run typecheck`, `npm test`, and `npm run build` on Node `26.13.1`)
 - Local Git author MUST be configured repo-locally as:
   - `user.name = "Lance Andrei C. Bolaños"`
   - `user.email = "bolanoslanceandrei@gmail.com"`
-- **Strict Local-Only Rule:** NEVER run `gh repo create`, `git remote add`, or `git push` unless the user explicitly asks to publish.
+- **Strict Commit-Locally-Only Rule:** Agents MUST commit locally only and **NEVER run `git push`** (or modify remotes)—pushing to `main` automatically deploys to live playtesters on Cloudflare Pages. The maintainer reviews diffs and pushes manually via GitHub Desktop.
+- **Player-Facing Release Rule:** Whenever preparing a player-facing update, bump `APP_VERSION` in `src/data/releaseNotes.ts` (kept strictly in sync with `package.json`) and prepend a new entry to `RELEASE_NOTES` so `ReleaseNotesModal` automatically displays once for returning players.
 - Commit every completed step, feature slice, or fix locally using **Conventional Commits**:
   - Format the summary line as `type(scope): concise summary` (`< 60` characters), using standard types (`feat`, `fix`, `refactor`, `perf`, `chore`, `docs`, `test`).
   - Include a brief 1–3 line description body summarizing changes and verification.
-- Never commit `node_modules/`, `dist/`, `.npm-cache/`, `.npmrc`, `graphify-out/`, `*.log`, or temporary files.
+- Never commit `node_modules/`, `dist/`, `.npm-cache/`, `.npmrc`, `graphify-out/`, `.env*`, `*.log`, or temporary files.
 
 ## 6. Per-User Local Storage Architecture (v2)
 - All saves stay strictly local in browser `localStorage` with multi-profile support (isolated v2 namespace leaving v1 keys untouched):
@@ -45,28 +50,31 @@
 ## 7. Folder Layout
 ```text
 D:\PokeManager\
-├── README.md                          # Project guide, setup, credits, free fan-project notice
+├── README.md                          # Project guide, live playtest URL, setup, credits & fan-project notice
 ├── AGENTS.md                          # Always-on project rules & architecture source of truth
+├── .node-version                      # Pins Node.js 26.13.1 for Cloudflare Pages & local parity
+├── .github/workflows/ci.yml           # GitHub Actions CI (`npm ci`, typecheck, test, build)
 ├── .agents/rules/sprites-and-animation.md # Model-decision rules for PMD SpriteCollab & Canvas
 ├── public/assets/
-│   ├── fonts/                         # Self-hosted Chakra Petch, Pixelify Sans & Silkscreen WOFF2 fonts
+│   ├── fonts/                         # Self-hosted Chakra Petch & Silkscreen WOFF2 fonts
 │   ├── npcs/                          # 16 pret/pokeemerald overworlds + Showdown Human Trainer portraits
 │   ├── tiles/                         # Decoded pret/pokeemerald outdoor & indoor tiles + Pet Shop props
-│   ├── pmd/                           # Bundled core 21 PMD species sheets (Walk/Idle/Sleep/Hop) & portraits
+│   ├── pmd/                           # Bundled core 21 PMD species sheets (Walk/Idle/Sleep) & portraits
 │   ├── items/                         # Curated Gen 4 pixel item icons
 │   └── CREDITS.md                     # Non-commercial PMDCollab, pret/pokeemerald, Showdown & PokeAPI credits
 ├── scripts/
 │   ├── build-pokedex.mjs              # Generates 493-species Gen 1–4 catalog & core PMD bundle
 │   └── fetch-world-assets.mjs         # Decodes pret/pokeemerald metatiles, trainers & Pet Shop props
 ├── src/
-│   ├── data/                          # 493 species JSON/TS, difficulties, Human NPCs, items, trends, upgrades
-│   ├── engine/                        # Tycoon sim, haggling, rent, debt, breeding, storage, SFX & dual BGM
+│   ├── data/                          # 493 species JSON/TS, difficulties, NPCs, items, trends, upgrades, releaseNotes
+│   ├── engine/                        # Tycoon sim, haggling, rent, debt, breeding, storage, SFX & 3-track BGM
 │   ├── canvas/                        # Tiled indoor floor, nature backdrop, PMD & Human animators
-│   └── components/                    # React + Tailwind HUD, AudioControls, Counter & accessible modals
+│   └── components/                    # React + Tailwind HUD, AudioControls, Counter, ReleaseNotes & modals
 └── tests/                             # Vitest unit tests & React Testing Library integration tests
 ```
 
-## 8. Mandatory Self-Verification Rules & Waived Opus Gate
+## 8. Mandatory Self-Verification Rules, Graphify & Waived Opus Gate
 - After every checkpoint or fix, run `npm run typecheck`, `npm test`, and `npm run build` and resolve all failures.
 - Verify UI flows on desktop (`1280×800`) and Full HD widescreen (`1920×1080`) viewports with **0 runtime console errors** and **0 failed (`404`) asset requests**.
+- **Graphify Knowledge Graph:** After modifying files, refresh the local graph with `graphify update .` (do **not** pass `--code-only`, which is unsupported by the installed CLI).
 - **Model Gate Status:** The v1 Claude Opus 5.5 gate is explicitly waived for this v2 overhaul.
